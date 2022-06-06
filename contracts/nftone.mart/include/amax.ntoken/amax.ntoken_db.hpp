@@ -19,7 +19,7 @@ using namespace std;
 using namespace eosio;
 
 #define HASH256(str) sha256(const_cast<char*>(str.c_str()), str.size())
-#define TBL struct [[eosio::table, eosio::contract("amax.ntoken")]]
+#define TBL_NT struct [[eosio::table, eosio::contract("amax.ntoken")]]
 
 struct nsymbol {
     uint32_t id;
@@ -27,7 +27,7 @@ struct nsymbol {
 
     nsymbol() {}
     nsymbol(const uint32_t& i): id(i),parent_id(0) {}
-    nsymbol(const uint32_t& i, const uint32_t& pid): id(i),parent_id(pid) {}
+    nsymbol(const uint32_t& i, const uint32_t& pid): id(i), parent_id(pid) {}
 
     friend bool operator==(const nsymbol&, const nsymbol&);
     bool is_valid()const { return( id > parent_id ); }
@@ -40,8 +40,6 @@ bool operator==(const nsymbol& symb1, const nsymbol& symb2) {
     return( symb1.id == symb2.id && symb1.parent_id == symb2.parent_id ); 
 }
 
-
-///Scope: symbole.id
 struct nasset {
     int64_t         amount;
     nsymbol         symbol;
@@ -50,6 +48,7 @@ struct nasset {
     nasset(const uint32_t& id): symbol(id), amount(0) {}
     nasset(const uint32_t& id, const uint32_t& pid): symbol(id, pid), amount(0) {}
     nasset(const uint32_t& id, const uint32_t& pid, const int64_t& am): symbol(id, pid), amount(am) {}
+    nasset(const int64_t& amt, const nsymbol& symb): amount(amt), symbol(symb) {}
 
     nasset& operator+=(const nasset& quantity) { 
         check( quantity.symbol.raw() == this->symbol.raw(), "nsymbol mismatch");
@@ -65,7 +64,7 @@ struct nasset {
     EOSLIB_SERIALIZE( nasset, (amount)(symbol) )
 };
 
-TBL nstats_t {
+TBL_NT nstats_t {
     nasset          supply;
     nasset          max_supply;     // 1 means NFT-721 type
     string          token_uri;      // globally unique uri for token metadata { image, desc,..etc }
@@ -100,7 +99,7 @@ TBL nstats_t {
 };
 
 ///Scope: owner's account
-TBL account_t {
+TBL_NT account_t {
     nasset      balance;
     bool        paused = false;   //if true, it can no longer be transferred
 

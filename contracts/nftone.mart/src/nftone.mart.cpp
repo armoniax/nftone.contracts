@@ -1,6 +1,8 @@
 #include <nftone.mart/nftone.mart.hpp>
 #include <amax.ntoken/amax.ntoken_db.hpp>
-
+#include <amax.ntoken/amax.ntoken.hpp>
+#include <cnyd.token/amax.xtoken.hpp>
+#include <utils.hpp>
 namespace amax {
 
 using namespace std;
@@ -15,45 +17,151 @@ using namespace std;
     * @param from
     * @param to
     * @param quantity
-    * @param memo
+    * @param memo: $ask_price       E.g.:  102.88    (its currency unit is CNYD)
+    *               
     */
-   [[eosio::on_notify("amax.ntoken::transfer")]]
-   void nftone_mart::ontransfer(const name& from, const name& to, const nasset& quantity, const string& memo) {
-      CHECKC( from != to, err::ACCOUNT_INVALID,"cannot transfer to self" );
-      CHECKC( quantity.amount > 0, err::PARAM_ERROR, "non-positive quantity not allowed" )
+   void nftone_mart::onselltransfer(const name& from, const name& to, const nasset& quant, const string& memo) {
+      CHECKC( from != to, err::ACCOUNT_INVALID, "cannot transfer to self" );
+      CHECKC( quant.amount > 0, err::PARAM_ERROR, "non-positive quantity not allowed" )
       CHECKC( memo != "", err::MEMO_FORMAT_ERROR, "empty memo!" )
 
-      auto offers = offer_t::idx_t( _self, _self.value );
-      auto itr = offers.find( quantity.symbol.raw() );
-      if (itr == offers.end()) {
-         offers.emplace( _self, [&]( auto& row ) {
-            row.id            = offers.available_primary_key(); if (row.id == 0) row.id = 1;
-            row.owner         = from;
-            row.quantity      = quantity;
-            row.created_at    = time_point_sec( current_time_point() );
-         });
-      } else {
-         accounts.modify(itr, same_payer, [&]( auto& row ) {
-            row.quantity      += quantity;
+      auto quantity           = quant;
+      auto ask_price          = price_s( quant.symbol, stof(memo) );
+      auto earned             = asset(0, CNYD); //by seller
+      auto bought             = nasset(0, quantity.symbol); //by buyer
+      
+      auto offers = buyoffer_idx( _self, quant.symbol.id );
+      auto idx = offers.get_index<"priceidx"_n>(); //larger first
+      for (auto itr = idx.begin(); itr != idx.end(); itr++) {
+         if (itr->price.value < ask_price.value) 
+            break;   //offer or bit price < ask price
+         
+         auto offer_value     = itr->frozen;
+         auto sell_value      = quantity.amount * itr->price.value;
+         if (offer_value >= sell_value) {
+            earned.amount     += sell_value;
+            idx.modify(itr, same_payer, [&]( auto& row ) {
+               row.frozen     -= sell_value;
+            });
+            
+            //send to seller for CNYD tokens
+            TRANSFER( CNYD_BANK, from, earned, "sell nft: " + to_string( quant.symbol.id ) )
+
+            //send to buyer for NFT tokens
+            bought.amount     = quantity.amount;
+            vector<nasset> quants = { bought };
+            NTRANSFER( NFT_BANK, itr->maker, quants, "buy nft: " + to_string( quant.symbol.id ) )
+            return;
+
+         } else {// will execute the current offer wholely
+            auto offer_amount  = itr->frozen / itr->price.value;
+            earned.amount     += itr->frozen;
+            quantity.amount   -= offer_amount;
+
+            //send to buyer for nft tokens
+            bought.amount     = offer_amount;
+            vector<nasset> quants = { bought };
+            NTRANSFER( NFT_BANK, itr->maker, quants, "buy nft: " + to_string( quant.symbol.id) )
+
+            idx.erase( itr );
+         }
+      }
+
+      if (earned.amount > 0)
+         TRANSFER( CNYD_BANK, from, earned, "sell nft: " + to_string( quant.symbol.id) )
+
+      if (quantity.amount > 0) { //unsatisified remaining quantity will be placed as limit sell order
+         auto selloffers = selloffer_idx( _self, quantity.symbol.id );
+         selloffers.emplace(_self, [&]( auto& row ){
+            row.id         = selloffers.available_primary_key(); if (row.id == 0) row.id = 1;
+            row.price      = ask_price;
+            row.frozen     = quantity.amount; 
+            row.maker      = from;
+            row.created_at = time_point_sec( current_time_point() );
          });
       }
    }
 
-   void nftone_mart::onsale(const name& owner, const nsymbol& nft_symb, asset& cnyd_price, const uint64_t& start_in_seconds) {
-      require_auth( owner );
+   /**
+    * @brief send CNYD tokens into nftone marketplace to buy or place buy order
+    *
+    * @param from
+    * @param to
+    * @param quant
+    * @param memo: $tokenid:$bid_price       E.g.:  123:102.88
+    */
+   void nftone_mart::onbuytransfer(const name& from, const name& to, const asset& quant, const string& memo) {
+      CHECKC( from != to, err::ACCOUNT_INVALID, "cannot transfer to self" );
+      CHECKC( quant.amount > 0, err::PARAM_ERROR, "non-positive quantity not allowed" )
+      CHECKC( memo != "", err::MEMO_FORMAT_ERROR, "empty memo!" )
 
-      CHECKC( cnyd_price.symbol == CNYD_SYMB, err::PARAM_ERROR, "price symbol is not CNYD" )
-      CHECKC( cnyd_price.quantity.amount > 0, err::PARAM_ERROR, "asset price must be positive" )
+      vector<string_view> params = split(memo, ":");
+      auto param_size = params.size();
+      CHECKC( param_size == 2, err::MEMO_FORMAT_ERROR, "memo format incorrect" )
 
-      auto offers = offers_t::idx_t( _self, _self.value );
-      auto idx = offers.get_index<"ownernfts"_n>();
-      auto sk = (uint128_t) owner.value | nft_symb.raw();
-      auto itr = idx.find(sk);
-      CHECKC( itr != idx.end(), err::RECORD_NOT_FOUND, "nft not found: " + nft_symb.to_string() )
-      
-      idx.modify( itr, same_payer,[&]( auto& row ) {
-         row.price = cnyd_price;
-      });
+      auto quantity           = quant;
+      auto token_id           = stoi( string(params[0]) );
+      auto nstats             = nstats_t::idx_t(NFT_BANK, NFT_BANK.value);
+      auto nstats_itr         = nstats.find(token_id);
+      CHECKC( nstats_itr      != nstats.end(), err::RECORD_NOT_FOUND, "nft token not found: " + to_string(token_id) )
+      auto token_pid          = nstats_itr->supply.symbol.parent_id;
+      auto nsymb              = nsymbol( token_id, token_pid );
+      auto bid_price          = price_s( nsymb, stof( string(params[1] )));
+      auto earned             = asset(0, CNYD); //by seller
+      auto bought             = nasset(0, nsymb); //by buyer
+
+      auto offers = selloffer_idx( _self, token_id );
+      auto idx = offers.get_index<"priceidx"_n>(); //smaller first
+      for (auto itr = idx.begin(); itr != idx.end(); itr++) {
+         auto price_diff = itr->price.value - bid_price.value;
+         if (price_diff > 0) 
+            break;   //offer or ask price > bid price
+         
+         auto offer_cost = itr->price.value * itr->frozen;
+         if (offer_cost >= quantity.amount) {
+            auto offer_buy_amount = quantity.amount / itr->price.value;
+            bought.amount += offer_buy_amount;
+
+            idx.modify(itr, same_payer, [&]( auto& row ) {
+               row.frozen -= offer_buy_amount;
+               row.updated_at = time_point_sec( current_time_point() );
+            });
+            
+            //send to buyer for nft tokens
+            vector<nasset> quants = { bought };
+            NTRANSFER( NFT_BANK, from, quants, "buy nft:" + to_string(token_id) )
+
+            //send to seller for quote tokens
+            earned.amount = quantity.amount;
+            TRANSFER( CNYD_BANK, itr->maker, earned, "sell nft:" + to_string(token_id) )
+            return;
+
+         } else {// will buy the current offer wholely and continue
+            bought.amount += itr->frozen / itr->price.value;
+            quantity.amount -= offer_cost;
+
+            idx.erase( itr );
+
+            earned.amount = itr->frozen;
+            TRANSFER( CNYD_BANK, itr->maker, earned, "sell nft:" + to_string(token_id) )
+         }
+      }
+
+      if (bought.amount > 0) {
+         vector<nasset> quants = { bought };
+         NTRANSFER( NFT_BANK, from, quants, "buy nft: " + to_string(token_id) )
+      }
+
+      if (quantity.amount > 0) { //unsatisified remaining quantity will be placed as limit buy order
+         auto buyoffers = buyoffer_idx( _self, token_id );
+         buyoffers.emplace(_self, [&]( auto& row ){
+            row.id         = buyoffers.available_primary_key(); if (row.id == 0) row.id = 1;
+            row.price      = bid_price;
+            row.frozen     = quantity.amount; 
+            row.maker      = from;
+            row.created_at = current_time_point();
+         });
+      }
    }
 
 } //namespace amax

@@ -15,6 +15,33 @@ using std::vector;
 
 using namespace eosio;
 
+static constexpr name      NFT_BANK    = "amax.ntoken"_n;
+static constexpr name      CNYD_BANK   = "cnyd.token"_n;
+static constexpr symbol    CNYD        = symbol(symbol_code("CNYD"), 4);
+
+enum class err: uint8_t {
+   NONE                 = 0,
+   RECORD_NOT_FOUND     = 1,
+   RECORD_EXISTING      = 2,
+   SYMBOL_MISMATCH      = 4,
+   PARAM_ERROR          = 5,
+   MEMO_FORMAT_ERROR    = 6,
+   PAUSED               = 7,
+   NO_AUTH              = 8,
+   NOT_POSITIVE         = 9,
+   NOT_STARTED          = 10,
+   OVERSIZED            = 11,
+   TIME_EXPIRED         = 12,
+   NOTIFY_UNRELATED     = 13,
+   ACTION_REDUNDANT     = 14,
+   ACCOUNT_INVALID      = 15,
+   FEE_INSUFFICIENT     = 16,
+   FIRST_CREATOR        = 17,
+   STATUS_ERROR         = 18
+
+};
+
+
 /**
  * The `nftone.mart` sample system contract defines the structures and actions that allow users to create, issue, and manage tokens for AMAX based blockchains. It demonstrates one way to implement a smart contract which allows for creation and management of tokens. It is possible for one to create a similar contract which suits different needs. However, it is recommended that if one only needs a token with the below listed actions, that one uses the `nftone.mart` contract instead of developing their own.
  * 
@@ -28,45 +55,26 @@ class [[eosio::contract("nftone.mart")]] nftone_mart : public contract {
    public:
       using contract::contract;
 
+   nftone_mart(eosio::name receiver, eosio::name code, datastream<const char*> ds): contract(receiver, code, ds),
+        _global(get_self(), get_self().value)
+    {
+        _gstate = _global.exists() ? _global.get() : global_t{};
+    }
+
+    ~nftone_mart() { _global.set( _gstate, get_self() ); }
 
    [[eosio::on_notify("amax.ntoken::transfer")]]
-   void ontransfer(const name& from, const name& to, const nasset& quantity, const string& memo);
+   void onselltransfer(const name& from, const name& to, const nasset& quant, const string& memo);
 
-   /**
-    * @brief This action issues to `to` account a `quantity` of tokens.
-    *
-    * @param to - the account to issue tokens to, it must be the same as the issuer,
-    * @param quntity - the amount of tokens to be issued,
-    * @memo - the memo string that accompanies the token issue transaction.
-    */
-   ACTION onsale( const name& to, const nasset& quantity, const string& memo );
+   [[eosio::on_notify("cnyd.token::transfer")]]
+   void onbuytransfer(const name& from, const name& to, const asset& quant, const string& memo);
 
-   ACTION offsale( const nasset& quantity, const string& memo );
-	/**
-	 * @brief Transfers one or more assets.
-	 * 
-    * This action transfers one or more assets by changing scope.
-    * Sender's RAM will be charged to transfer asset.
-    * Transfer will fail if asset is offered for claim or is delegated.
-    *
-    * @param from is account who sends the asset.
-    * @param to is account of receiver.
-    * @param assetids is array of assetid's to transfer.
-    * @param memo is transfers comment.
-    * @return no return value.
-    */
-   ACTION transfer( name from, name to, vector< nasset >& assets, string memo );
-   using transfer_action = action_wrapper< "transfer"_n, &ntoken::transfer >;
-  
-   /**
-    * @brief fragment a NFT into multiple common or unique NFT pieces
-    * 
-    * @return ACTION 
-    */
-   // ACTION fragment();
+   // ACTION offsale( const nasset& quantity, const string& memo );
+   // ACTION withdraw( const name& owner, const nasset& quantity );
 
    private:
-   void add_balance( const name& owner, const nasset& value, const name& ram_payer );
-   void sub_balance( const name& owner, const nasset& value );
+      global_singleton    _global;
+      global_t            _gstate;
+
 };
 } //namespace amax
