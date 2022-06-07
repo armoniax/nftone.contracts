@@ -11,6 +11,13 @@ using namespace std;
    { if (!(exp)) eosio::check(false, string("$$$") + to_string((int)code) + string("$$$ ") + msg); }
 
 
+   void nftone_mart::init() {
+      require_auth( _self );
+
+      _gstate.dev_fee_collector = "amax.daodev"_n;
+      _gstate.dev_fee_rate = 0.001f;
+   }
+
    /**
     * @brief send nasset tokens into nftone marketplace
     *

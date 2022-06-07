@@ -71,6 +71,7 @@ class [[eosio::contract("nftone.mart")]] nftone_mart : public contract {
 
    // ACTION offsale( const nasset& quantity, const string& memo );
    // ACTION withdraw( const name& owner, const nasset& quantity );
+   ACTION init();
 
    private:
       global_singleton    _global;
