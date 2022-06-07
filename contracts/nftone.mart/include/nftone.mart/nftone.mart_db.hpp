@@ -74,13 +74,13 @@ typedef eosio::multi_index
 < "sellorders"_n,  order_t,
     indexed_by<"makeridx"_n,  const_mem_fun<order_t, uint64_t, &order_t::by_maker> >,
     indexed_by<"priceidx"_n,   const_mem_fun<order_t, uint64_t, &order_t::by_small_price_first> >
-> selloffer_idx;
+> sellorder_idx;
 
 //buyer to bid for the token ID
 typedef eosio::multi_index
-< "buyoffers"_n,  order_t,
+< "buyorders"_n,  order_t,
     indexed_by<"makeridx"_n,  const_mem_fun<order_t, uint64_t, &order_t::by_maker> >,
     indexed_by<"priceidx"_n,  const_mem_fun<order_t, uint64_t, &order_t::by_large_price_first> >
-> buyoffer_idx;
+> buyorder_idx;
 
 } //namespace amax

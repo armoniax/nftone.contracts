@@ -37,8 +37,8 @@ using namespace std;
       auto earned             = asset(0, CNYD); //by seller
       auto bought             = nasset(0, quantity.symbol); //by buyer
       
-      auto offers = buyoffer_idx( _self, quant.symbol.id );
-      auto idx = offers.get_index<"priceidx"_n>(); //larger first
+      auto orders = buyorder_idx( _self, quant.symbol.id );
+      auto idx = orders.get_index<"priceidx"_n>(); //larger first
       for (auto itr = idx.begin(); itr != idx.end(); itr++) {
          if (itr->price.value < ask_price.value) 
             break;   //offer or bit price < ask price
@@ -78,9 +78,9 @@ using namespace std;
          TRANSFER( CNYD_BANK, from, earned, "sell nft: " + to_string( quant.symbol.id) )
 
       if (quantity.amount > 0) { //unsatisified remaining quantity will be placed as limit sell order
-         auto selloffers = selloffer_idx( _self, quantity.symbol.id );
-         selloffers.emplace(_self, [&]( auto& row ){
-            row.id         = selloffers.available_primary_key(); if (row.id == 0) row.id = 1;
+         auto sellorders = sellorder_idx( _self, quantity.symbol.id );
+         sellorders.emplace(_self, [&]( auto& row ){
+            row.id         = sellorders.available_primary_key(); if (row.id == 0) row.id = 1;
             row.price      = ask_price;
             row.frozen     = quantity.amount; 
             row.maker      = from;
@@ -117,8 +117,8 @@ using namespace std;
       auto earned             = asset(0, CNYD); //by seller
       auto bought             = nasset(0, nsymb); //by buyer
 
-      auto offers = selloffer_idx( _self, token_id );
-      auto idx = offers.get_index<"priceidx"_n>(); //smaller first
+      auto orders = sellorder_idx( _self, token_id );
+      auto idx = orders.get_index<"priceidx"_n>(); //smaller first
       for (auto itr = idx.begin(); itr != idx.end(); itr++) {
          auto price_diff = itr->price.value - bid_price.value;
          if (price_diff > 0) 
@@ -160,14 +160,45 @@ using namespace std;
       }
 
       if (quantity.amount > 0) { //unsatisified remaining quantity will be placed as limit buy order
-         auto buyoffers = buyoffer_idx( _self, token_id );
-         buyoffers.emplace(_self, [&]( auto& row ){
-            row.id         = buyoffers.available_primary_key(); if (row.id == 0) row.id = 1;
+         auto buyorders = buyorder_idx( _self, token_id );
+         buyorders.emplace(_self, [&]( auto& row ){
+            row.id         = buyorders.available_primary_key(); if (row.id == 0) row.id = 1;
             row.price      = bid_price;
             row.frozen     = quantity.amount; 
             row.maker      = from;
             row.created_at = current_time_point();
          });
+      }
+   }
+
+   void nftone_mart::cancelorder(const name& maker, const uint32_t& token_id, const uint64_t& order_id, const bool& is_sell_order) {
+      require_auth( maker );
+
+      if (is_sell_order) {
+         auto orders = sellorder_idx(_self, token_id);
+         if (order_id != 0) {
+            auto itr = orders.find( order_id );
+            CHECKC( itr != orders.end(), err::RECORD_NOT_FOUND, "order not exit: " + to_string(order_id) + "@" + to_string(token_id) )
+            orders.erase( itr );
+         
+         } else {
+            for (auto itr = orders.begin(); itr != orders.end(); itr++) {
+               orders.erase( itr );
+            }
+         }
+
+      } else {
+         auto orders = buyorder_idx(_self, token_id);
+         if (order_id != 0) {
+            auto itr = orders.find( order_id );
+            CHECKC( itr != orders.end(), err::RECORD_NOT_FOUND, "order not exit: " + to_string(order_id) + "@" + to_string(token_id) )
+            orders.erase( itr );
+         
+         } else {
+            for (auto itr = orders.begin(); itr != orders.end(); itr++) {
+               orders.erase( itr );
+            }
+         }
       }
    }
 
