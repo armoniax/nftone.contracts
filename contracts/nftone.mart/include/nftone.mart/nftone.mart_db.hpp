@@ -62,9 +62,9 @@ TBL order_t {
 
     uint64_t primary_key()const { return id; }
 
-    // uint128_t by_maker_nft()const { (uint128_t) maker.value | quantity.symbol.raw(); }
-    uint64_t  by_small_price_first()const { return price.value; }
+    uint64_t by_small_price_first()const { return price.value; }
     uint64_t by_large_price_first()const { return( std::numeric_limits<uint64_t>::max() - price.value ); }
+    uint64_t by_maker()const { return maker.value; }
 
     EOSLIB_SERIALIZE( order_t, (id)(price)(frozen)(maker)(created_at)(updated_at)(paused) )
  
@@ -72,14 +72,14 @@ TBL order_t {
 
 typedef eosio::multi_index
 < "sellorders"_n,  order_t,
-    // indexed_by<"makernfts"_n,  const_mem_fun<order_t, uint128_t, &order_t::by_maker_nft> >
+    indexed_by<"makeridx"_n,  const_mem_fun<order_t, uint64_t, &order_t::by_maker> >,
     indexed_by<"priceidx"_n,   const_mem_fun<order_t, uint64_t, &order_t::by_small_price_first> >
 > selloffer_idx;
 
 //buyer to bid for the token ID
 typedef eosio::multi_index
 < "buyoffers"_n,  order_t,
-    // indexed_by<"ownernfts"_n,  const_mem_fun<order_t, uint128_t, &order_t::by_maker_nft> >
+    indexed_by<"makeridx"_n,  const_mem_fun<order_t, uint64_t, &order_t::by_maker> >,
     indexed_by<"priceidx"_n,  const_mem_fun<order_t, uint64_t, &order_t::by_large_price_first> >
 > buyoffer_idx;
 
