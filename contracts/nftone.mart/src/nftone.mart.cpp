@@ -190,6 +190,8 @@ using namespace std;
    }
 
    ACTION nftone_mart::takebuyorder( const name& issuer, const uint32_t& token_id, const uint64_t& buy_order_id ) {
+      require_auth( issuer );
+
       auto buyorders             = buyorder_idx( _self, token_id );
       auto buy_itr               = buyorders.find(buy_order_id);
       CHECKC( buy_itr != buyorders.end(), err::RECORD_NOT_FOUND, "buy order not found: " + to_string(buy_order_id) )
@@ -201,6 +203,8 @@ using namespace std;
       auto sold                  = nasset(0, buyorder.price.symbol); //by seller
 
       for (auto sell_itr = sell_idx.begin(); sell_itr != sell_idx.end(); sell_itr++) {
+         CHECKC( sell_itr->maker == issuer, err::NO_AUTH, "issuer not a seller: " + sell_itr->maker.to_string() )
+
          if (sold.amount + sell_itr->frozen > buy_amount) {
             sold.amount          = buy_amount;
             earned.amount        = buyorder.frozen;
