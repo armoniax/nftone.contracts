@@ -189,7 +189,7 @@ using namespace std;
       }
    }
 
-   ACTION nftone_mart::targetsell( const name& issuer, const uint32_t& token_id, const uint64_t& buy_order_id ) {
+   ACTION nftone_mart::takebuyorder( const name& issuer, const uint32_t& token_id, const uint64_t& buy_order_id ) {
       auto buyorders             = buyorder_idx( _self, token_id );
       auto buy_itr               = buyorders.find(buy_order_id);
       CHECKC( buy_itr != buyorders.end(), err::RECORD_NOT_FOUND, "buy order not found: " + to_string(buy_order_id) )
