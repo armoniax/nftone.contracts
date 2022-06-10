@@ -189,8 +189,56 @@ using namespace std;
       }
    }
 
+   ACTION nftone_mart::targetsell( const name& issuer, const uint32_t& token_id, const uint64_t& buy_order_id ) {
+      auto buyorders             = buyorder_idx( _self, token_id );
+      auto buy_itr               = buyorders.find(buy_order_id);
+      CHECKC( buy_itr != buyorders.end(), err::RECORD_NOT_FOUND, "buy order not found: " + to_string(buy_order_id) )
+      auto buyorder              = *buy_itr;
+      auto buy_amount            = buyorder.frozen / buyorder.price.value;
+      auto earned                = asset(0, CNYD); //to seller
+      auto sellorders            = sellorder_idx( _self, token_id );
+      auto sell_idx              = sellorders.get_index<"makeridx"_n>();
+      auto sold                  = nasset(0, buyorder.price.symbol); //by seller
+
+      for (auto sell_itr = sell_idx.begin(); sell_itr != sell_idx.end(); sell_itr++) {
+         if (sold.amount + sell_itr->frozen > buy_amount) {
+            sold.amount          = buy_amount;
+            earned.amount        = buyorder.frozen;
+            buyorder.frozen      = 0;
+            sell_idx.modify(sell_itr, same_payer, [&]( auto& row ) {
+               row.frozen        -= buy_amount - sold.amount;
+               row.updated_at    = current_time_point();
+            });
+            break;
+
+         } else {
+            sold.amount          += sell_itr->frozen;
+            earned.amount        += sell_itr->frozen * buyorder.price.value;
+            buyorder.frozen      -= sell_itr->frozen * buyorder.price.value;
+
+            auto sell_itr_del    = sell_itr;
+            sell_idx.erase( sell_itr_del );
+         }
+      }
+
+      if (buyorder.frozen == 0)
+         buyorders.erase( buy_itr );
+
+      if (sold.amount > 0) {
+         //send to buyer for nft tokens
+         vector<nasset> quants = { sold };
+         TRANSFER_N( NFT_BANK, buyorder.maker, quants, "buy nft: " + to_string(token_id) )
+      }
+
+      //send to seller for quote tokens
+      TRANSFER_X( CNYD_BANK, issuer, earned, "sell nft:" + to_string(sold.symbol.id) )
+   }
+
+/////////////////////////////// private funcs below /////////////////////////////////////////////
+
+
    void nftone_mart::process_single_buy_order( order_t& order, asset& quantity, nasset& bought ) {
-      auto earned                = asset(0, CNYD); //by seller
+      auto earned                = asset(0, CNYD); //to seller
       auto offer_cost            = order.frozen * order.price.value;
       if (offer_cost >= quantity.amount) {
          bought.amount           += quantity.amount / order.price.value;
