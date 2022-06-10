@@ -98,7 +98,7 @@ TBL order_t {
 
     uint64_t by_small_price_first()const { return price.value; }
     uint64_t by_large_price_first()const { return( std::numeric_limits<uint64_t>::max() - price.value ); }
-    uint64_t by_maker()const { return maker.value; }
+    uint128_t by_maker_orderid()const { return (uint128_t) maker.value << 64 | id; }
 
     EOSLIB_SERIALIZE( order_t, (id)(price)(frozen)(maker)(created_at)(updated_at) )
  
@@ -127,14 +127,14 @@ TBL order_t {
 
 typedef eosio::multi_index
 < "sellorders"_n,  order_t,
-    indexed_by<"makeridx"_n,  const_mem_fun<order_t, uint64_t, &order_t::by_maker> >,
-    indexed_by<"priceidx"_n,   const_mem_fun<order_t, uint64_t, &order_t::by_small_price_first> >
+    indexed_by<"makerordidx"_n,     const_mem_fun<order_t, uint128_t, &order_t::by_maker_orderid> >,
+    indexed_by<"priceidx"_n,        const_mem_fun<order_t, uint64_t, &order_t::by_small_price_first> >
 > sellorder_idx;
 
 //buyer to bid for the token ID
 typedef eosio::multi_index
 < "buyorders"_n,  order_t,
-    indexed_by<"makeridx"_n,  const_mem_fun<order_t, uint64_t, &order_t::by_maker> >,
+    indexed_by<"makerordidx"_n,  const_mem_fun<order_t, uint128_t, &order_t::by_maker_orderid> >,
     indexed_by<"priceidx"_n,  const_mem_fun<order_t, uint64_t, &order_t::by_large_price_first> >
 > buyorder_idx;
 

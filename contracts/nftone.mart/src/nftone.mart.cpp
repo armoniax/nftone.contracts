@@ -199,10 +199,12 @@ using namespace std;
       auto buy_amount            = buyorder.frozen / buyorder.price.value;
       auto earned                = asset(0, CNYD); //to seller
       auto sellorders            = sellorder_idx( _self, token_id );
-      auto sell_idx              = sellorders.get_index<"makeridx"_n>();
+      auto sell_idx              = sellorders.get_index<"makerordidx"_n>();
       auto sold                  = nasset(0, buyorder.price.symbol); //by seller
 
-      for (auto sell_itr = sell_idx.begin(); sell_itr != sell_idx.end(); sell_itr++) {
+      auto sell_itr_lower        = sell_idx.lower_bound( (uint128_t) issuer.value << 64 );
+      auto sell_itr_upper        = sell_idx.upper_bound( (uint128_t) issuer.value << 64 | std::numeric_limits<uint64_t>::max() );
+      for (auto sell_itr = sell_itr_lower; sell_itr != sell_itr_upper && sell_itr != sell_idx.end(); sell_itr++) {
          CHECKC( sell_itr->maker == issuer, err::NO_AUTH, "issuer not a seller: " + sell_itr->maker.to_string() )
 
          if (sold.amount + sell_itr->frozen > buy_amount) {
