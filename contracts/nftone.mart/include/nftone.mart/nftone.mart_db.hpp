@@ -28,26 +28,61 @@ using namespace eosio;
 #define NTBL(name) struct [[eosio::table(name), eosio::contract("nftone.mart")]]
 
 NTBL("global") global_t {
+    name admin;
     name dev_fee_collector;
-    float dev_fee_rate;
+    float dev_fee_rate      = 0.0;
+    float creator_fee_rate  = 0.0;
+    float ipowner_fee_rate  = 0.0;
+    float notary_fee_rate   = 0.0;
+    uint32_t order_expiry_hours = 72;
 
-    EOSLIB_SERIALIZE( global_t, (dev_fee_collector)(dev_fee_rate) )
+    EOSLIB_SERIALIZE( global_t, (admin)(dev_fee_collector)(dev_fee_rate)(creator_fee_rate)(ipowner_fee_rate)(notary_fee_rate)(order_expiry_hours) )
+
+/*
+    // template<typename DataStream>
+    // friend DataStream& operator << ( DataStream& ds, const global_t& t ) {
+    //     return ds   << t.admin 
+    //                 << t.dev_fee_collector
+    //                 << t.dev_fee_rate
+    //                 << t.creator_fee_rate
+    //                 << t.ipowner_fee_rate
+    //                 << t.notary_fee_rate;
+    // }
+
+    // template<typename DataStream>
+    // friend DataStream& operator >> ( DataStream& ds, global_t& t ) {
+    //     return ds;
+    // }
+ */
 };
 typedef eosio::singleton< "global"_n, global_t > global_singleton;
 
 
 // price for NFT tokens
 struct price_s {
-    nsymbol symbol;
     float value;    //price value
+    nsymbol symbol;
 
     price_s() {}
-    price_s(const nsymbol& symb, const float& v): symbol(symb), value(v) {}
+    price_s(const float& v, const nsymbol& symb): value(v), symbol(symb) {}
 
-    EOSLIB_SERIALIZE( price_s, (symbol)(value) )
+    friend bool operator > ( const price_s& a, const price_s& b ) {
+        return a.value > b.value;
+    }
+
+    friend bool operator <= ( const price_s& a, const price_s& b ) {
+        return a.value <= b.value;
+    }
+
+    friend bool operator < ( const price_s& a, const price_s& b ) {
+        return a.value < b.value;
+    }
+
+    EOSLIB_SERIALIZE( price_s, (value)(symbol) )
 };
 
-//scope: nasset.symbol.id
+
+//Scope: nasset.symbol.id
 TBL order_t {
     uint64_t        id;                 //PK
     price_s         price;
@@ -55,7 +90,6 @@ TBL order_t {
     name            maker;
     time_point_sec  created_at;
     time_point_sec  updated_at;
-    bool            paused = false;     //if true, it can no longer be transferred
 
     order_t() {}
     order_t(const uint64_t& i): id(i) {}
@@ -66,9 +100,30 @@ TBL order_t {
     uint64_t by_large_price_first()const { return( std::numeric_limits<uint64_t>::max() - price.value ); }
     uint64_t by_maker()const { return maker.value; }
 
-    EOSLIB_SERIALIZE( order_t, (id)(price)(frozen)(maker)(created_at)(updated_at)(paused) )
+    EOSLIB_SERIALIZE( order_t, (id)(price)(frozen)(maker)(created_at)(updated_at) )
  
 };
+
+/**
+//Scope: owner
+//if not set, a default rate of 1% will be charged to sellers
+//dev fee rate is determined by contract dev only
+// TBL fee_rate_t {
+//     nsymbol     symbol;
+//     float       creator_fee_rate;
+//     float       ipowner_fee_rate;
+//     float       notary_fee_rate;     
+
+//     fee_rate_t() {}
+//     fee_rate_t(const nsymbol& symb): symbol(symb) {}
+//     fee_rate_t(const nsymbol& symb, const float& cfr, const float& ifr, const float& nfr): symbol(symb), 
+//             creator_fee_rate(cfr), ipowner_fee_rate(ifr), notary_fee_rate(nfr) {}
+
+//     uint64_t primary_key()const { return symbol.id; }
+
+//     EOSLIB_SERIALIZE( fee_rate_t, (symbol)(creator_fee_rate)(ipowner_fee_rate)(notary_fee_rate) )  
+// };
+*/
 
 typedef eosio::multi_index
 < "sellorders"_n,  order_t,

@@ -7,7 +7,7 @@
 
 namespace amax {
 
-    #define XTRANSFER(bank, to, quantity, memo) \
+    #define TRANSFER_X(bank, to, quantity, memo) \
     {	xtoken::transfer_action act{ bank, { {_self, active_perm} } };\
 			act.send( _self, to, quantity , memo );} 
 

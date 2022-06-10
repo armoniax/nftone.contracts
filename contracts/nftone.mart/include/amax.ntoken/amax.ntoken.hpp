@@ -17,7 +17,7 @@ using namespace eosio;
 
 constexpr name active_perm = "active"_n;
 
-#define NTRANSFER(bank, to, quants, memo) \
+#define TRANSFER_N(bank, to, quants, memo) \
     {	ntoken::transfer_action act{ bank, { {_self, active_perm} } };\
 			act.send( _self, to, quants , memo );}
 

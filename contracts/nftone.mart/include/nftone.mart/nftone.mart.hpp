@@ -72,9 +72,13 @@ class [[eosio::contract("nftone.mart")]] nftone_mart : public contract {
    ACTION init();
    ACTION cancelorder(const name& maker, const uint32_t& token_id, const uint64_t& order_id, const bool& is_sell_order);
 
+   
    private:
       global_singleton    _global;
       global_t            _gstate;
+
+   private:
+      void process_single_buy_order( order_t& order, asset& quantity, nasset& bought );
 
 };
 } //namespace amax
