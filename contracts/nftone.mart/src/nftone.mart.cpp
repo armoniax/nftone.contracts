@@ -99,8 +99,8 @@ using namespace std;
     * @param from
     * @param to
     * @param quant
-    * @param memo: t:$tokenid:$bid_price | o:$token_id:$order_id:$bid_price
-    *       E.g.:  t:123:102.88          | o:123:1:102.88
+    * @param memo: t:$token_id:$bid_price | o:$token_id:$order_id:$bid_price
+    *       E.g.:  t:123:102.88           | o:123:1:102.88
     */
    void nftone_mart::onbuytransfer(const name& from, const name& to, const asset& quant, const string& memo) {
       CHECKC( from != to, err::ACCOUNT_INVALID, "cannot transfer to self" );
