@@ -46,14 +46,15 @@ NTBL("global") global_t {
     //                 << t.dev_fee_rate
     //                 << t.creator_fee_rate
     //                 << t.ipowner_fee_rate
-    //                 << t.notary_fee_rate;
+    //                 << t.notary_fee_rate
+    //                 << t.order_expiry_hours ;
     // }
 
     // template<typename DataStream>
     // friend DataStream& operator >> ( DataStream& ds, global_t& t ) {
     //     return ds;
     // }
- */
+*/
 };
 typedef eosio::singleton< "global"_n, global_t > global_singleton;
 
