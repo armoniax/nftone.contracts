@@ -16,7 +16,7 @@ using namespace std;
 
       _gstate.admin = "amax.daodev"_n;
       _gstate.dev_fee_collector = "amax.daodev"_n;
-      _gstate.dev_fee_rate = 0.001f;
+      _gstate.dev_fee_rate = 0.00100000000000000;
 
       //reset with default
       // _gstate = global_t{};
@@ -189,12 +189,18 @@ using namespace std;
       }
    }
 
+   //buyer to take a specific sell order
+   ACTION nftone_mart::takeselorder( const name& issuer, const uint32_t& token_id, const uint64_t& sell_order_id ) {
+      require_auth( issuer );
+   }
+
+   //seller to take a specific buy order
    ACTION nftone_mart::takebuyorder( const name& issuer, const uint32_t& token_id, const uint64_t& buy_order_id ) {
       require_auth( issuer );
 
       auto buyorders             = buyorder_idx( _self, token_id );
       auto buy_itr               = buyorders.find(buy_order_id);
-      CHECKC( buy_itr != buyorders.end(), err::RECORD_NOT_FOUND, "buy order not found: " + to_string(buy_order_id) )
+      CHECKC( buy_itr            != buyorders.end(), err::RECORD_NOT_FOUND, "buy order not found: " + to_string(buy_order_id) )
       auto buyorder              = *buy_itr;
       auto buy_amount            = buyorder.frozen / buyorder.price.value;
       auto earned                = asset(0, CNYD); //to seller
