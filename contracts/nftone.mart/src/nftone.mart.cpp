@@ -16,7 +16,7 @@ using namespace std;
 
       _gstate.admin = "amax.daodev"_n;
       _gstate.dev_fee_collector = "amax.daodev"_n;
-      _gstate.dev_fee_rate = 0.00100000000000000;
+      _gstate.dev_fee_rate = 0.001;
 
       //reset with default
       // _gstate = global_t{};
@@ -144,6 +144,17 @@ using namespace std;
                   row.updated_at = current_time_point();
                });
             }
+         } else {
+            auto buyerbids          = buyer_bid_t::idx_t(_self, _self.value);
+            auto id                 = buyerbids.available_primary_key();
+            buyerbids.emplace(_self, [&]( auto& row ){
+               row.id               = id;
+               row.sell_order_id    = order_id;
+               row.price            = bid_price;
+               row.frozen           = quant.amount;
+               row.created_at       = current_time_point();
+            });
+
          }
       } else {
          bid_price.value         = stof( string( params[2] ));
