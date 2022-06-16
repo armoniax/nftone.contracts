@@ -28,7 +28,7 @@ using namespace std;
     * @param from
     * @param to
     * @param quantity
-    * @param memo: $ask_price       E.g.:  102.88    (its currency unit is CNYD)
+    * @param memo: $ask_price       E.g.:  10288/100    (its currency unit is CNYD)
     *               
     */
    void nftone_mart::onselltransfer(const name& from, const name& to, const nasset& quant, const string& memo) {
@@ -36,8 +36,11 @@ using namespace std;
       CHECKC( quant.amount > 0, err::PARAM_ERROR, "non-positive quantity not allowed" )
       CHECKC( memo != "", err::MEMO_FORMAT_ERROR, "empty memo!" )
 
+      float price             = 0.0f;
+      compute_memo_price( memo, price );
+      
       auto quantity           = quant;
-      auto ask_price          = price_s(stof(memo), quant.symbol);
+      auto ask_price          = price_s(price, quant.symbol);
       auto earned             = asset(0, CNYD); //by seller
       auto bought             = nasset(0, quantity.symbol); //by buyer
       
@@ -100,7 +103,7 @@ using namespace std;
     * @param to
     * @param quant
     * @param memo: t:$token_id:$bid_price | o:$token_id:$order_id:$bid_price
-    *       E.g.:  t:123:102.88           | o:123:1:102.88
+    *       E.g.:  t:123:10288/100           | o:123:1:10288/100
     */
    void nftone_mart::onbuytransfer(const name& from, const name& to, const asset& quant, const string& memo) {
       CHECKC( from != to, err::ACCOUNT_INVALID, "cannot transfer to self" );
@@ -126,8 +129,11 @@ using namespace std;
       auto bid_price             = price_s(0, nsymb); 
 
       if (is_order_buy) {
+         float price             = 0.0f;
+         compute_memo_price(  params[3], price );
+
          auto order_id           = stoi( string( params[2] ));
-         bid_price.value         = stof( string( params[3] ));
+         bid_price.value         = price;
          auto itr                = orders.find( order_id );
          CHECKC( itr != orders.end(), err::RECORD_NOT_FOUND, "order not found: " + to_string(order_id) + "@" + to_string(token_id) )
 
@@ -157,8 +163,11 @@ using namespace std;
 
          }
       } else {
-         bid_price.value         = stof( string( params[2] ));
-         auto idx                = orders.get_index<"priceidx"_n>(); //smaller first
+         float price                = 0.0f;
+         compute_memo_price(  params[2], price );
+
+         bid_price.value            = price;
+         auto idx                   = orders.get_index<"priceidx"_n>(); //smaller first
          for (auto itr = idx.begin(); itr != idx.end(); itr++) {
             auto order = *itr;
             if (order.price > bid_price)
@@ -259,7 +268,6 @@ using namespace std;
 
 /////////////////////////////// private funcs below /////////////////////////////////////////////
 
-
    void nftone_mart::process_single_buy_order( order_t& order, asset& quantity, nasset& bought ) {
       auto earned                = asset(0, CNYD); //to seller
       auto offer_cost            = order.frozen * order.price.value;
@@ -322,6 +330,15 @@ using namespace std;
                orders.erase( itr );
             }
          }
+      }
+   }
+
+   void nftone_mart::compute_memo_price(const string& memo, float& price) {
+      vector<string_view> params = split(memo, "//");
+      switch (params.size) {
+         case 1:  price = (float) stoi( params[0] ); break;
+         case 2:  price = (float) stoi( params[0] ) / (float) stoi( params[1] ); break;
+         default: CHECKC( false, err::MEMO_FORMAT_ERROR, "price format incorrect" )
       }
    }
 

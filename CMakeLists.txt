@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(amax_contracts)
+project(nftone_contracts)
 
 set(VERSION_MAJOR 0)
-set(VERSION_MINOR 1)
+set(VERSION_MINOR 0)
 set(VERSION_PATCH 1)
 # set(VERSION_SUFFIX alpha)
 
@@ -17,7 +17,7 @@ include(ExternalProject)
 
 find_package(amax.cdt)
 
-message(STATUS "Building amax.contracts v${VERSION_FULL}")
+message(STATUS "Building nftone.contracts v${VERSION_FULL}")
 
 set(AMAX_CDT_VERSION_MIN "1.7.0")
 set(AMAX_CDT_VERSION_SOFT_MAX "1.7.99")
