@@ -129,11 +129,9 @@ using namespace std;
       auto bid_price             = price_s(0, nsymb); 
 
       if (is_order_buy) {
-         float price             = 0.0f;
-         compute_memo_price(  params[3], price );
+         compute_memo_price( params[3], bid_price.value );
 
          auto order_id           = stoi( string( params[2] ));
-         bid_price.value         = price;
          auto itr                = orders.find( order_id );
          CHECKC( itr != orders.end(), err::RECORD_NOT_FOUND, "order not found: " + to_string(order_id) + "@" + to_string(token_id) )
 
@@ -163,10 +161,8 @@ using namespace std;
 
          }
       } else {
-         float price                = 0.0f;
-         compute_memo_price(  params[2], price );
+         compute_memo_price( params[2], bid_price.value );
 
-         bid_price.value            = price;
          auto idx                   = orders.get_index<"priceidx"_n>(); //smaller first
          for (auto itr = idx.begin(); itr != idx.end(); itr++) {
             auto order = *itr;
