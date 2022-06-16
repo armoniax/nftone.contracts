@@ -111,6 +111,7 @@ TBL buyer_bid_t {
     uint64_t        sell_order_id;
     price_s         price;
     int64_t         frozen; //CNYD
+    name            buyer;
     time_point_sec  created_at;
 
     buyer_bid_t() {}
@@ -120,7 +121,7 @@ TBL buyer_bid_t {
 
     uint64_t by_large_price_first()const { return( std::numeric_limits<uint64_t>::max() - price.value ); }
 
-    EOSLIB_SERIALIZE( buyer_bid_t, (id)(sell_order_id)(price)(frozen)(created_at) )
+    EOSLIB_SERIALIZE( buyer_bid_t, (id)(sell_order_id)(price)(frozen)(buyer)(created_at) )
 
     typedef eosio::multi_index
     < "buyerbids"_n,  buyer_bid_t,

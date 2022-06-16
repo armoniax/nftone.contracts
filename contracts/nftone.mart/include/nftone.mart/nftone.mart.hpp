@@ -71,8 +71,8 @@ class [[eosio::contract("nftone.mart")]] nftone_mart : public contract {
 
    ACTION init();
    ACTION cancelorder(const name& maker, const uint32_t& token_id, const uint64_t& order_id, const bool& is_sell_order);
-   ACTION takebuyorder( const name& issuer, const uint32_t& token_id, const uint64_t& buy_order_id );
-   ACTION takeselorder( const name& issuer, const uint32_t& token_id, const uint64_t& sell_order_id );
+   ACTION takebuybid( const name& issuer, const uint32_t& token_id, const uint64_t& buyer_bid_id );
+   // ACTION takeselorder( const name& issuer, const uint32_t& token_id, const uint64_t& sell_order_id );
    
    private:
       global_singleton    _global;

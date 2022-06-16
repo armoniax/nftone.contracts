@@ -199,7 +199,10 @@ using namespace std;
          TRANSFER_N( NFT_BANK, from, quants, "buy nft: " + to_string(token_id) )
       }
 
-      if (quantity.amount > 0) { //unsatisified remaining quantity will be placed as limit buy order
+      if (quantity.amount > 0) { 
+         TRANSFER_X( CNYD_BANK, from, quantity, "nft buy left" )
+
+      /* //unsatisified remaining quantity will be placed as limit buy order
          auto buyorders = buyorder_idx( _self, token_id );
          buyorders.emplace(_self, [&]( auto& row ){
             row.id         = buyorders.available_primary_key(); if (row.id == 0) row.id = 1;
@@ -208,13 +211,16 @@ using namespace std;
             row.maker      = from;
             row.created_at = current_time_point();
          });
+      */
       }
    }
 
    //buyer to take a specific sell order
-   ACTION nftone_mart::takeselorder( const name& issuer, const uint32_t& token_id, const uint64_t& sell_order_id ) {
-      require_auth( issuer );
-   }
+   // ACTION nftone_mart::takeselorder( const name& issuer, const uint32_t& token_id, const uint64_t& sell_order_id ) {
+   //    require_auth( issuer );
+
+
+   // }
 
    //seller to take a specific buy order
    /** disabled temporarily to cater for otc mode impl first
@@ -269,10 +275,44 @@ using namespace std;
       TRANSFER_X( CNYD_BANK, issuer, earned, "sell nft:" + to_string(sold.symbol.id) )
    } **/
 
-   ACTION nftone_mart::takebuyorder( const name& issuer, const uint32_t& token_id, const uint64_t& buyer_bid_id ) {
-      require_auth( issuer );
+   ACTION nftone_mart::takebuybid( const name& seller, const uint32_t& token_id, const uint64_t& buyer_bid_id ) {
+      require_auth( seller );
 
-     
+      auto bids                     = buyer_bid_t::idx_t(_self, _self.value);
+      auto bid_itr                  = bids.find( buyer_bid_id );
+      CHECKC( bid_itr != bids.end(), err::RECORD_NOT_FOUND, "buyer bid not found: " + to_string( buyer_bid_id ))
+      auto sell_order_id = bid_itr->sell_order_id;
+
+      auto sellorders               = sellorder_idx( _self, token_id );
+      auto sell_itr                 = sellorders.find( sell_order_id );
+      CHECKC( sell_itr != sellorders.end(), err::RECORD_NOT_FOUND, "sell order not found: " + to_string( sell_order_id ))
+      auto bid_amount               = bid_itr->frozen / bid_itr->price.value;
+      CHECKC( sell_itr->frozen >= bid_amount, err::OVERSIZED, "big amount oversized" )
+
+      auto earned                   = asset( bid_itr->frozen, CNYD );
+      TRANSFER_X( CNYD_BANK, sell_itr->maker, earned, "take nft bid" )
+
+      auto nstats                   = nstats_t::idx_t(NFT_BANK, NFT_BANK.value);
+      auto nstats_itr               = nstats.find(token_id);
+      CHECKC( nstats_itr            != nstats.end(), err::RECORD_NOT_FOUND, "nft token not found: " + to_string(token_id) )
+      auto token_pid                = nstats_itr->supply.symbol.parent_id;
+      auto nsymb                    = nsymbol( token_id, token_pid );
+      auto bought                   = nasset(0, nsymb); //by buyer
+      bought.amount                 = bid_amount;
+      vector<nasset> quants         = { bought };
+      TRANSFER_N( NFT_BANK, bid_itr->buyer, quants, "buy nft: " + to_string(token_id) )
+
+      if( sell_itr->frozen > bid_amount ) {
+         sellorders.modify( sell_itr, same_payer, [&]( auto& row ){
+            row.frozen              -= bid_amount;
+            row.updated_at          = current_time_point();
+         });
+       
+      } else {
+         sellorders.erase( sell_itr );
+      }
+
+      bids.erase( bid_itr );
    }
 
 
