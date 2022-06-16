@@ -111,7 +111,7 @@ using namespace std;
     */
    void nftone_mart::onbuytransfer(const name& from, const name& to, const asset& quant, const string& memo) {
       if (from == get_self() || to != get_self()) return;
-      
+
       CHECKC( from != to, err::ACCOUNT_INVALID, "cannot transfer to self" );
       CHECKC( quant.amount > 0, err::PARAM_ERROR, "non-positive quantity not allowed" )
       CHECKC( memo != "", err::MEMO_FORMAT_ERROR, "empty memo!" )
@@ -276,7 +276,7 @@ using namespace std;
    }
 
 
-/////////////////////////////// private funcs below /////////////////////////////////////////////
+   /////////////////////////////// private funcs below /////////////////////////////////////////////
 
    void nftone_mart::process_single_buy_order( order_t& order, asset& quantity, nasset& bought ) {
       auto earned                = asset(0, CNYD); //to seller
