@@ -31,14 +31,18 @@ using namespace std;
     * @param memo: $ask_price       E.g.:  10288/100    (its currency unit is CNYD)
     *               
     */
-   void nftone_mart::onselltransfer(const name& from, const name& to, const nasset& quant, const string& memo) {
+   void nftone_mart::onselltransfer(const name& from, const name& to, const vector<nasset>& quants, const string& memo) {
       CHECKC( from != to, err::ACCOUNT_INVALID, "cannot transfer to self" );
-      CHECKC( quant.amount > 0, err::PARAM_ERROR, "non-positive quantity not allowed" )
-      CHECKC( memo != "", err::MEMO_FORMAT_ERROR, "empty memo!" )
 
+      if (from == get_self() || to != get_self()) return;
+      
+      CHECKC( memo != "", err::MEMO_FORMAT_ERROR, "empty memo!" )
+      CHECKC( quants.size() == 1, err::OVERSIZED, "only one nft allowed to sell to nft at a timepoint" )
       float price             = 0.0f;
       compute_memo_price( memo, price );
-      
+
+      auto quant              = quants[0];
+      CHECKC( quant.amount > 0, err::PARAM_ERROR, "non-positive quantity not allowed" )
       auto quantity           = quant;
       auto ask_price          = price_s(price, quant.symbol);
       auto earned             = asset(0, CNYD); //by seller
@@ -106,6 +110,8 @@ using namespace std;
     *       E.g.:  t:123:10288/100           | o:123:1:10288/100
     */
    void nftone_mart::onbuytransfer(const name& from, const name& to, const asset& quant, const string& memo) {
+      if (from == get_self() || to != get_self()) return;
+      
       CHECKC( from != to, err::ACCOUNT_INVALID, "cannot transfer to self" );
       CHECKC( quant.amount > 0, err::PARAM_ERROR, "non-positive quantity not allowed" )
       CHECKC( memo != "", err::MEMO_FORMAT_ERROR, "empty memo!" )
@@ -211,6 +217,7 @@ using namespace std;
    }
 
    //seller to take a specific buy order
+   /** disabled temporarily to cater for otc mode impl first
    ACTION nftone_mart::takebuyorder( const name& issuer, const uint32_t& token_id, const uint64_t& buy_order_id ) {
       require_auth( issuer );
 
@@ -260,7 +267,14 @@ using namespace std;
 
       //send to seller for quote tokens
       TRANSFER_X( CNYD_BANK, issuer, earned, "sell nft:" + to_string(sold.symbol.id) )
+   } **/
+
+   ACTION nftone_mart::takebuyorder( const name& issuer, const uint32_t& token_id, const uint64_t& buyer_bid_id ) {
+      require_auth( issuer );
+
+     
    }
+
 
 /////////////////////////////// private funcs below /////////////////////////////////////////////
 
