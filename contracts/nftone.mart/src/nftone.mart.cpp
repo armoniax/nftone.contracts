@@ -129,7 +129,7 @@ using namespace std;
       auto bid_price             = price_s(0, nsymb); 
 
       if (is_order_buy) {
-         compute_memo_price( params[3], bid_price.value );
+         compute_memo_price( string(params[3]), bid_price.value );
 
          auto order_id           = stoi( string( params[2] ));
          auto itr                = orders.find( order_id );
@@ -161,7 +161,7 @@ using namespace std;
 
          }
       } else {
-         compute_memo_price( params[2], bid_price.value );
+         compute_memo_price( string(params[2]), bid_price.value );
 
          auto idx                   = orders.get_index<"priceidx"_n>(); //smaller first
          for (auto itr = idx.begin(); itr != idx.end(); itr++) {
@@ -331,9 +331,9 @@ using namespace std;
 
    void nftone_mart::compute_memo_price(const string& memo, float& price) {
       vector<string_view> params = split(memo, "//");
-      switch (params.size) {
-         case 1:  price = (float) stoi( params[0] ); break;
-         case 2:  price = (float) stoi( params[0] ) / (float) stoi( params[1] ); break;
+      switch (params.size()) {
+         case 1:  price = (float) stoi( string(params[0]) ); break;
+         case 2:  price = (float) stoi( string(params[0]) ) / (float) stoi( string(params[1]) ); break;
          default: CHECKC( false, err::MEMO_FORMAT_ERROR, "price format incorrect" )
       }
    }
