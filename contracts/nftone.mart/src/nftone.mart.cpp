@@ -291,8 +291,8 @@ using namespace std;
          TRANSFER_X( CNYD_BANK, order.maker, earned, "sell nft:" + to_string(bought.symbol.id) )
 
       } else {// will buy the current offer wholely and continue
-         bought.amount           += order.frozen / order.price.value;
-         earned.amount           = order.frozen;
+         bought.amount           += order.frozen;
+         earned.amount           = offer_cost;
          order.frozen            = 0;
          quantity.amount         -= offer_cost;
 
