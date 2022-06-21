@@ -143,6 +143,8 @@ using namespace std;
 
          auto order = *itr;
          if (order.price <= bid_price) {
+            CHECKC( memo != "", err::MEMO_FORMAT_ERROR, "order.price <= bid_price!" )
+
             process_single_buy_order( order, quantity, bought );
 
             if (order.frozen == 0) {
@@ -157,14 +159,16 @@ using namespace std;
          } else {
             auto buyerbids          = buyer_bid_t::idx_t(_self, _self.value);
             auto id                 = buyerbids.available_primary_key();
+            auto frozen             = int(quant.amount / bid_price.value / 10000);
             buyerbids.emplace(_self, [&]( auto& row ){
                row.id               = id;
                row.sell_order_id    = order_id;
                row.price            = bid_price;
-               row.frozen           = quant.amount;
+               row.frozen           = frozen;
+               row.buyer            = from;
                row.created_at       = current_time_point();
             });
-
+            quantity.amount         -= frozen * bid_price.value * 10000;
          }
       } else {
          compute_memo_price( string(params[2]), bid_price.value );
@@ -320,12 +324,12 @@ using namespace std;
 
    void nftone_mart::process_single_buy_order( order_t& order, asset& quantity, nasset& bought ) {
       auto earned                = asset(0, CNYD); //to seller
-      auto offer_cost            = order.frozen * order.price.value;
+      auto offer_cost            = order.frozen * order.price.value * 10000;
       if (offer_cost >= quantity.amount) {
-         bought.amount           += quantity.amount / order.price.value;
-         earned                  = quantity;
+         bought.amount           += quantity.amount / order.price.value / 10000;
+         earned.amount            = bought.amount * order.price.value * 10000;
          order.frozen            -= bought.amount;
-         quantity.amount         = 0;
+         quantity.amount         -= earned.amount;
          
          //send to seller for quote tokens
          TRANSFER_X( CNYD_BANK, order.maker, earned, "sell nft:" + to_string(bought.symbol.id) )
