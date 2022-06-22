@@ -43,7 +43,7 @@ using namespace std;
       vector<string_view> params = split(memo, ":");
       CHECKC( 2 == params.size(), err::PARAM_ERROR, "param error" );
 
-      uint64_t sn = stoi(string(params[0]));
+      uint64_t sn = to_uint64(string(params[0]), "order_sn");
       compute_memo_price( string(params[1]), price );
       
       auto quant              = quants[0];
@@ -88,7 +88,7 @@ using namespace std;
 
       auto is_order_buy          = (magic_no == "o");  
       auto quantity              = quant;
-      auto token_id              = to_uint64( params[1], "order_sn" );
+      auto token_id              = stoi( string( params[1] ));
 
       auto nstats                = nstats_t::idx_t(NFT_BANK, NFT_BANK.value);
       auto nstats_itr            = nstats.find(token_id);
@@ -113,7 +113,7 @@ using namespace std;
             orders.erase( itr );
          } else {
             orders.modify(itr, same_payer, [&]( auto& row ) {
-               row.frozen     = order.frozen;
+               row.frozen  = order.frozen;
                row.updated_at = current_time_point();
             });
          }
@@ -132,6 +132,7 @@ using namespace std;
          quantity.amount         -= frozen * bid_price.value * 10000;
       }
      
+
       if (bought.amount > 0) {
          //send to buyer for nft tokens
          vector<nasset> quants = { bought };
