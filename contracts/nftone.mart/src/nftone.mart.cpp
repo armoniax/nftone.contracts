@@ -43,52 +43,8 @@ using namespace std;
 
       auto quant              = quants[0];
       CHECKC( quant.amount > 0, err::PARAM_ERROR, "non-positive quantity not allowed" )
-      // auto quantity           = quant;
       auto ask_price          = price_s(price, quant.symbol);
-      // auto earned             = asset(0, CNYD); //by seller
-      // auto bought             = nasset(0, quantity.symbol); //by buyer
-      
-      //auto orders             = buyorder_idx( _self, quant.symbol.id );
-      // auto idx                = orders.get_index<"priceidx"_n>(); //larger first
-      // for (auto itr = idx.begin(); itr != idx.end(); itr++) {
-      //    if (itr->price.value < ask_price.value) 
-      //       break;   //offer or bit price < ask price
-         
-      //    auto offer_value     = itr->frozen;
-      //    auto sell_value      = quantity.amount * itr->price.value;
-      //    if (offer_value >= sell_value) {
-      //       earned.amount     += sell_value;
-      //       idx.modify(itr, same_payer, [&]( auto& row ) {
-      //          row.frozen     -= sell_value;
-      //       });
-            
-      //       //send to seller for CNYD tokens
-      //       TRANSFER_X( CNYD_BANK, from, earned, "sell nft: " + to_string( quant.symbol.id ) )
-
-      //       //send to buyer for NFT tokens
-      //       bought.amount     = quantity.amount;
-      //       vector<nasset> quants = { bought };
-      //       TRANSFER_N( NFT_BANK, itr->maker, quants, "buy nft: " + to_string( quant.symbol.id ) )
-      //       return;
-
-      //    } else {// will execute the current offer wholely
-      //       auto offer_amount  = itr->frozen / itr->price.value;
-      //       earned.amount     += itr->frozen;
-      //       quantity.amount   -= offer_amount;
-
-      //       //send to buyer for nft tokens
-      //       bought.amount     = offer_amount;
-      //       vector<nasset> quants = { bought };
-      //       TRANSFER_N( NFT_BANK, itr->maker, quants, "buy nft: " + to_string( quant.symbol.id) )
-
-      //       idx.erase( itr );
-      //    }
-      // }
-
-      // if (earned.amount > 0)
-      //    TRANSFER_X( CNYD_BANK, from, earned, "sell nft: " + to_string( quant.symbol.id) )
-
-      // if (quantity.amount > 0) { //unsatisified remaining quantity will be placed as limit sell order
+ 
       auto sellorders = sellorder_idx( _self, quant.symbol.id );
       sellorders.emplace(_self, [&]( auto& row ){
          row.id         = sellorders.available_primary_key(); if (row.id == 0) row.id = 1;
@@ -97,7 +53,6 @@ using namespace std;
          row.maker      = from;
          row.created_at = time_point_sec( current_time_point() );
       });
-      // }
    }
 
    /**
@@ -106,8 +61,8 @@ using namespace std;
     * @param from
     * @param to
     * @param quant
-    * @param memo: t:$token_id:$bid_price | o:$token_id:$order_id:$bid_price
-    *       E.g.:  t:123:10288/100        | o:123:1:10288/100
+    * @param memo: o:$token_id:$order_id:$bid_price
+    *       E.g.:  o:123:1:10288/100
     */
    void nftone_mart::onbuytransfer(const name& from, const name& to, const asset& quant, const string& memo) {
       if (from == get_self() || to != get_self()) return;
@@ -168,32 +123,7 @@ using namespace std;
             });
             quantity.amount         -= frozen * bid_price.value * 10000;
          }
-      // } else {
-      //    compute_memo_price( string(params[2]), bid_price.value );
-
-      //    auto idx                   = orders.get_index<"priceidx"_n>(); //smaller first
-      //    for (auto itr = idx.begin(); itr != idx.end(); itr++) {
-      //       auto order = *itr;
-      //       if (order.price > bid_price)
-      //          break;
-
-      //       process_single_buy_order( order, quantity, bought );
-
-      //       if (order.frozen == 0) {
-      //          auto itr_del = itr;
-      //          idx.erase( itr_del );
-
-      //       } else {
-      //          idx.modify(itr, same_payer, [&]( auto& row ) {
-      //             row.frozen = order.frozen;
-      //             row.updated_at = current_time_point();
-      //          });
-      //       }
-
-      //       if (quantity.amount == 0)
-      //          break;
-      //    }
-      // }
+     
 
       if (bought.amount > 0) {
          //send to buyer for nft tokens
@@ -203,80 +133,10 @@ using namespace std;
 
       if (quantity.amount > 0) { 
          TRANSFER_X( CNYD_BANK, from, quantity, "nft buy left" )
-
-      /* //unsatisified remaining quantity will be placed as limit buy order
-         auto buyorders = buyorder_idx( _self, token_id );
-         buyorders.emplace(_self, [&]( auto& row ){
-            row.id         = buyorders.available_primary_key(); if (row.id == 0) row.id = 1;
-            row.price      = bid_price;
-            row.frozen     = quantity.amount; 
-            row.maker      = from;
-            row.created_at = current_time_point();
-         });
-      */
       }
    }
 
-   //buyer to take a specific sell order
-   // ACTION nftone_mart::takeselorder( const name& issuer, const uint32_t& token_id, const uint64_t& sell_order_id ) {
-   //    require_auth( issuer );
-
-
-   // }
-
-   //seller to take a specific buy order
-   /** disabled temporarily to cater for otc mode impl first
-   ACTION nftone_mart::takebuyorder( const name& issuer, const uint32_t& token_id, const uint64_t& buy_order_id ) {
-      require_auth( issuer );
-
-      auto buyorders             = buyorder_idx( _self, token_id );
-      auto buy_itr               = buyorders.find(buy_order_id);
-      CHECKC( buy_itr            != buyorders.end(), err::RECORD_NOT_FOUND, "buy order not found: " + to_string(buy_order_id) )
-      auto buyorder              = *buy_itr;
-      auto buy_amount            = buyorder.frozen / buyorder.price.value;
-      auto earned                = asset(0, CNYD); //to seller
-      auto sellorders            = sellorder_idx( _self, token_id );
-      auto sell_idx              = sellorders.get_index<"makerordidx"_n>();
-      auto sold                  = nasset(0, buyorder.price.symbol); //by seller
-
-      auto sell_itr_lower        = sell_idx.lower_bound( (uint128_t) issuer.value << 64 );
-      auto sell_itr_upper        = sell_idx.upper_bound( (uint128_t) issuer.value << 64 | std::numeric_limits<uint64_t>::max() );
-      for (auto sell_itr = sell_itr_lower; sell_itr != sell_itr_upper && sell_itr != sell_idx.end(); sell_itr++) {
-         CHECKC( sell_itr->maker == issuer, err::NO_AUTH, "issuer not a seller: " + sell_itr->maker.to_string() )
-
-         if (sold.amount + sell_itr->frozen > buy_amount) {
-            sold.amount          = buy_amount;
-            earned.amount        = buyorder.frozen;
-            buyorder.frozen      = 0;
-            sell_idx.modify(sell_itr, same_payer, [&]( auto& row ) {
-               row.frozen        -= buy_amount - sold.amount;
-               row.updated_at    = current_time_point();
-            });
-            break;
-
-         } else {
-            sold.amount          += sell_itr->frozen;
-            earned.amount        += sell_itr->frozen * buyorder.price.value;
-            buyorder.frozen      -= sell_itr->frozen * buyorder.price.value;
-
-            auto sell_itr_del    = sell_itr;
-            sell_idx.erase( sell_itr_del );
-         }
-      }
-
-      if (buyorder.frozen == 0)
-         buyorders.erase( buy_itr );
-
-      if (sold.amount > 0) {
-         //send to buyer for nft tokens
-         vector<nasset> quants = { sold };
-         TRANSFER_N( NFT_BANK, buyorder.maker, quants, "buy nft: " + to_string(token_id) )
-      }
-
-      //send to seller for quote tokens
-      TRANSFER_X( CNYD_BANK, issuer, earned, "sell nft:" + to_string(sold.symbol.id) )
-   } **/
-
+  
    ACTION nftone_mart::takebuybid( const name& seller, const uint32_t& token_id, const uint64_t& buyer_bid_id ) {
       require_auth( seller );
 
@@ -291,8 +151,7 @@ using namespace std;
       auto sell_itr                 = sellorders.find( sell_order_id );
       CHECKC( sell_itr != sellorders.end(), err::RECORD_NOT_FOUND, "sell order not found: " + to_string( sell_order_id ))
       auto sell_frozen              = sell_itr->frozen;
-      // auto bid_amount               = bid_itr->frozen / bid_itr->price.value;
-      // CHECKC( sell_itr->frozen >= bid_itr->frozen, err::OVERSIZED, "big amount oversized" )
+
       auto nstats                   = nstats_t::idx_t(NFT_BANK, NFT_BANK.value);
       auto nstats_itr               = nstats.find(token_id);
       CHECKC( nstats_itr            != nstats.end(), err::RECORD_NOT_FOUND, "nft token not found: " + to_string(token_id) )
@@ -365,48 +224,26 @@ using namespace std;
    }
    
    void nftone_mart::cancelorder(const name& maker, const uint32_t& token_id, const uint64_t& order_id) {
-      // CHECKC( has_auth( maker ) || has_auth(_gstate.admin), err::NO_AUTH, "neither order maker nor admin" )
 
-      // if (is_sell_order) {
-         auto orders = sellorder_idx(_self, token_id);
-         if (order_id != 0) {
-            auto itr = orders.find( order_id );
-            CHECKC( itr != orders.end(), err::RECORD_NOT_FOUND, "order not exit: " + to_string(order_id) + "@" + to_string(token_id) )
-            CHECKC( maker == itr->maker, err::NO_AUTH, "NO_AUTH")
+      auto orders = sellorder_idx(_self, token_id);
+      if (order_id != 0) {
+         auto itr = orders.find( order_id );
+         CHECKC( itr != orders.end(), err::RECORD_NOT_FOUND, "order not exit: " + to_string(order_id) + "@" + to_string(token_id) )
+         CHECKC( maker == itr->maker, err::NO_AUTH, "NO_AUTH")
 
+         auto nft_quant = nasset( itr->frozen, itr->price.symbol );
+         vector<nasset> quants = { nft_quant };
+         TRANSFER_N( NFT_BANK, itr->maker, quants, "nftone mart cancel" )
+         orders.erase( itr );
+      
+      } else {
+         for (auto itr = orders.begin(); itr != orders.end(); itr++) {
             auto nft_quant = nasset( itr->frozen, itr->price.symbol );
             vector<nasset> quants = { nft_quant };
             TRANSFER_N( NFT_BANK, itr->maker, quants, "nftone mart cancel" )
             orders.erase( itr );
-         
-         } else {
-            for (auto itr = orders.begin(); itr != orders.end(); itr++) {
-               auto nft_quant = nasset( itr->frozen, itr->price.symbol );
-               vector<nasset> quants = { nft_quant };
-               TRANSFER_N( NFT_BANK, itr->maker, quants, "nftone mart cancel" )
-               orders.erase( itr );
-            }
          }
-
-      // } else {
-      //    auto orders = buyorder_idx(_self, token_id);
-      //    if (order_id != 0) {
-      //       auto itr = orders.find( order_id );
-      //       CHECKC( itr != orders.end(), err::RECORD_NOT_FOUND, "order not exit: " + to_string(order_id) + "@" + to_string(token_id) )
-      //       auto nft_quant = nasset( itr->frozen, itr->price.symbol );
-      //       vector<nasset> quants = { nft_quant };
-      //       TRANSFER_N( NFT_BANK, itr->maker, quants, "nftone mart cancel" )
-      //       orders.erase( itr );
-         
-      //    } else {
-      //       for (auto itr = orders.begin(); itr != orders.end(); itr++) {
-      //          auto nft_quant = nasset( itr->frozen, itr->price.symbol );
-      //          vector<nasset> quants = { nft_quant };
-      //          TRANSFER_N( NFT_BANK, itr->maker, quants, "nftone mart cancel" )
-      //          orders.erase( itr );
-      //       }
-      //    }
-      // }
+      }
    }
 
    void nftone_mart::compute_memo_price(const string& memo, float& price) {
