@@ -156,11 +156,11 @@ typedef eosio::multi_index
     indexed_by<"priceidx"_n,        const_mem_fun<order_t, uint64_t, &order_t::by_small_price_first> >
 > sellorder_idx;
 
-//buyer to bid for the token ID
-typedef eosio::multi_index
-< "buyorders"_n,  order_t,
-    indexed_by<"makerordidx"_n,  const_mem_fun<order_t, uint128_t, &order_t::by_maker_large_price_first> >,
-    indexed_by<"priceidx"_n,  const_mem_fun<order_t, uint64_t, &order_t::by_large_price_first> >
-> buyorder_idx;
+// //buyer to bid for the token ID
+// typedef eosio::multi_index
+// < "buyorders"_n,  order_t,
+//     indexed_by<"makerordidx"_n,  const_mem_fun<order_t, uint128_t, &order_t::by_maker_large_price_first> >,
+//     indexed_by<"priceidx"_n,  const_mem_fun<order_t, uint64_t, &order_t::by_large_price_first> >
+// > buyorder_idx;
 
 } //namespace amax
