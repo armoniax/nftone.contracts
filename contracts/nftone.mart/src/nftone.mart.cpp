@@ -28,7 +28,7 @@ using namespace std;
     * @param from
     * @param to
     * @param quantity
-    * @param memo: $ask_price       E.g.:  10288/100    (its currency unit is CNYD)
+    * @param memo: $sn:$ask_price       E.g.:  1001:10288/100    (its currency unit is CNYD)
     *               
     */
    void nftone_mart::onselltransfer(const name& from, const name& to, const vector<nasset>& quants, const string& memo) {
@@ -39,15 +39,25 @@ using namespace std;
       CHECKC( memo != "", err::MEMO_FORMAT_ERROR, "empty memo!" )
       CHECKC( quants.size() == 1, err::OVERSIZED, "only one nft allowed to sell to nft at a timepoint" )
       float price             = 0.0f;
-      compute_memo_price( memo, price );
+      
+      vector<string_view> params = split(memo, ":");
+      CHECKC( 2 == params.size(), err::PARAM_ERROR, "param error" );
 
+      uint64_t sn = stoi(string(params[0]));
+      compute_memo_price( string(params[1]), price );
+      
       auto quant              = quants[0];
       CHECKC( quant.amount > 0, err::PARAM_ERROR, "non-positive quantity not allowed" )
       auto ask_price          = price_s(price, quant.symbol);
- 
-      auto sellorders = sellorder_idx( _self, quant.symbol.id );
+
+      auto sellorders      = sellorder_idx( _self, quant.symbol.id );
+      auto ordersn_index   = sellorders.get_index<"ordersn"_n>();
+      const auto& itr 	   = ordersn_index.find(sn);
+      CHECKC( itr == ordersn_index.end(), err::RECORD_EXISTING, "the record already exists" );
+
       sellorders.emplace(_self, [&]( auto& row ){
          row.id         = sellorders.available_primary_key(); if (row.id == 0) row.id = 1;
+         row.sn         = sn;
          row.price      = ask_price;
          row.frozen     = quant.amount; 
          row.maker      = from;
@@ -208,6 +218,7 @@ using namespace std;
          TRANSFER_X( CNYD_BANK, order.maker, earned, "sell nft:" + to_string(bought.symbol.id) )
       }
    }
+
    void nftone_mart::cancelbid( const name& buyer, const uint64_t& buyer_bid_id ){
       require_auth( buyer );
       auto bids                     = buyer_bid_t::idx_t(_self, _self.value);
@@ -246,8 +257,8 @@ using namespace std;
       }
    }
 
-   void nftone_mart::compute_memo_price(const string& memo, float& price) {
-      vector<string_view> params = split(memo, "//");
+   void nftone_mart::compute_memo_price(const string& memo_price, float& price) {
+      vector<string_view> params = split(memo_price, "//");
       switch (params.size()) {
          case 1:  price = (float) stoi( string(params[0]) ); break;
          case 2:  price = (float) stoi( string(params[0]) ) / (float) stoi( string(params[1]) ); break;
