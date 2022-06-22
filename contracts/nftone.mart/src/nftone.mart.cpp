@@ -43,61 +43,61 @@ using namespace std;
 
       auto quant              = quants[0];
       CHECKC( quant.amount > 0, err::PARAM_ERROR, "non-positive quantity not allowed" )
-      auto quantity           = quant;
+      // auto quantity           = quant;
       auto ask_price          = price_s(price, quant.symbol);
-      auto earned             = asset(0, CNYD); //by seller
-      auto bought             = nasset(0, quantity.symbol); //by buyer
+      // auto earned             = asset(0, CNYD); //by seller
+      // auto bought             = nasset(0, quantity.symbol); //by buyer
       
-      auto orders             = buyorder_idx( _self, quant.symbol.id );
-      auto idx                = orders.get_index<"priceidx"_n>(); //larger first
-      for (auto itr = idx.begin(); itr != idx.end(); itr++) {
-         if (itr->price.value < ask_price.value) 
-            break;   //offer or bit price < ask price
+      //auto orders             = buyorder_idx( _self, quant.symbol.id );
+      // auto idx                = orders.get_index<"priceidx"_n>(); //larger first
+      // for (auto itr = idx.begin(); itr != idx.end(); itr++) {
+      //    if (itr->price.value < ask_price.value) 
+      //       break;   //offer or bit price < ask price
          
-         auto offer_value     = itr->frozen;
-         auto sell_value      = quantity.amount * itr->price.value;
-         if (offer_value >= sell_value) {
-            earned.amount     += sell_value;
-            idx.modify(itr, same_payer, [&]( auto& row ) {
-               row.frozen     -= sell_value;
-            });
+      //    auto offer_value     = itr->frozen;
+      //    auto sell_value      = quantity.amount * itr->price.value;
+      //    if (offer_value >= sell_value) {
+      //       earned.amount     += sell_value;
+      //       idx.modify(itr, same_payer, [&]( auto& row ) {
+      //          row.frozen     -= sell_value;
+      //       });
             
-            //send to seller for CNYD tokens
-            TRANSFER_X( CNYD_BANK, from, earned, "sell nft: " + to_string( quant.symbol.id ) )
+      //       //send to seller for CNYD tokens
+      //       TRANSFER_X( CNYD_BANK, from, earned, "sell nft: " + to_string( quant.symbol.id ) )
 
-            //send to buyer for NFT tokens
-            bought.amount     = quantity.amount;
-            vector<nasset> quants = { bought };
-            TRANSFER_N( NFT_BANK, itr->maker, quants, "buy nft: " + to_string( quant.symbol.id ) )
-            return;
+      //       //send to buyer for NFT tokens
+      //       bought.amount     = quantity.amount;
+      //       vector<nasset> quants = { bought };
+      //       TRANSFER_N( NFT_BANK, itr->maker, quants, "buy nft: " + to_string( quant.symbol.id ) )
+      //       return;
 
-         } else {// will execute the current offer wholely
-            auto offer_amount  = itr->frozen / itr->price.value;
-            earned.amount     += itr->frozen;
-            quantity.amount   -= offer_amount;
+      //    } else {// will execute the current offer wholely
+      //       auto offer_amount  = itr->frozen / itr->price.value;
+      //       earned.amount     += itr->frozen;
+      //       quantity.amount   -= offer_amount;
 
-            //send to buyer for nft tokens
-            bought.amount     = offer_amount;
-            vector<nasset> quants = { bought };
-            TRANSFER_N( NFT_BANK, itr->maker, quants, "buy nft: " + to_string( quant.symbol.id) )
+      //       //send to buyer for nft tokens
+      //       bought.amount     = offer_amount;
+      //       vector<nasset> quants = { bought };
+      //       TRANSFER_N( NFT_BANK, itr->maker, quants, "buy nft: " + to_string( quant.symbol.id) )
 
-            idx.erase( itr );
-         }
-      }
+      //       idx.erase( itr );
+      //    }
+      // }
 
-      if (earned.amount > 0)
-         TRANSFER_X( CNYD_BANK, from, earned, "sell nft: " + to_string( quant.symbol.id) )
+      // if (earned.amount > 0)
+      //    TRANSFER_X( CNYD_BANK, from, earned, "sell nft: " + to_string( quant.symbol.id) )
 
-      if (quantity.amount > 0) { //unsatisified remaining quantity will be placed as limit sell order
-         auto sellorders = sellorder_idx( _self, quantity.symbol.id );
-         sellorders.emplace(_self, [&]( auto& row ){
-            row.id         = sellorders.available_primary_key(); if (row.id == 0) row.id = 1;
-            row.price      = ask_price;
-            row.frozen     = quantity.amount; 
-            row.maker      = from;
-            row.created_at = time_point_sec( current_time_point() );
-         });
-      }
+      // if (quantity.amount > 0) { //unsatisified remaining quantity will be placed as limit sell order
+      auto sellorders = sellorder_idx( _self, quant.symbol.id );
+      sellorders.emplace(_self, [&]( auto& row ){
+         row.id         = sellorders.available_primary_key(); if (row.id == 0) row.id = 1;
+         row.price      = ask_price;
+         row.frozen     = quant.amount; 
+         row.maker      = from;
+         row.created_at = time_point_sec( current_time_point() );
+      });
+      // }
    }
 
    /**
@@ -134,7 +134,7 @@ using namespace std;
       auto bought                = nasset(0, nsymb); //by buyer
       auto bid_price             = price_s(0, nsymb); 
 
-      if (is_order_buy) {
+      // if (is_order_buy) {
          compute_memo_price( string(params[3]), bid_price.value );
 
          auto order_id           = stoi( string( params[2] ));
@@ -143,8 +143,6 @@ using namespace std;
 
          auto order = *itr;
          if (order.price <= bid_price) {
-            CHECKC( memo != "", err::MEMO_FORMAT_ERROR, "order.price <= bid_price!" )
-
             process_single_buy_order( order, quantity, bought );
 
             if (order.frozen == 0) {
@@ -170,32 +168,32 @@ using namespace std;
             });
             quantity.amount         -= frozen * bid_price.value * 10000;
          }
-      } else {
-         compute_memo_price( string(params[2]), bid_price.value );
+      // } else {
+      //    compute_memo_price( string(params[2]), bid_price.value );
 
-         auto idx                   = orders.get_index<"priceidx"_n>(); //smaller first
-         for (auto itr = idx.begin(); itr != idx.end(); itr++) {
-            auto order = *itr;
-            if (order.price > bid_price)
-               break;
+      //    auto idx                   = orders.get_index<"priceidx"_n>(); //smaller first
+      //    for (auto itr = idx.begin(); itr != idx.end(); itr++) {
+      //       auto order = *itr;
+      //       if (order.price > bid_price)
+      //          break;
 
-            process_single_buy_order( order, quantity, bought );
+      //       process_single_buy_order( order, quantity, bought );
 
-            if (order.frozen == 0) {
-               auto itr_del = itr;
-               idx.erase( itr_del );
+      //       if (order.frozen == 0) {
+      //          auto itr_del = itr;
+      //          idx.erase( itr_del );
 
-            } else {
-               idx.modify(itr, same_payer, [&]( auto& row ) {
-                  row.frozen = order.frozen;
-                  row.updated_at = current_time_point();
-               });
-            }
+      //       } else {
+      //          idx.modify(itr, same_payer, [&]( auto& row ) {
+      //             row.frozen = order.frozen;
+      //             row.updated_at = current_time_point();
+      //          });
+      //       }
 
-            if (quantity.amount == 0)
-               break;
-         }
-      }
+      //       if (quantity.amount == 0)
+      //          break;
+      //    }
+      // }
 
       if (bought.amount > 0) {
          //send to buyer for nft tokens
@@ -290,33 +288,41 @@ using namespace std;
       auto sellorders               = sellorder_idx( _self, token_id );
       auto sell_itr                 = sellorders.find( sell_order_id );
       CHECKC( sell_itr != sellorders.end(), err::RECORD_NOT_FOUND, "sell order not found: " + to_string( sell_order_id ))
-      auto bid_amount               = bid_itr->frozen / bid_itr->price.value;
-      CHECKC( sell_itr->frozen >= bid_amount, err::OVERSIZED, "big amount oversized" )
-
-      auto earned                   = asset( bid_itr->frozen, CNYD );
-      TRANSFER_X( CNYD_BANK, sell_itr->maker, earned, "take nft bid" )
-
+      auto bid_frozen               = bid_itr->frozen;
+      auto bid_price                = bid_itr->price;
+      auto sell_frozen              = sell_itr->frozen;
+      // auto bid_amount               = bid_itr->frozen / bid_itr->price.value;
+      // CHECKC( sell_itr->frozen >= bid_itr->frozen, err::OVERSIZED, "big amount oversized" )
       auto nstats                   = nstats_t::idx_t(NFT_BANK, NFT_BANK.value);
       auto nstats_itr               = nstats.find(token_id);
       CHECKC( nstats_itr            != nstats.end(), err::RECORD_NOT_FOUND, "nft token not found: " + to_string(token_id) )
       auto token_pid                = nstats_itr->supply.symbol.parent_id;
       auto nsymb                    = nsymbol( token_id, token_pid );
       auto bought                   = nasset(0, nsymb); //by buyer
-      bought.amount                 = bid_amount;
-      vector<nasset> quants         = { bought };
-      TRANSFER_N( NFT_BANK, bid_itr->buyer, quants, "buy nft: " + to_string(token_id) )
+      auto earned                   = asset( 0, CNYD );
 
-      if( sell_itr->frozen > bid_amount ) {
+      
+      if(bid_frozen < sell_frozen){
+         bought.amount = bid_frozen;
          sellorders.modify( sell_itr, same_payer, [&]( auto& row ){
-            row.frozen              -= bid_amount;
+            row.frozen              = sell_frozen;
             row.updated_at          = current_time_point();
          });
-       
-      } else {
+      }else{
+         if(bid_frozen > sell_frozen){
+            auto left = asset( 0, CNYD );
+            left.amount = (bid_frozen - sell_frozen) * bid_price.value * 10000;
+            TRANSFER_X( CNYD_BANK, bid_itr->buyer,left , "take nft left" )
+         }
+         bought.amount = sell_frozen;
          sellorders.erase( sell_itr );
       }
-
       bids.erase( bid_itr );
+
+      vector<nasset> quants         = { bought };
+      TRANSFER_N( NFT_BANK, bid_itr->buyer, quants, "buy nft: " + to_string(token_id) )
+      earned.amount = bought.amount * bid_price.value * 10000;
+      TRANSFER_X( CNYD_BANK, sell_itr->maker, earned, "take nft bid" )
    }
 
 
