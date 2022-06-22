@@ -43,7 +43,7 @@ using namespace std;
       vector<string_view> params = split(memo, ":");
       CHECKC( 2 == params.size(), err::PARAM_ERROR, "param error" );
 
-      uint64_t sn = to_uint64(string(params[0]), "order_sn");
+      uint64_t sn = to_uint64( params[0], "order_sn");
       compute_memo_price( string(params[1]), price );
       
       auto quant              = quants[0];
