@@ -107,7 +107,7 @@ using namespace std;
     * @param to
     * @param quant
     * @param memo: t:$token_id:$bid_price | o:$token_id:$order_id:$bid_price
-    *       E.g.:  t:123:10288/100           | o:123:1:10288/100
+    *       E.g.:  t:123:10288/100        | o:123:1:10288/100
     */
    void nftone_mart::onbuytransfer(const name& from, const name& to, const asset& quant, const string& memo) {
       if (from == get_self() || to != get_self()) return;
