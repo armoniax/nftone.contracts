@@ -50,57 +50,57 @@ void ntoken::notarize(const name& notary, const uint32_t& token_id) {
    nstats.modify( itr, same_payer, [&]( auto& row ) {
       row.notary = notary;
       row.notarized_at = time_point_sec( current_time_point()  );
-    });
+   });
 }
 
 void ntoken::issue( const name& to, const nasset& quantity, const string& memo )
 {
-    auto sym = quantity.symbol;
-    check( sym.is_valid(), "invalid symbol name" );
-    check( memo.size() <= 256, "memo has more than 256 bytes" );
+   auto sym = quantity.symbol;
+   check( sym.is_valid(), "invalid symbol name" );
+   check( memo.size() <= 256, "memo has more than 256 bytes" );
 
-    auto nstats = nstats_t::idx_t( _self, _self.value );
-    auto existing = nstats.find( sym.id );
-    check( existing != nstats.end(), "token with symbol does not exist, create token before issue" );
-    const auto& st = *existing;
-    check( to == st.issuer, "tokens can only be issued to issuer account" );
+   auto nstats = nstats_t::idx_t( _self, _self.value );
+   auto existing = nstats.find( sym.id );
+   check( existing != nstats.end(), "token with symbol does not exist, create token before issue" );
+   const auto& st = *existing;
+   check( to == st.issuer, "tokens can only be issued to issuer account" );
 
-    require_auth( st.issuer );
-    check( quantity.is_valid(), "invalid quantity" );
-    check( quantity.amount > 0, "must issue positive quantity" );
+   require_auth( st.issuer );
+   check( quantity.is_valid(), "invalid quantity" );
+   check( quantity.amount > 0, "must issue positive quantity" );
 
-    check( quantity.symbol == st.supply.symbol, "symbol mismatch" );
-    check( quantity.amount <= st.max_supply.amount - st.supply.amount, "quantity exceeds available supply");
+   check( quantity.symbol == st.supply.symbol, "symbol mismatch" );
+   check( quantity.amount <= st.max_supply.amount - st.supply.amount, "quantity exceeds available supply");
 
-    nstats.modify( st, same_payer, [&]( auto& s ) {
-       s.supply += quantity;
-    });
+   nstats.modify( st, same_payer, [&]( auto& s ) {
+      s.supply += quantity;
+   });
 
-    add_balance( st.issuer, quantity, st.issuer );
+   add_balance( st.issuer, quantity, st.issuer );
 }
 
 void ntoken::retire( const nasset& quantity, const string& memo )
 {
-    auto sym = quantity.symbol;
-    check( sym.is_valid(), "invalid symbol name" );
-    check( memo.size() <= 256, "memo has more than 256 bytes" );
+   auto sym = quantity.symbol;
+   check( sym.is_valid(), "invalid symbol name" );
+   check( memo.size() <= 256, "memo has more than 256 bytes" );
 
-    auto nstats = nstats_t::idx_t( _self, _self.value );
-    auto existing = nstats.find( sym.id );
-    check( existing != nstats.end(), "token with symbol does not exist" );
-    const auto& st = *existing;
+   auto nstats = nstats_t::idx_t( _self, _self.value );
+   auto existing = nstats.find( sym.id );
+   check( existing != nstats.end(), "token with symbol does not exist" );
+   const auto& st = *existing;
 
-    require_auth( st.issuer );
-    check( quantity.is_valid(), "invalid quantity" );
-    check( quantity.amount > 0, "must retire positive quantity" );
+   require_auth( st.issuer );
+   check( quantity.is_valid(), "invalid quantity" );
+   check( quantity.amount > 0, "must retire positive quantity" );
 
-    check( quantity.symbol == st.supply.symbol, "symbol precision mismatch" );
+   check( quantity.symbol == st.supply.symbol, "symbol precision mismatch" );
 
-    nstats.modify( st, same_payer, [&]( auto& s ) {
-       s.supply -= quantity;
-    });
+   nstats.modify( st, same_payer, [&]( auto& s ) {
+      s.supply -= quantity;
+   });
 
-    sub_balance( st.issuer, quantity );
+   sub_balance( st.issuer, quantity );
 }
 
 void ntoken::transfer( name from, name to, vector< nasset >& assets, string memo  )

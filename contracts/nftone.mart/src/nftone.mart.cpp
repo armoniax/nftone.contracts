@@ -99,42 +99,39 @@ using namespace std;
       auto bought                = nasset(0, nsymb); //by buyer
       auto bid_price             = price_s(0, nsymb); 
 
-      // if (is_order_buy) {
-         compute_memo_price( string(params[3]), bid_price.value );
+      compute_memo_price( string(params[3]), bid_price.value );
 
-         auto order_id           = stoi( string( params[2] ));
-         auto itr                = orders.find( order_id );
-         CHECKC( itr != orders.end(), err::RECORD_NOT_FOUND, "order not found: " + to_string(order_id) + "@" + to_string(token_id) )
+      auto order_id           = stoi( string( params[2] ));
+      auto itr                = orders.find( order_id );
+      CHECKC( itr != orders.end(), err::RECORD_NOT_FOUND, "order not found: " + to_string(order_id) + "@" + to_string(token_id) )
 
-         auto order = *itr;
-         if (order.price <= bid_price) {
-            process_single_buy_order( order, quantity, bought );
+      auto order = *itr;
+      if (order.price <= bid_price) {
+         process_single_buy_order( order, quantity, bought );
 
-            if (order.frozen == 0) {
-               orders.erase( itr );
-
-            } else {
-               orders.modify(itr, same_payer, [&]( auto& row ) {
-                  row.frozen = order.frozen;
-                  row.updated_at = current_time_point();
-               });
-            }
+         if (order.frozen == 0) {
+            orders.erase( itr );
          } else {
-            auto buyerbids          = buyer_bid_t::idx_t(_self, _self.value);
-            auto id                 = buyerbids.available_primary_key();
-            auto frozen             = int(quant.amount / bid_price.value / 10000);
-            buyerbids.emplace(_self, [&]( auto& row ){
-               row.id               = id;
-               row.sell_order_id    = order_id;
-               row.price            = bid_price;
-               row.frozen           = frozen;
-               row.buyer            = from;
-               row.created_at       = current_time_point();
+            orders.modify(itr, same_payer, [&]( auto& row ) {
+               row.frozen     = order.frozen;
+               row.updated_at = current_time_point();
             });
-            quantity.amount         -= frozen * bid_price.value * 10000;
          }
+      } else {
+         auto buyerbids          = buyer_bid_t::idx_t(_self, _self.value);
+         auto id                 = buyerbids.available_primary_key();
+         auto frozen             = int(quant.amount / bid_price.value / 10000);
+         buyerbids.emplace(_self, [&]( auto& row ){
+            row.id               = id;
+            row.sell_order_id    = order_id;
+            row.price            = bid_price;
+            row.frozen           = frozen;
+            row.buyer            = from;
+            row.created_at       = current_time_point();
+         });
+         quantity.amount         -= frozen * bid_price.value * 10000;
+      }
      
-
       if (bought.amount > 0) {
          //send to buyer for nft tokens
          vector<nasset> quants = { bought };
