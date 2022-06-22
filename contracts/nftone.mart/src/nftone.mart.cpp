@@ -88,7 +88,7 @@ using namespace std;
 
       auto is_order_buy          = (magic_no == "o");  
       auto quantity              = quant;
-      auto token_id              = stoi( string( params[1] ));
+      auto token_id              = to_uint64( params[1], "order_sn" );
 
       auto nstats                = nstats_t::idx_t(NFT_BANK, NFT_BANK.value);
       auto nstats_itr            = nstats.find(token_id);
