@@ -30,11 +30,12 @@ void ntoken::create( const name& issuer, const int64_t& maximum_supply, const ns
    });
 }
 
-void ntoken::setnotary(const name& notary, const bool& add) {
+void ntoken::setnotary(const name& notary, const bool& to_add) {
    require_auth( _self );
 
-   if (add)
+   if (to_add)
       _gstate.notaries.insert(notary);
+
    else 
       _gstate.notaries.erase(notary);
 
