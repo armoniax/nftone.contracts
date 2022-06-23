@@ -7,6 +7,7 @@
 #include <eosio/time.hpp>
 
 #include <amax.ntoken/amax.ntoken_db.hpp>
+#include <utils.hpp>
 
 // #include <deque>
 #include <optional>
@@ -122,14 +123,17 @@ TBL buyer_bid_t {
 
     uint64_t by_large_price_first()const { return( std::numeric_limits<uint64_t>::max() - price.value ); }
  
-    uint128_t by_buyer_created_at()const { return (uint128_t) buyer.value << 64 | (uint128_t) created_at.sec_since_epoch(); }
+    checksum256 by_buyer_created_at()const { return make256key( sell_order_id,
+                                                                buyer.value,
+                                                                created_at.sec_since_epoch(),
+                                                                0); }
     
     EOSLIB_SERIALIZE( buyer_bid_t, (id)(sell_order_id)(price)(frozen)(buyer)(created_at) )
 
     typedef eosio::multi_index
     < "buyerbids"_n,  buyer_bid_t,
         indexed_by<"priceidx"_n,        const_mem_fun<buyer_bid_t, uint64_t, &buyer_bid_t::by_large_price_first> >,
-        indexed_by<"createidx"_n,       const_mem_fun<buyer_bid_t, uint128_t, &buyer_bid_t::by_buyer_created_at> >
+        indexed_by<"createidx"_n,       const_mem_fun<buyer_bid_t, checksum256, &buyer_bid_t::by_buyer_created_at> >
     > idx_t;
 };
 
