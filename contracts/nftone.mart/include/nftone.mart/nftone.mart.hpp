@@ -17,6 +17,7 @@ using namespace eosio;
 
 static constexpr name      NFT_BANK    = "amax.ntoken"_n;
 static constexpr name      CNYD_BANK   = "cnyd.token"_n;
+static constexpr name      MTOKEN_BANK = "amax.mtoken"_n;
 static constexpr symbol    CNYD        = symbol(symbol_code("CNYD"), 4);
 
 enum class err: uint8_t {
@@ -82,5 +83,6 @@ class [[eosio::contract("nftone.mart")]] nftone_mart : public contract {
    private:
       void process_single_buy_order( order_t& order, asset& quantity, nasset& bought );
       void compute_memo_price( const string& memo, float& price );
+      void transfer_token(const name &from, const asset &quantity, const string &memo);
 };
 } //namespace amax

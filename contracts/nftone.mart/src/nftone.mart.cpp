@@ -2,6 +2,7 @@
 #include <amax.ntoken/amax.ntoken_db.hpp>
 #include <amax.ntoken/amax.ntoken.hpp>
 #include <cnyd.token/amax.xtoken.hpp>
+#include <amax.mtoken/amax.mtoken.hpp>
 #include <utils.hpp>
 namespace amax {
 
@@ -140,7 +141,7 @@ using namespace std;
       }
 
       if (quantity.amount > 0) { 
-         TRANSFER_X( CNYD_BANK, from, quantity, "nft buy left" )
+         transfer_token( from, quantity, "nft buy left" );
       }
    }
 
@@ -179,7 +180,7 @@ using namespace std;
          if(bid_frozen > sell_frozen){
             auto left = asset( 0, CNYD );
             left.amount = (bid_frozen - sell_frozen) * bid_price.value * 10000;
-            TRANSFER_X( CNYD_BANK, bid_itr->buyer,left , "take nft left" )
+            transfer_token( bid_itr->buyer, left , "take nft left" );
          }
          bought.amount = sell_frozen;
          sellorders.erase( sell_itr );
@@ -189,7 +190,7 @@ using namespace std;
       vector<nasset> quants         = { bought };
       TRANSFER_N( NFT_BANK, bid_itr->buyer, quants, "buy nft: " + to_string(token_id) )
       earned.amount = bought.amount * bid_price.value * 10000;
-      TRANSFER_X( CNYD_BANK, sell_itr->maker, earned, "take nft bid" )
+      transfer_token( sell_itr->maker, earned, "take nft bid" );
    }
 
 
@@ -205,7 +206,7 @@ using namespace std;
          quantity.amount         -= earned.amount;
          
          //send to seller for quote tokens
-         TRANSFER_X( CNYD_BANK, order.maker, earned, "sell nft:" + to_string(bought.symbol.id) )
+         transfer_token( order.maker, earned, "sell nft:" + to_string(bought.symbol.id) );
 
       } else {// will buy the current offer wholely and continue
          bought.amount           += order.frozen;
@@ -213,7 +214,7 @@ using namespace std;
          order.frozen            = 0;
          quantity.amount         -= offer_cost;
 
-         TRANSFER_X( CNYD_BANK, order.maker, earned, "sell nft:" + to_string(bought.symbol.id) )
+         transfer_token( order.maker, earned, "sell nft:" + to_string(bought.symbol.id) );
       }
    }
 
@@ -228,7 +229,7 @@ using namespace std;
 
       auto left = asset( 0, CNYD );
       left.amount = bid_frozen * bid_price.value * 10000;
-      TRANSFER_X( CNYD_BANK, bid_itr->buyer,left , "cancel" )
+      transfer_token( bid_itr->buyer,left , "cancel" );
       bids.erase( bid_itr );
    }
    
@@ -263,5 +264,16 @@ using namespace std;
          default: CHECKC( false, err::MEMO_FORMAT_ERROR, "price format incorrect" )
       }
    }
+
+
+   void nftone_mart::transfer_token(const name &from, const asset &quantity, const string &memo) {
+      if( quantity.symbol == CNYD ) {
+         TRANSFER_X( CNYD_BANK, from, quantity, memo )
+      } else {
+         TRANSFER_M( MTOKEN_BANK, from, quantity, memo )
+      }
+
+   }
+
 
 } //namespace amax
