@@ -31,9 +31,10 @@ NTBL("global") global_t {
     float creator_fee_rate  = 0.0;
     float ipowner_fee_rate  = 0.0;
     float notary_fee_rate   = 0.0;
+    symbol quote_symbol;
     uint32_t order_expiry_hours = 72;
 
-    EOSLIB_SERIALIZE( global_t, (admin)(dev_fee_collector)(dev_fee_rate)(creator_fee_rate)(ipowner_fee_rate)(notary_fee_rate)(order_expiry_hours) )
+    EOSLIB_SERIALIZE( global_t, (admin)(dev_fee_collector)(dev_fee_rate)(creator_fee_rate)(ipowner_fee_rate)(notary_fee_rate)(quote_symbol)(order_expiry_hours) )
 
 /*
     // template<typename DataStream>

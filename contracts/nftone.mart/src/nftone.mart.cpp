@@ -18,6 +18,7 @@ using namespace std;
       _gstate.admin = "amax.daodev"_n;
       _gstate.dev_fee_collector = "amax.daodev"_n;
       _gstate.dev_fee_rate = 0.001;
+      _gstate.quote_symbol = CNYD;
 
       //reset with default
       // _gstate = global_t{};
@@ -33,6 +34,7 @@ using namespace std;
     *               
     */
    void nftone_mart::onselltransfer(const name& from, const name& to, const vector<nasset>& quants, const string& memo) {
+
       CHECKC( from != to, err::ACCOUNT_INVALID, "cannot transfer to self" );
 
       if (from == get_self() || to != get_self()) return;
@@ -81,6 +83,9 @@ using namespace std;
       CHECKC( from != to, err::ACCOUNT_INVALID, "cannot transfer to self" );
       CHECKC( quant.amount > 0, err::PARAM_ERROR, "non-positive quantity not allowed" )
       CHECKC( memo != "", err::MEMO_FORMAT_ERROR, "empty memo!" )
+
+      CHECKC( quant.symbol  == _gstate.quote_symbol, err::PARAM_ERROR, "not support the symbol" )
+
 
       vector<string_view> params = split(memo, ":");
       auto param_size            = params.size();
@@ -197,7 +202,9 @@ using namespace std;
    /////////////////////////////// private funcs below /////////////////////////////////////////////
 
    void nftone_mart::process_single_buy_order( order_t& order, asset& quantity, nasset& bought ) {
-      auto earned                = asset(0, CNYD); //to seller
+      CHECKC( quantity.symbol  == _gstate.quote_symbol, err::PARAM_ERROR, "not support the symbol" )
+
+      auto earned                = asset(0, _gstate.quote_symbol); //to seller
       auto offer_cost            = order.frozen * order.price.value * 10000;
       if (offer_cost >= quantity.amount) {
          bought.amount           += quantity.amount / order.price.value / 10000;
@@ -266,11 +273,11 @@ using namespace std;
    }
 
 
-   void nftone_mart::transfer_token(const name &from, const asset &quantity, const string &memo) {
+   void nftone_mart::transfer_token(const name &to, const asset &quantity, const string &memo) {
       if( quantity.symbol == CNYD ) {
-         TRANSFER_X( CNYD_BANK, from, quantity, memo )
+         TRANSFER_X( CNYD_BANK, to, quantity, memo )
       } else {
-         TRANSFER_M( MTOKEN_BANK, from, quantity, memo )
+         TRANSFER_M( MTOKEN_BANK, to, quantity, memo )
       }
 
    }
