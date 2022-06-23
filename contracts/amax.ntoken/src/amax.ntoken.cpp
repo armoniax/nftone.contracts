@@ -19,6 +19,7 @@ void ntoken::create( const name& issuer, const int64_t& maximum_supply, const ns
    // check( lower_itr == idx.end() || lower_itr == upper_itr, "token with token_uri already exists" );
    check( idx.find(token_uri_hash) == idx.end(), "token with token_uri already exists" );
    check( nstats.find(symbol.id) == nstats.end(), "token of ID: " + to_string(symbol.id) + " alreay exists" );
+   check( symbol.id != symbol.parent_id, "parent id shall not be equal to id" );
 
    nstats.emplace( issuer, [&]( auto& s ) {
       s.supply.symbol   = symbol;
