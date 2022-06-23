@@ -101,6 +101,7 @@ TBL order_t {
     uint64_t by_large_price_first()const { return( std::numeric_limits<uint64_t>::max() - price.value ); }
     uint128_t by_maker_small_price_first()const { return (uint128_t) maker.value << 64 | (uint128_t) price.value; }
     uint128_t by_maker_large_price_first()const { return (uint128_t) maker.value << 64 | (uint128_t) (std::numeric_limits<uint64_t>::max() - price.value); }
+    uint128_t by_maker_created_at()const { return (uint128_t) maker.value << 64 | (uint128_t) created_at.sec_since_epoch(); }
 
     EOSLIB_SERIALIZE( order_t, (id)(price)(frozen)(maker)(created_at)(updated_at) )
  
@@ -120,12 +121,15 @@ TBL buyer_bid_t {
     uint64_t primary_key()const { return id; }
 
     uint64_t by_large_price_first()const { return( std::numeric_limits<uint64_t>::max() - price.value ); }
-
+ 
+    uint128_t by_buyer_created_at()const { return (uint128_t) buyer.value << 64 | (uint128_t) created_at.sec_since_epoch(); }
+    
     EOSLIB_SERIALIZE( buyer_bid_t, (id)(sell_order_id)(price)(frozen)(buyer)(created_at) )
 
     typedef eosio::multi_index
     < "buyerbids"_n,  buyer_bid_t,
-        indexed_by<"priceidx"_n,        const_mem_fun<buyer_bid_t, uint64_t, &buyer_bid_t::by_large_price_first> >
+        indexed_by<"priceidx"_n,        const_mem_fun<buyer_bid_t, uint64_t, &buyer_bid_t::by_large_price_first> >,
+        indexed_by<"createidx"_n,       const_mem_fun<buyer_bid_t, uint128_t, &buyer_bid_t::by_buyer_created_at> >
     > idx_t;
 };
 
@@ -153,7 +157,8 @@ TBL buyer_bid_t {
 typedef eosio::multi_index
 < "sellorders"_n,  order_t,
     indexed_by<"makerordidx"_n,     const_mem_fun<order_t, uint128_t, &order_t::by_maker_small_price_first> >,
-    indexed_by<"priceidx"_n,        const_mem_fun<order_t, uint64_t, &order_t::by_small_price_first> >
+    indexed_by<"makercreated"_n,    const_mem_fun<order_t, uint128_t, &order_t::by_maker_created_at> >,
+    indexed_by<"priceidx"_n,        const_mem_fun<order_t, uint64_t,  &order_t::by_small_price_first> >
 > sellorder_idx;
 
 // //buyer to bid for the token ID
