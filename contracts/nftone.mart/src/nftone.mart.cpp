@@ -61,8 +61,8 @@ using namespace std;
     * @param from
     * @param to
     * @param quant
-    * @param memo: o:$token_id:$order_id:$bid_price
-    *       E.g.:  o:123:1:10288/100
+    * @param memo: $token_id:$order_id:$bid_price
+    *       E.g.:  123:1:10288/100
     */
    void nftone_mart::onbuytransfer(const name& from, const name& to, const asset& quant, const string& memo) {
       if (from == get_self() || to != get_self()) return;
@@ -73,12 +73,10 @@ using namespace std;
 
       vector<string_view> params = split(memo, ":");
       auto param_size            = params.size();
-      auto magic_no              = string( string(params[0] ));
-      CHECKC( magic_no == "t" && param_size == 3 || magic_no == "o" && param_size == 4, err::MEMO_FORMAT_ERROR, "memo format incorrect" )
+      CHECKC( param_size == 3, err::MEMO_FORMAT_ERROR, "memo format incorrect" )
 
-      auto is_order_buy          = (magic_no == "o");  
       auto quantity              = quant;
-      auto token_id              = stoi( string( params[1] ));
+      auto token_id              = to_uint64( params[0], "token_id" );
 
       auto nstats                = nstats_t::idx_t(NFT_BANK, NFT_BANK.value);
       auto nstats_itr            = nstats.find(token_id);
@@ -89,41 +87,39 @@ using namespace std;
       auto bought                = nasset(0, nsymb); //by buyer
       auto bid_price             = price_s(0, nsymb); 
 
-      // if (is_order_buy) {
-         compute_memo_price( string(params[3]), bid_price.value );
+      compute_memo_price( string(params[2]), bid_price.value );
 
-         auto order_id           = stoi( string( params[2] ));
-         auto itr                = orders.find( order_id );
-         CHECKC( itr != orders.end(), err::RECORD_NOT_FOUND, "order not found: " + to_string(order_id) + "@" + to_string(token_id) )
+      auto order_id           = stoi( string( params[1] ));
+      auto itr                = orders.find( order_id );
+      CHECKC( itr != orders.end(), err::RECORD_NOT_FOUND, "order not found: " + to_string(order_id) + "@" + to_string(token_id) )
 
-         auto order = *itr;
-         if (order.price <= bid_price) {
-            process_single_buy_order( order, quantity, bought );
+      auto order = *itr;
+      if (order.price <= bid_price) {
+         process_single_buy_order( order, quantity, bought );
 
-            if (order.frozen == 0) {
-               orders.erase( itr );
+         if (order.frozen == 0) {
+            orders.erase( itr );
 
-            } else {
-               orders.modify(itr, same_payer, [&]( auto& row ) {
-                  row.frozen = order.frozen;
-                  row.updated_at = current_time_point();
-               });
-            }
          } else {
-            auto buyerbids          = buyer_bid_t::idx_t(_self, _self.value);
-            auto id                 = buyerbids.available_primary_key();
-            auto frozen             = int(quant.amount / bid_price.value / 10000);
-            buyerbids.emplace(_self, [&]( auto& row ){
-               row.id               = id;
-               row.sell_order_id    = order_id;
-               row.price            = bid_price;
-               row.frozen           = frozen;
-               row.buyer            = from;
-               row.created_at       = current_time_point();
+            orders.modify(itr, same_payer, [&]( auto& row ) {
+               row.frozen = order.frozen;
+               row.updated_at = current_time_point();
             });
-            quantity.amount         -= frozen * bid_price.value * 10000;
          }
-     
+      } else {
+         auto buyerbids          = buyer_bid_t::idx_t(_self, _self.value);
+         auto id                 = buyerbids.available_primary_key();
+         auto frozen             = int(quant.amount / bid_price.value / 10000);
+         buyerbids.emplace(_self, [&]( auto& row ){
+            row.id               = id;
+            row.sell_order_id    = order_id;
+            row.price            = bid_price;
+            row.frozen           = frozen;
+            row.buyer            = from;
+            row.created_at       = current_time_point();
+         });
+         quantity.amount         -= frozen * bid_price.value * 10000;
+      }
 
       if (bought.amount > 0) {
          //send to buyer for nft tokens
