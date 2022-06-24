@@ -93,14 +93,16 @@ TBL nstats_t {
     uint64_t by_parent_id()const    { return supply.symbol.parent_id; }
     uint64_t by_ipowner()const      { return ipowner.value; }
     uint64_t by_issuer()const       { return issuer.value; }
+    uint128_t by_issuer_created()const { return (uint128_t) issuer.value << 64 | (uint128_t) issued_at.sec_since_epoch(); }
     checksum256 by_token_uri()const { return HASH256(token_uri); } // unique index
 
     typedef eosio::multi_index
     < "tokenstats"_n,  nstats_t,
-        indexed_by<"parentidx"_n,  const_mem_fun<nstats_t, uint64_t, &nstats_t::by_parent_id> >,
-        indexed_by<"ipowneridx"_n, const_mem_fun<nstats_t, uint64_t, &nstats_t::by_ipowner> >,
-        indexed_by<"issueridx"_n, const_mem_fun<nstats_t, uint64_t, &nstats_t::by_issuer> >,
-        indexed_by<"tokenuriidx"_n, const_mem_fun<nstats_t, checksum256, &nstats_t::by_token_uri> >
+        indexed_by<"parentidx"_n,       const_mem_fun<nstats_t, uint64_t, &nstats_t::by_parent_id> >,
+        indexed_by<"ipowneridx"_n,      const_mem_fun<nstats_t, uint64_t, &nstats_t::by_ipowner> >,
+        indexed_by<"issueridx"_n,       const_mem_fun<nstats_t, uint64_t, &nstats_t::by_issuer> >,
+        indexed_by<"issuercreate"_n,    const_mem_fun<nstats_t, uint128_t, &nstats_t::by_issuer_created> >,
+        indexed_by<"tokenuriidx"_n,     const_mem_fun<nstats_t, checksum256, &nstats_t::by_token_uri> >
     > idx_t;
 
     EOSLIB_SERIALIZE(nstats_t,  (supply)(max_supply)(token_uri)
