@@ -125,7 +125,7 @@ TBL buyer_bid_t {
  
     checksum256 by_buyer_created_at()const { return make256key( sell_order_id,
                                                                 buyer.value,
-                                                                created_at.sec_since_epoch(),
+                                                                id,
                                                                 0); }
     
     EOSLIB_SERIALIZE( buyer_bid_t, (id)(sell_order_id)(price)(frozen)(buyer)(created_at) )
