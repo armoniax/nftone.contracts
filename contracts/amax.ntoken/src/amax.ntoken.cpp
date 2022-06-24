@@ -11,18 +11,22 @@ void ntoken::create( const name& issuer, const int64_t& maximum_supply, const ns
    check( maximum_supply > 0, "max-supply must be positive" );
    check( token_uri.length() < 1024, "token uri length > 1024" );
 
-   auto nstats = nstats_t::idx_t( _self, _self.value );
-   auto idx = nstats.get_index<"tokenuriidx"_n>();
-   auto token_uri_hash = HASH256(token_uri);
+   auto nsymb           = symbol;
+   auto nstats          = nstats_t::idx_t( _self, _self.value );
+   auto idx             = nstats.get_index<"tokenuriidx"_n>();
+   auto token_uri_hash  = HASH256(token_uri);
    // auto lower_itr = idx.lower_bound( token_uri_hash );
    // auto upper_itr = idx.upper_bound( token_uri_hash );
    // check( lower_itr == idx.end() || lower_itr == upper_itr, "token with token_uri already exists" );
    check( idx.find(token_uri_hash) == idx.end(), "token with token_uri already exists" );
-   check( nstats.find(symbol.id) == nstats.end(), "token of ID: " + to_string(symbol.id) + " alreay exists" );
-   check( symbol.id != symbol.parent_id, "parent id shall not be equal to id" );
-
+   check( nstats.find(nsymb.id) == nstats.end(), "token of ID: " + to_string(nsymb.id) + " alreay exists" );
+   if (nsymb.id != 0) 
+      check( nsymb.id != nsymb.parent_id, "parent id shall not be equal to id" );
+   else
+      nsymb.id         = nstats.available_primary_key();
+   
    nstats.emplace( issuer, [&]( auto& s ) {
-      s.supply.symbol   = symbol;
+      s.supply.symbol   = nsymb;
       s.max_supply      = nasset( maximum_supply, symbol );
       s.token_uri       = token_uri;
       s.ipowner         = ipowner;
