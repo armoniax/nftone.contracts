@@ -67,9 +67,12 @@ class [[eosio::contract("nftone.mart")]] nftone_mart : public contract {
    void onselltransfer(const name& from, const name& to, const vector<nasset>& quants, const string& memo);
 
    [[eosio::on_notify("cnyd.token::transfer")]]
-   void onbuytransfer(const name& from, const name& to, const asset& quant, const string& memo);
+   void onbuytransfercnyd(const name& from, const name& to, const asset& quant, const string& memo);
 
-   ACTION init();
+   [[eosio::on_notify("amax.mtoken::transfer")]]
+   void onbuytransfermtoken(const name& from, const name& to, const asset& quant, const string& memo);
+   
+   ACTION init(eosio::symbol symbol, name bank_contract);
    ACTION cancelorder(const name& maker, const uint32_t& token_id, const uint64_t& order_id);
    ACTION takebuybid( const name& issuer, const uint32_t& token_id, const uint64_t& buyer_bid_id );
    // ACTION takeselorder( const name& issuer, const uint32_t& token_id, const uint64_t& sell_order_id );
@@ -82,5 +85,8 @@ class [[eosio::contract("nftone.mart")]] nftone_mart : public contract {
    private:
       void process_single_buy_order( order_t& order, asset& quantity, nasset& bought );
       void compute_memo_price( const string& memo, float& price );
+
+      void on_buy_transfer(const name& from, const name& to, const asset& quant, const string& memo);
+
 };
 } //namespace amax
