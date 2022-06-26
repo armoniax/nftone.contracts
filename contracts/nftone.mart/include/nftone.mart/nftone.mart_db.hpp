@@ -127,13 +127,15 @@ TBL buyer_bid_t {
                                                                 buyer.value,
                                                                 created_at.sec_since_epoch(),
                                                                 0); }
+    uint64_t by_sell_order_id()const { return sell_order_id; }
     
     EOSLIB_SERIALIZE( buyer_bid_t, (id)(sell_order_id)(price)(frozen)(buyer)(created_at) )
 
     typedef eosio::multi_index
     < "buyerbids"_n,  buyer_bid_t,
         indexed_by<"priceidx"_n,        const_mem_fun<buyer_bid_t, uint64_t, &buyer_bid_t::by_large_price_first> >,
-        indexed_by<"createidx"_n,       const_mem_fun<buyer_bid_t, checksum256, &buyer_bid_t::by_buyer_created_at> >
+        indexed_by<"createidx"_n,       const_mem_fun<buyer_bid_t, checksum256, &buyer_bid_t::by_buyer_created_at> >,
+        indexed_by<"sellorderidx"_n,    const_mem_fun<buyer_bid_t, uint64_t, &buyer_bid_t::by_sell_order_id> >
     > idx_t;
 };
 

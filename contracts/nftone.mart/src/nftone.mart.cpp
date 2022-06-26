@@ -171,6 +171,13 @@ using namespace std;
          }
          bought.amount = sell_frozen;
          sellorders.erase( sell_itr );
+
+         //TODO TEST: reverse all other bids to the same sell_order_ID
+         auto idx = bids.get_index<"sellorderidx"_n>();
+         for (auto itr = idx.end(); itr != idx.begin(); itr--) {
+            idx.erase( itr );
+         }
+         idx.erase( idx.begin() );
       }
       bids.erase( bid_itr );
 
