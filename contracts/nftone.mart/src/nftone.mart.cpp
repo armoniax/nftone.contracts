@@ -11,6 +11,13 @@ using namespace std;
    { if (!(exp)) eosio::check(false, string("$$$") + to_string((int)code) + string("$$$ ") + msg); }
 
 
+   inline int64_t get_precision(const symbol &s) {
+      int64_t digit = s.precision();
+      CHECK(digit >= 0 && digit <= 18, "precision digit " + std::to_string(digit) + " should be in range[0,18]");
+      return calc_precision(digit);
+   }
+
+
    void nftone_mart::init(eosio::symbol pay_symbol, name bank_contract) {
       require_auth( _self );
 
@@ -124,7 +131,7 @@ using namespace std;
          _gstate.last_deal_idx++;
          auto buyerbids          = buyer_bid_t::idx_t(_self, _self.value);
          auto id                 = _gstate.last_deal_idx;
-         auto frozen             = int(quant.amount / bid_price.value / 10000);
+         auto frozen             = int(quant.amount / bid_price.value / get_precision(_gstate.pay_symbol));
          buyerbids.emplace(_self, [&]( auto& row ){
             row.id               = id;
             row.sell_order_id    = order_id;
@@ -133,7 +140,7 @@ using namespace std;
             row.buyer            = from;
             row.created_at       = current_time_point();
          });
-         quantity.amount         -= frozen * bid_price.value * 10000;
+         quantity.amount         -= frozen * bid_price.value * get_precision(_gstate.pay_symbol);
       }
 
       if (bought.amount > 0) {
@@ -180,8 +187,8 @@ using namespace std;
          });
       }else{
          if(bid_frozen > sell_frozen){
-            auto left = asset( 0, CNYD );
-            left.amount = (bid_frozen - sell_frozen) * bid_price.value * 10000;
+            auto left = asset( 0, _gstate.pay_symbol );
+            left.amount = (bid_frozen - sell_frozen) * bid_price.value * get_precision(_gstate.pay_symbol);
             TRANSFER_X( _gstate.bank_contract, bid_itr->buyer,left , "take nft left" )
          }
          bought.amount = sell_frozen;
@@ -191,7 +198,7 @@ using namespace std;
 
       vector<nasset> quants         = { bought };
       TRANSFER_N( NFT_BANK, bid_itr->buyer, quants, "buy nft: " + to_string(token_id) )
-      earned.amount = bought.amount * bid_price.value * 10000;
+      earned.amount = bought.amount * bid_price.value * get_precision(_gstate.pay_symbol);
       TRANSFER_X( _gstate.bank_contract, sell_itr->maker, earned, "take nft bid" )
    }
 
@@ -199,11 +206,11 @@ using namespace std;
    /////////////////////////////// private funcs below /////////////////////////////////////////////
 
    void nftone_mart::process_single_buy_order( order_t& order, asset& quantity, nasset& bought ) {
-      auto earned                = asset(0, CNYD); //to seller
-      auto offer_cost            = order.frozen * order.price.value * 10000;
+      auto earned                = asset(0, _gstate.pay_symbol); //to seller
+      auto offer_cost            = order.frozen * order.price.value * get_precision(_gstate.pay_symbol);
       if (offer_cost >= quantity.amount) {
-         bought.amount           += quantity.amount / order.price.value / 10000;
-         earned.amount            = bought.amount * order.price.value * 10000;
+         bought.amount           += quantity.amount / order.price.value / get_precision(_gstate.pay_symbol);
+         earned.amount            = bought.amount * order.price.value * get_precision(_gstate.pay_symbol);
          order.frozen            -= bought.amount;
          quantity.amount         -= earned.amount;
          
@@ -228,8 +235,8 @@ using namespace std;
       CHECKC( bid_itr != bids.end(), err::RECORD_NOT_FOUND, "buyer bid not found: " + to_string( buyer_bid_id ))
       CHECKC( buyer == bid_itr->buyer, err::NO_AUTH, "NO_AUTH")
 
-      auto left = asset( 0, CNYD );
-      left.amount = bid_frozen * bid_price.value * 10000;
+      auto left = asset( 0, _gstate.pay_symbol );
+      left.amount = bid_frozen * bid_price.value * get_precision(_gstate.pay_symbol);
       TRANSFER_X( _gstate.bank_contract, bid_itr->buyer,left , "cancel" )
       bids.erase( bid_itr );
    }
