@@ -169,7 +169,7 @@ using namespace std;
       auto token_pid                = nstats_itr->supply.symbol.parent_id;
       auto nsymb                    = nsymbol( token_id, token_pid );
       auto bought                   = nasset(0, nsymb); //by buyer
-      auto earned                   = asset( 0, CNYD );
+      auto earned                   = asset( 0, _gstate.pay_symbol );
 
       
       if(bid_frozen < sell_frozen){
