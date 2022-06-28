@@ -179,14 +179,15 @@ using namespace std;
       auto earned                   = asset( 0, _gstate.pay_symbol );
 
       
-      if(bid_frozen < sell_frozen){
+      if (bid_frozen < sell_frozen) {
          bought.amount = bid_frozen;
          sellorders.modify( sell_itr, same_payer, [&]( auto& row ){
             row.frozen              = sell_frozen - bid_frozen;
             row.updated_at          = current_time_point();
          });
-      }else{
-         if(bid_frozen > sell_frozen){
+
+      } else {
+         if (bid_frozen > sell_frozen) {
             auto left = asset( 0, _gstate.pay_symbol );
             left.amount = (bid_frozen - sell_frozen) * bid_price.value * get_precision(_gstate.pay_symbol);
             TRANSFER_X( _gstate.bank_contract, bid_itr->buyer,left , "take nft left" )
@@ -194,14 +195,8 @@ using namespace std;
          bought.amount = sell_frozen;
          sellorders.erase( sell_itr );
 
-         //TODO TEST: reverse all other bids to the same sell_order_ID
-         auto idx = bids.get_index<"sellorderidx"_n>();
-         for (auto itr = idx.end(); itr != idx.begin(); itr--) {
-            idx.erase( itr );
-         }
-         idx.erase( idx.begin() );
+        
       }
-      bids.erase( bid_itr );
 
       vector<nasset> quants         = { bought };
       TRANSFER_N( NFT_BANK, bid_itr->buyer, quants, "buy nft: " + to_string(token_id) )
