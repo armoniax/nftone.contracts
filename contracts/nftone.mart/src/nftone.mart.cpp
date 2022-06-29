@@ -23,7 +23,7 @@ using namespace std;
 
       _gstate.admin                 = "amax.daodev"_n;
       _gstate.dev_fee_collector     = "amax.daodev"_n;
-      _gstate.dev_fee_rate          = 0.001;
+      _gstate.dev_fee_rate          = 0;
       _gstate.pay_symbol            = pay_symbol;
       _gstate.bank_contract         = bank_contract;
 
@@ -110,9 +110,11 @@ using namespace std;
 
       compute_memo_price( string(params[2]), bid_price.value );
 
+
       auto order_id           = stoi( string( params[1] ));
       auto itr                = orders.find( order_id );
       CHECKC( itr != orders.end(), err::RECORD_NOT_FOUND, "order not found: " + to_string(order_id) + "@" + to_string(token_id) )
+      CHECKC( quant.amount >= bid_price.value * get_precision(_gstate.pay_symbol), err::PARAM_ERROR, "quantity < price" )
 
       auto order = *itr;
       if (order.price <= bid_price) {
@@ -168,6 +170,7 @@ using namespace std;
       auto sellorders               = sellorder_idx( _self, token_id );
       auto sell_itr                 = sellorders.find( sell_order_id );
       CHECKC( sell_itr != sellorders.end(), err::RECORD_NOT_FOUND, "sell order not found: " + to_string( sell_order_id ))
+      CHECKC( seller == sell_itr->maker, err::NO_AUTH, "NO_AUTH")
       auto sell_frozen              = sell_itr->frozen;
 
       auto nstats                   = nstats_t::idx_t(NFT_BANK, NFT_BANK.value);
@@ -244,6 +247,7 @@ using namespace std;
    }
    
    void nftone_mart::cancelorder(const name& maker, const uint32_t& token_id, const uint64_t& order_id) {
+      require_auth( maker );
 
       auto orders = sellorder_idx(_self, token_id);
       if (order_id != 0) {
