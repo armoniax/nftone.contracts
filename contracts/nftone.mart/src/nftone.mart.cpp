@@ -3,6 +3,7 @@
 #include <amax.ntoken/amax.ntoken.hpp>
 #include <cnyd.token/amax.xtoken.hpp>
 #include <utils.hpp>
+
 namespace amax {
 
 using namespace std;
@@ -37,7 +38,7 @@ using namespace std;
     * @param from
     * @param to
     * @param quantity
-    * @param memo: $ask_price       E.g.:  10288/100    (its currency unit is CNYD)
+    * @param memo: $ask_price       E.g.:  10288    (its currency unit is CNYD)
     *               
     */
    void nftone_mart::onselltransfer(const name& from, const name& to, const vector<nasset>& quants, const string& memo) {
@@ -47,7 +48,7 @@ using namespace std;
       
       CHECKC( memo != "", err::MEMO_FORMAT_ERROR, "empty memo!" )
       CHECKC( quants.size() == 1, err::OVERSIZED, "only one nft allowed to sell to nft at a timepoint" )
-      float price             = 0.0f;
+      asset price          = asset( 0, _gstate.pay_symbol );
       compute_memo_price( memo, price );
 
       auto quant              = quants[0];
@@ -56,7 +57,7 @@ using namespace std;
  
       auto sellorders = sellorder_idx( _self, quant.symbol.id );
       _gstate.last_buy_order_idx ++;
-      sellorders.emplace(_self, [&]( auto& row ){
+      sellorders.emplace(_self, [&]( auto& row ) {
          row.id         =  _gstate.last_buy_order_idx;
          row.price      = ask_price;
          row.frozen     = quant.amount; 
@@ -81,7 +82,7 @@ using namespace std;
     * @param to
     * @param quant
     * @param memo: $token_id:$order_id:$bid_price
-    *       E.g.:  123:1:10288/100
+    *       E.g.:  123:1:10288
     */
    void nftone_mart::on_buy_transfer(const name& from, const name& to, const asset& quant, const string& memo) {
 
@@ -106,16 +107,17 @@ using namespace std;
       auto nsymb                 = nsymbol( token_id, token_pid );
       auto orders                = sellorder_idx( _self, token_id );
       auto bought                = nasset(0, nsymb); //by buyer
-      auto bid_price             = price_s(0, nsymb); 
+      asset price                = asset( 0, _gstate.pay_symbol );
+
+      auto bid_price             = price_s(price, nsymb); 
 
       compute_memo_price( string(params[2]), bid_price.value );
-
 
       auto order_id           = stoi( string( params[1] ));
       auto itr                = orders.find( order_id );
       CHECKC( itr != orders.end(), err::RECORD_NOT_FOUND, "order not found: " + to_string(order_id) + "@" + to_string(token_id) )
-      CHECKC( quant.amount >= (uint64_t)(bid_price.value * get_precision(_gstate.pay_symbol)), 
-               err::PARAM_ERROR, "quantity < price , "  + to_string(bid_price.value * get_precision(_gstate.pay_symbol)) )
+      CHECKC( quant.amount >= (uint64_t)(bid_price.value.amount), 
+               err::PARAM_ERROR, "quantity < price , "  + to_string(bid_price.value.amount) )
 
       auto order = *itr;
       if (order.price <= bid_price) {
@@ -134,7 +136,9 @@ using namespace std;
          _gstate.last_deal_idx++;
          auto buyerbids          = buyer_bid_t::idx_t(_self, _self.value);
          auto id                 = _gstate.last_deal_idx;
-         auto frozen             = int(quant.amount / bid_price.value / get_precision(_gstate.pay_symbol));
+         auto nft_count          = divide_decimal64( quant.amount, bid_price.value.amount, (int128_t) 1 );
+         auto frozen             = quant;
+         frozen.amount           = nft_count * bid_price.value.amount;
          buyerbids.emplace(_self, [&]( auto& row ){
             row.id               = id;
             row.sell_order_id    = order_id;
@@ -143,7 +147,7 @@ using namespace std;
             row.buyer            = from;
             row.created_at       = current_time_point();
          });
-         quantity.amount         -= frozen * bid_price.value * get_precision(_gstate.pay_symbol);
+         quantity.amount         -= nft_count * bid_price.value.amount;
       }
 
       if (bought.amount > 0) {
@@ -156,7 +160,6 @@ using namespace std;
          TRANSFER_X( _gstate.bank_contract, from, quantity, "nft buy left" )
       }
    }
-
   
    ACTION nftone_mart::takebuybid( const name& seller, const uint32_t& token_id, const uint64_t& buyer_bid_id ) {
       require_auth( seller );
@@ -165,6 +168,7 @@ using namespace std;
       auto bid_itr                  = bids.find( buyer_bid_id );
       auto bid_frozen               = bid_itr->frozen;
       auto bid_price                = bid_itr->price;
+      auto bid_count                = divide_decimal64(bid_itr->frozen.amount, bid_itr->price.value.amount, (uint128_t)1);          
       CHECKC( bid_itr != bids.end(), err::RECORD_NOT_FOUND, "buyer bid not found: " + to_string( buyer_bid_id ))
       auto sell_order_id = bid_itr->sell_order_id;
 
@@ -183,28 +187,26 @@ using namespace std;
       auto earned                   = asset( 0, _gstate.pay_symbol );
 
       
-      if (bid_frozen < sell_frozen) {
-         bought.amount = bid_frozen;
+      if (bid_count < sell_frozen) {
+         bought.amount = bid_count;
          sellorders.modify( sell_itr, same_payer, [&]( auto& row ){
-            row.frozen              = sell_frozen - bid_frozen;
+            row.frozen              = sell_frozen - bid_count;
             row.updated_at          = current_time_point();
          });
 
       } else {
-         if (bid_frozen > sell_frozen) {
+         if (bid_count > sell_frozen) {
             auto left = asset( 0, _gstate.pay_symbol );
-            left.amount = (bid_frozen - sell_frozen) * bid_price.value * get_precision(_gstate.pay_symbol);
+            left.amount = (bid_count - sell_frozen) * bid_price.value.amount ;
             TRANSFER_X( _gstate.bank_contract, bid_itr->buyer,left , "take nft left" )
          }
          bought.amount = sell_frozen;
          sellorders.erase( sell_itr );
-
-        
       }
 
       vector<nasset> quants         = { bought };
       TRANSFER_N( NFT_BANK, bid_itr->buyer, quants, "buy nft: " + to_string(token_id) )
-      earned.amount = bought.amount * bid_price.value * get_precision(_gstate.pay_symbol);
+      earned.amount = bought.amount * bid_price.value.amount;
       TRANSFER_X( _gstate.bank_contract, sell_itr->maker, earned, "take nft bid" )
    }
 
@@ -213,10 +215,10 @@ using namespace std;
 
    void nftone_mart::process_single_buy_order( order_t& order, asset& quantity, nasset& bought ) {
       auto earned                = asset(0, _gstate.pay_symbol); //to seller
-      auto offer_cost            = order.frozen * order.price.value * get_precision(_gstate.pay_symbol);
+      auto offer_cost            = order.frozen * order.price.value.amount;
       if (offer_cost >= quantity.amount) {
-         bought.amount           += quantity.amount / order.price.value / get_precision(_gstate.pay_symbol);
-         earned.amount            = bought.amount * order.price.value * get_precision(_gstate.pay_symbol);
+         bought.amount           += divide_decimal64(quantity.amount, order.price.value.amount, (uint128_t)1);
+         earned.amount            = bought.amount * order.price.value.amount;
          order.frozen            -= bought.amount;
          quantity.amount         -= earned.amount;
          
@@ -242,8 +244,7 @@ using namespace std;
       CHECKC( buyer == bid_itr->buyer, err::NO_AUTH, "NO_AUTH")
 
       auto left = asset( 0, _gstate.pay_symbol );
-      left.amount = bid_frozen * bid_price.value * get_precision(_gstate.pay_symbol);
-      TRANSFER_X( _gstate.bank_contract, bid_itr->buyer,left , "cancel" )
+      TRANSFER_X( _gstate.bank_contract, bid_itr->buyer, bid_frozen, "cancel" )
       bids.erase( bid_itr );
    }
    
@@ -271,13 +272,8 @@ using namespace std;
       }
    }
 
-   void nftone_mart::compute_memo_price(const string& memo, float& price) {
-      vector<string_view> params = split(memo, "//");
-      switch (params.size()) {
-         case 1:  price = (float) stoi( string(params[0]) ); break;
-         case 2:  price = (float) stoi( string(params[0]) ) / (float) stoi( string(params[1]) ); break;
-         default: CHECKC( false, err::MEMO_FORMAT_ERROR, "price format incorrect" )
-      }
+   void nftone_mart::compute_memo_price(const string& memo, asset& price) {
+      price.amount = (uint64_t) stoi( memo);
    }
 
 } //namespace amax

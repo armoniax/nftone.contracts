@@ -67,11 +67,11 @@ typedef eosio::singleton< "global"_n, global_t > global_singleton;
 
 // price for NFT tokens
 struct price_s {
-    float value;    //price value
+    asset value;    //price value
     nsymbol symbol;
 
     price_s() {}
-    price_s(const float& v, const nsymbol& symb): value(v), symbol(symb) {}
+    price_s(const asset& v, const nsymbol& symb): value(v), symbol(symb) {}
 
     friend bool operator > ( const price_s& a, const price_s& b ) {
         return a.value > b.value;
@@ -93,7 +93,7 @@ struct price_s {
 TBL order_t {
     uint64_t        id;                 //PK
     price_s         price;
-    int64_t         frozen;             //nft amount for sellers, cnyd amount for buyers
+    int64_t         frozen;             //nft amount for sellers
     name            maker;
     time_point_sec  created_at;
     time_point_sec  updated_at;
@@ -103,10 +103,10 @@ TBL order_t {
 
     uint64_t primary_key()const { return id; }
 
-    uint64_t by_small_price_first()const { return price.value; }
-    uint64_t by_large_price_first()const { return( std::numeric_limits<uint64_t>::max() - price.value ); }
-    uint128_t by_maker_small_price_first()const { return (uint128_t) maker.value << 64 | (uint128_t) price.value; }
-    uint128_t by_maker_large_price_first()const { return (uint128_t) maker.value << 64 | (uint128_t) (std::numeric_limits<uint64_t>::max() - price.value); }
+    uint64_t by_small_price_first()const { return price.value.amount; }
+    uint64_t by_large_price_first()const { return( std::numeric_limits<uint64_t>::max() - price.value.amount ); }
+    uint128_t by_maker_small_price_first()const { return (uint128_t) maker.value << 64 | (uint128_t) price.value.amount ; }
+    uint128_t by_maker_large_price_first()const { return (uint128_t) maker.value << 64 | (uint128_t) (std::numeric_limits<uint64_t>::max() - price.value.amount ); }
     uint128_t by_maker_created_at()const { return (uint128_t) maker.value << 64 | (uint128_t) created_at.sec_since_epoch(); }
 
     EOSLIB_SERIALIZE( order_t, (id)(price)(frozen)(maker)(created_at)(updated_at) )
@@ -117,7 +117,7 @@ TBL buyer_bid_t {
     uint64_t        id;
     uint64_t        sell_order_id;
     price_s         price;
-    int64_t         frozen; //CNYD
+    asset           frozen; //CNYD
     name            buyer;
     time_point_sec  created_at;
 
@@ -126,7 +126,7 @@ TBL buyer_bid_t {
 
     uint64_t primary_key()const { return id; }
 
-    uint64_t by_large_price_first()const { return( std::numeric_limits<uint64_t>::max() - price.value ); }
+    uint64_t by_large_price_first()const { return( std::numeric_limits<uint64_t>::max() - price.value.amount ); }
  
     checksum256 by_buyer_created_at()const { return make256key( sell_order_id,
                                                                 buyer.value,
