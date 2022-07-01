@@ -114,7 +114,7 @@ using namespace std;
       auto order_id           = stoi( string( params[1] ));
       auto itr                = orders.find( order_id );
       CHECKC( itr != orders.end(), err::RECORD_NOT_FOUND, "order not found: " + to_string(order_id) + "@" + to_string(token_id) )
-      CHECKC( quant.amount >= bid_price.value * get_precision(_gstate.pay_symbol), 
+      CHECKC( quant.amount >= (uint64_t)(bid_price.value * get_precision(_gstate.pay_symbol)), 
                err::PARAM_ERROR, "quantity < price , "  + to_string(bid_price.value * get_precision(_gstate.pay_symbol)) )
 
       auto order = *itr;
