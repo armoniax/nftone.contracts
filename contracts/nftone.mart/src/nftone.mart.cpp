@@ -273,7 +273,7 @@ using namespace std;
    }
 
    void nftone_mart::compute_memo_price(const string& memo, asset& price) {
-      price.amount = (uint64_t) stoi( memo);
+      price.amount =  to_int64( memo, "price");
    }
 
 } //namespace amax
