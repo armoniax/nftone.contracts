@@ -274,6 +274,7 @@ using namespace std;
 
    void nftone_mart::compute_memo_price(const string& memo, asset& price) {
       price.amount =  to_int64( memo, "price");
+      CHECKC( price.amount > 0, err::PARAM_ERROR, " price non-positive quantity not allowed" )
    }
 
 } //namespace amax
