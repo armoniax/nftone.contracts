@@ -136,7 +136,7 @@ using namespace std;
          _gstate.last_deal_idx++;
          auto buyerbids          = buyer_bid_t::idx_t(_self, _self.value);
          auto id                 = _gstate.last_deal_idx;
-         auto nft_count          = divide_decimal64( quant.amount, bid_price.value.amount, (int128_t) 1 );
+         auto nft_count          = quant.amount / bid_price.value.amount;
          auto frozen             = quant;
          frozen.amount           = nft_count * bid_price.value.amount;
          buyerbids.emplace(_self, [&]( auto& row ){
@@ -168,7 +168,7 @@ using namespace std;
       auto bid_itr                  = bids.find( buyer_bid_id );
       auto bid_frozen               = bid_itr->frozen;
       auto bid_price                = bid_itr->price;
-      auto bid_count                = divide_decimal64(bid_itr->frozen.amount, bid_itr->price.value.amount, (uint128_t)1);          
+      auto bid_count                = bid_itr->frozen.amount / bid_itr->price.value.amount;          
       CHECKC( bid_itr != bids.end(), err::RECORD_NOT_FOUND, "buyer bid not found: " + to_string( buyer_bid_id ))
       auto sell_order_id = bid_itr->sell_order_id;
 
@@ -217,7 +217,7 @@ using namespace std;
       auto earned                = asset(0, _gstate.pay_symbol); //to seller
       auto offer_cost            = order.frozen * order.price.value.amount;
       if (offer_cost >= quantity.amount) {
-         bought.amount           += divide_decimal64(quantity.amount, order.price.value.amount, (uint128_t)1);
+         bought.amount           += quantity.amount / order.price.value.amount;
          earned.amount            = bought.amount * order.price.value.amount;
          order.frozen            -= bought.amount;
          quantity.amount         -= earned.amount;
