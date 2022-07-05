@@ -84,7 +84,7 @@ class [[eosio::contract("nftone.mart")]] nftone_mart : public contract {
 
    private:
       void process_single_buy_order( order_t& order, asset& quantity, nasset& bought );
-      void compute_memo_price( const string& memo, float& price );
+      void compute_memo_price( const string& memo, asset& price );
 
       void on_buy_transfer(const name& from, const name& to, const asset& quant, const string& memo);
 
