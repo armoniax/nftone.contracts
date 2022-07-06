@@ -203,7 +203,9 @@ using namespace std;
          bought.amount = sell_frozen;
          sellorders.erase( sell_itr );
       }
-
+      
+      bids.erase(bid_itr);
+      
       vector<nasset> quants         = { bought };
       TRANSFER_N( NFT_BANK, bid_itr->buyer, quants, "buy nft: " + to_string(token_id) )
       earned.amount = bought.amount * bid_price.value.amount;
