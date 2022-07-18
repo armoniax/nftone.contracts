@@ -4,6 +4,9 @@
 #include <cnyd.token/amax.xtoken.hpp>
 #include <utils.hpp>
 
+static constexpr eosio::name active_permission{"active"_n};
+
+
 namespace amax {
 
 using namespace std;
@@ -121,7 +124,7 @@ using namespace std;
 
       auto order = *itr;
       if (order.price <= bid_price) {
-         process_single_buy_order( order, quantity, bought );
+         process_single_buy_order(from,  order, quantity, bought );
 
          if (order.frozen == 0) {
             orders.erase( itr );
@@ -132,6 +135,7 @@ using namespace std;
                row.updated_at = current_time_point();
             });
          }
+
       } else {
          _gstate.last_deal_idx++;
          auto buyerbids          = buyer_bid_t::idx_t(_self, _self.value);
@@ -148,6 +152,19 @@ using namespace std;
             row.created_at       = current_time_point();
          });
          quantity.amount         -= nft_count * bid_price.value.amount;
+         auto fee                = asset(0, _gstate.pay_symbol);
+        
+         _on_deal_trace(
+                           order_id,
+                           0,
+                           order.maker,
+                           from,
+                           bid_price,
+                           fee,
+                           nft_count,
+                           current_time_point()
+            );
+
       }
 
       if (bought.amount > 0) {
@@ -215,7 +232,7 @@ using namespace std;
 
    /////////////////////////////// private funcs below /////////////////////////////////////////////
 
-   void nftone_mart::process_single_buy_order( order_t& order, asset& quantity, nasset& bought ) {
+   void nftone_mart::process_single_buy_order(const name& buyer, order_t& order, asset& quantity, nasset& bought) {
       auto earned                = asset(0, _gstate.pay_symbol); //to seller
       auto offer_cost            = order.frozen * order.price.value.amount;
       if (offer_cost >= quantity.amount) {
@@ -235,6 +252,22 @@ using namespace std;
 
          TRANSFER_X( _gstate.bank_contract, order.maker, earned, "sell nft:" + to_string(bought.symbol.id) )
       }
+      auto seller_order_id = order.id;
+      auto maker           = order.maker;
+      auto price           =  order.price;
+      auto fee             = asset(0, _gstate.pay_symbol);
+      auto count           = bought.amount; 
+      _on_deal_trace(
+          seller_order_id,
+                     0,
+                     maker,
+                     buyer,
+                     price,
+                     fee,
+                     count,
+                     current_time_point()
+      );
+
    }
    void nftone_mart::cancelbid( const name& buyer, const uint64_t& buyer_bid_id ){
       require_auth( buyer );
@@ -278,5 +311,36 @@ using namespace std;
       price.amount =  to_int64( memo, "price");
       CHECKC( price.amount > 0, err::PARAM_ERROR, " price non-positive quantity not allowed" )
    }
+
+   void nftone_mart::dealtrace(const uint64_t& seller_order_id,
+                     const uint64_t& buy_order_id,
+                     const name& seller,
+                     const name& buyer,
+                     const price_s& price,
+                     const asset& fee,
+                     const int64_t& count,
+                     const time_point_sec created_at
+                   )
+   {
+      require_auth(get_self());
+      require_recipient(seller);
+      require_recipient(buyer);
+   }
+
+   void nftone_mart::_on_deal_trace(const uint64_t& seller_order_id,
+                     const uint64_t& buy_order_id,
+                     const name& maker,
+                     const name& buyer,
+                     const price_s& price,
+                     const asset& fee,
+                     const int64_t count,
+                     const time_point_sec created_at) 
+    {	
+         amax::nftone_mart::deal_trace_action act{ _self, { {_self, active_permission} } };
+
+			act.send( seller_order_id, buy_order_id, maker, buyer, price, fee, count, created_at );
+   
+   }
+
 
 } //namespace amax
