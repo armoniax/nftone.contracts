@@ -3,6 +3,7 @@
 #include <eosio/asset.hpp>
 #include <eosio/eosio.hpp>
 #include <eosio/permission.hpp>
+#include <eosio/action.hpp>
 
 #include <string>
 
@@ -77,16 +78,39 @@ class [[eosio::contract("nftone.mart")]] nftone_mart : public contract {
    ACTION takebuybid( const name& issuer, const uint32_t& token_id, const uint64_t& buyer_bid_id );
    // ACTION takeselorder( const name& issuer, const uint32_t& token_id, const uint64_t& sell_order_id );
    ACTION cancelbid( const name& buyer, const uint64_t& buyer_bid_id );
-   
+
+   ACTION dealtrace(const uint64_t& seller_order_id,
+                     const uint64_t& buy_order_id,
+                     const name& seller,
+                     const name& buyer,
+                     const price_s& price,
+                     const asset& fee,
+                     const int64_t& count,
+                     const time_point_sec created_at
+                   );
+
+
+   using deal_trace_action = eosio::action_wrapper<"dealtrace"_n, &nftone_mart::dealtrace>;
+
    private:
       global_singleton    _global;
       global_t            _gstate;
 
    private:
-      void process_single_buy_order( order_t& order, asset& quantity, nasset& bought );
+      void process_single_buy_order( const name& buyer, order_t& order, asset& quantity, nasset& bought );
+
       void compute_memo_price( const string& memo, asset& price );
 
       void on_buy_transfer(const name& from, const name& to, const asset& quant, const string& memo);
 
+      void _on_deal_trace(const uint64_t& seller_order_id,
+                     const uint64_t& buy_order_id,
+                     const name& seller,
+                     const name& buyer,
+                     const price_s& price,
+                     const asset& fee,
+                     const int64_t count,
+                     const time_point_sec created_at);
+                     
 };
 } //namespace amax
