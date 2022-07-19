@@ -80,7 +80,7 @@ class [[eosio::contract("nftone.mart")]] nftone_mart : public contract {
    ACTION cancelbid( const name& buyer, const uint64_t& buyer_bid_id );
 
    ACTION dealtrace(const uint64_t& seller_order_id,
-                     const uint64_t& buy_order_id,
+                     const uint64_t& bid_id,
                      const name& seller,
                      const name& buyer,
                      const price_s& price,
