@@ -272,7 +272,7 @@ using namespace std;
          TRANSFER_X( _gstate.bank_contract, order.maker, earned, "sell nft:" + to_string(bought.symbol.id) )
 
       } else {// will buy the current offer wholely and continue
-         deal_count              = deal_count;
+         deal_count              = order.frozen;
          bought.amount           += order.frozen;
          earned.amount           = offer_cost;
          order.frozen            = 0;
