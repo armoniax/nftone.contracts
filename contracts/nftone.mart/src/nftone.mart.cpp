@@ -244,7 +244,7 @@ using namespace std;
       auto fee             = asset(0, _gstate.pay_symbol);
       _on_deal_trace(
                      seller_order_id,
-                     0,
+                     bid_itr->id,
                      maker,
                      buyer,
                      bid_price,
