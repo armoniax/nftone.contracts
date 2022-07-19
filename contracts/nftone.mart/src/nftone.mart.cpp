@@ -327,7 +327,7 @@ using namespace std;
    }
 
    void nftone_mart::dealtrace(const uint64_t& seller_order_id,
-                     const uint64_t& buy_order_id,
+                     const uint64_t& bid_id,
                      const name& seller,
                      const name& buyer,
                      const price_s& price,
