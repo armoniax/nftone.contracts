@@ -8,6 +8,7 @@ void ntoken::create( const name& issuer, const int64_t& maximum_supply, const ns
    require_auth( issuer );
 
    check( is_account(issuer), "issuer account does not exist" );
+   check( is_account(ipowner), "ipowner account does not exist" );
    check( maximum_supply > 0, "max-supply must be positive" );
    check( token_uri.length() < 1024, "token uri length > 1024" );
 

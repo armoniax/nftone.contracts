@@ -31,10 +31,10 @@ using namespace eosio;
 NTBL("global") global_t {
     name admin;
     name dev_fee_collector;
-    float dev_fee_rate      = 0.0;
+    float dev_fee_rate      = 0.0;      //手续费
     float creator_fee_rate  = 0.0;
-    float ipowner_fee_rate  = 0.0;
-    float notary_fee_rate   = 0.0;
+    float ipowner_fee_rate  = 0.0;      //版权费
+    float notary_fee_rate   = 0.0;      
     uint32_t order_expiry_hours = 72;
     eosio::symbol           pay_symbol;
     name                    bank_contract;
