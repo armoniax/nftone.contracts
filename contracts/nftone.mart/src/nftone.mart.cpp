@@ -22,17 +22,26 @@ using namespace std;
    }
 
 
-   void nftone_mart::init(eosio::symbol pay_symbol, name bank_contract) {
+   void nftone_mart::init(const symbol& pay_symbol, const name& bank_contract, const name& admin, 
+                              const float& devfeerate, const name& feecollector,
+                              const float& ipfeerate, const name& ipcollector) {
       require_auth( _self );
 
-      _gstate.admin                 = "amax.daodev"_n;
-      _gstate.dev_fee_collector     = "amax.daodev"_n;
-      _gstate.dev_fee_rate          = 0;
+      CHECKC( devfeerate > 0.0 && devfeerate < 1.0, err::PARAM_ERROR, "devfeerate needs to be between 0 and 1" )
+      CHECKC( ipfeerate > 0.0 && ipfeerate < 1.0, err::PARAM_ERROR, "ipfeerate to be between 0 and 1" )
+      CHECKC( ipfeerate + devfeerate < 1.0, err::PARAM_ERROR, "The handling ipfeerate plus devfeerate shall not exceed 1" )
+      CHECKC( is_account(feecollector), err::ACCOUNT_INVALID, "feecollector cannot be found" )
+      CHECKC( is_account(ipcollector), err::ACCOUNT_INVALID, "ipcollector cannot be found" )
+      CHECKC( is_account(admin), err::ACCOUNT_INVALID, "admin cannot be found" )
+
+      _gstate.admin                 = admin;
+      _gstate.dev_fee_collector     = feecollector;
+      _gstate.dev_fee_rate          = devfeerate;
+      _gstate.ipowner_fee_collector = ipcollector;
+      _gstate.ipowner_fee_rate      = ipfeerate;
       _gstate.pay_symbol            = pay_symbol;
       _gstate.bank_contract         = bank_contract;
 
-      //reset with default
-      // _gstate = global_t{};
    }
 
    /**
@@ -129,7 +138,6 @@ using namespace std;
          auto count           = bought.amount; 
          process_single_buy_order( order, quantity, bought, deal_count );
 
-
          if (order.frozen == 0) {
             orders.erase( itr );
 
@@ -172,9 +180,8 @@ using namespace std;
             row.created_at       = current_time_point();
          });
          quantity.amount         -= nft_count * bid_price.value.amount;
-         auto fee                = asset(0, _gstate.pay_symbol);
       }
-
+      
       if (bought.amount > 0) {
          //send to buyer for nft tokens
          vector<nasset> quants = { bought };
@@ -184,6 +191,8 @@ using namespace std;
       if (quantity.amount > 0) { 
          TRANSFER_X( _gstate.bank_contract, from, quantity, "nft buy left" )
       }
+
+
    }
   
    ACTION nftone_mart::takebuybid( const name& seller, const uint32_t& token_id, const uint64_t& buyer_bid_id ) {
@@ -258,7 +267,7 @@ using namespace std;
 
    /////////////////////////////// private funcs below /////////////////////////////////////////////
 
-   void nftone_mart::process_single_buy_order(order_t& order, asset& quantity, nasset& bought, uint64_t& deal_count ) {
+   void nftone_mart::process_single_buy_order(order_t& order, asset& quantity, nasset& bought, uint64_t& deal_count) {
       auto earned                = asset(0, _gstate.pay_symbol); //to seller
       auto offer_cost            = order.frozen * order.price.value.amount;
       if (offer_cost >= quantity.amount) {
@@ -268,8 +277,7 @@ using namespace std;
          order.frozen            -= bought.amount;
          quantity.amount         -= earned.amount;
          
-         //send to seller for quote tokens
-         TRANSFER_X( _gstate.bank_contract, order.maker, earned, "sell nft:" + to_string(bought.symbol.id) )
+         maker_settlement(earned, bought);
 
       } else {// will buy the current offer wholely and continue
          deal_count              = order.frozen;
@@ -278,11 +286,35 @@ using namespace std;
          order.frozen            = 0;
          quantity.amount         -= offer_cost;
 
-         TRANSFER_X( _gstate.bank_contract, order.maker, earned, "sell nft:" + to_string(bought.symbol.id) )
+         maker_settlement(earned, bought);
+
       }
-    
 
    }
+
+   void nftone_mart::maker_settlement(asset& earned, nasset& bought) {
+      if(_gstate.dev_fee_rate > 0.0){
+         auto fee       =  asset(0, _gstate.pay_symbol);   
+         int64_t feeam  =  earned.amount * _gstate.dev_fee_rate;
+         fee.amount     =  feeam;
+         earned.amount  -= feeam;
+         TRANSFER_X( _gstate.bank_contract, _gstate.dev_fee_collector, fee, "dev fee" )
+
+      }
+
+      if(_gstate.ipowner_fee_rate > 0.0){
+         auto ipfee        =  asset(0, _gstate.pay_symbol);
+         int64_t ipfeeam   =  earned.amount * _gstate.ipowner_fee_rate;
+         ipfee.amount      =  ipfeeam;
+         earned.amount     -= ipfeeam;
+         TRANSFER_X( _gstate.bank_contract, _gstate.ipowner_fee_collector, ipfee, "ip fee" )
+
+      }
+      
+      TRANSFER_X( _gstate.bank_contract, order.maker, earned, "sell nft:" + to_string(bought.symbol.id) )
+
+   }
+
    void nftone_mart::cancelbid( const name& buyer, const uint64_t& buyer_bid_id ){
       require_auth( buyer );
       auto bids                     = buyer_bid_t::idx_t(_self, _self.value);
