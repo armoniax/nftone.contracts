@@ -1,4 +1,4 @@
-#pragma once
+   #pragma once
 
 #include <eosio/asset.hpp>
 #include <eosio/eosio.hpp>
@@ -99,7 +99,6 @@ class [[eosio::contract("nftone.mart")]] nftone_mart : public contract {
       global_t            _gstate;
 
    private:
-      void process_single_buy_order(order_t& order, asset& quantity, nasset& bought, uint64_t& deal_count );
 
       void compute_memo_price( const string& memo, asset& price );
 
@@ -113,6 +112,8 @@ class [[eosio::contract("nftone.mart")]] nftone_mart : public contract {
                      const asset& fee,
                      const int64_t count,
                      const time_point_sec created_at);
-                     
+      void process_single_buy_order(order_t& order, asset& quantity, nasset& bought, uint64_t& deal_count, asset& total_fee);
+
+      void maker_settlement(const name& maker, asset& earned, nasset& bought, asset& total_fee);
 };
 } //namespace amax
