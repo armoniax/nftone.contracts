@@ -293,23 +293,23 @@ using namespace std;
    void nftone_mart::maker_settlement(const name& maker, asset& earned, nasset& bought, asset& total_fee, name& ipowner) {
 
       if(_gstate.dev_fee_rate > 0.0){
-         auto fee       =  asset(0, _gstate.pay_symbol);
-         int64_t feeam  =  earned.amount * _gstate.dev_fee_rate;
-         fee.amount     =  feeam;
-         earned.amount  -= feeam;
+         auto fee          =  asset(0, _gstate.pay_symbol);
+         int64_t feeam     =  earned.amount * _gstate.dev_fee_rate;
+         fee.amount        =  feeam;
          TRANSFER_X( _gstate.bank_contract, _gstate.dev_fee_collector, fee, "dev fee" )
-         total_fee =  total_fee + fee;
+         total_fee         += fee;
       }
 
       if(_gstate.ipowner_fee_rate > 0.0 && ipowner.length() != 0 && is_account(ipowner)){
          auto ipfee        =  asset(0, _gstate.pay_symbol);
          int64_t ipfeeam   =  earned.amount * _gstate.ipowner_fee_rate;
          ipfee.amount      =  ipfeeam;
-         earned.amount     -= ipfeeam;
-         total_fee         =  total_fee + ipfee;
          TRANSFER_X( _gstate.bank_contract, ipowner, ipfee, "ip fee" )
+         total_fee         += ipfee;
+
       }
 
+      earned -= total_fee;
       TRANSFER_X( _gstate.bank_contract, maker, earned, "sell nft:" + to_string(bought.symbol.id) )
 
    }
