@@ -31,7 +31,6 @@ using namespace eosio;
 NTBL("global") global_t {
     name admin;
     name dev_fee_collector;
-    name ipowner_fee_collector;
     float dev_fee_rate      = 0.0;
     float creator_fee_rate  = 0.0;
     float ipowner_fee_rate  = 0.0;
@@ -42,13 +41,13 @@ NTBL("global") global_t {
     uint64_t last_buy_order_idx = 0;
     uint64_t last_deal_idx      = 0;
 
-    EOSLIB_SERIALIZE( global_t, (admin)(dev_fee_collector)(ipowner_fee_collector)(dev_fee_rate)(creator_fee_rate)(ipowner_fee_rate)
+    EOSLIB_SERIALIZE( global_t, (admin)(dev_fee_collector)(dev_fee_rate)(creator_fee_rate)(ipowner_fee_rate)
                                 (notary_fee_rate)(order_expiry_hours)(pay_symbol)(bank_contract)(last_buy_order_idx)(last_deal_idx) )
 
 /*
     // template<typename DataStream>
     // friend DataStream& operator << ( DataStream& ds, const global_t& t ) {
-    //     return ds   << t.admin 
+    //     return ds   << t.admin
     //                 << t.dev_fee_collector
     //                 << t.dev_fee_rate
     //                 << t.creator_fee_rate
@@ -111,7 +110,7 @@ TBL order_t {
     uint128_t by_maker_created_at()const { return (uint128_t) maker.value << 64 | (uint128_t) created_at.sec_since_epoch(); }
 
     EOSLIB_SERIALIZE( order_t, (id)(price)(frozen)(maker)(created_at)(updated_at) )
- 
+
 };
 
 TBL buyer_bid_t {
@@ -128,13 +127,13 @@ TBL buyer_bid_t {
     uint64_t primary_key()const { return id; }
 
     uint64_t by_large_price_first()const { return( std::numeric_limits<uint64_t>::max() - price.value.amount ); }
- 
+
     checksum256 by_buyer_created_at()const { return make256key( sell_order_id,
                                                                 buyer.value,
                                                                 created_at.sec_since_epoch(),
                                                                 id); }
     uint64_t by_sell_order_id()const { return sell_order_id; }
-    
+
     EOSLIB_SERIALIZE( buyer_bid_t, (id)(sell_order_id)(price)(frozen)(buyer)(created_at) )
 
     typedef eosio::multi_index
@@ -153,16 +152,16 @@ TBL buyer_bid_t {
 //     nsymbol     symbol;
 //     float       creator_fee_rate;
 //     float       ipowner_fee_rate;
-//     float       notary_fee_rate;     
+//     float       notary_fee_rate;
 
 //     fee_rate_t() {}
 //     fee_rate_t(const nsymbol& symb): symbol(symb) {}
-//     fee_rate_t(const nsymbol& symb, const float& cfr, const float& ifr, const float& nfr): symbol(symb), 
+//     fee_rate_t(const nsymbol& symb, const float& cfr, const float& ifr, const float& nfr): symbol(symb),
 //             creator_fee_rate(cfr), ipowner_fee_rate(ifr), notary_fee_rate(nfr) {}
 
 //     uint64_t primary_key()const { return symbol.id; }
 
-//     EOSLIB_SERIALIZE( fee_rate_t, (symbol)(creator_fee_rate)(ipowner_fee_rate)(notary_fee_rate) )  
+//     EOSLIB_SERIALIZE( fee_rate_t, (symbol)(creator_fee_rate)(ipowner_fee_rate)(notary_fee_rate) )
 // };
 */
 
