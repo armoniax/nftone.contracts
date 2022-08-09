@@ -135,7 +135,8 @@ using namespace std;
 
          auto fee             = asset(0, _gstate.pay_symbol);
          auto count           = bought.amount;
-         process_single_buy_order( order, quantity, bought, deal_count, fee, nstats_itr->ipowner );
+         auto ipowner         = nstats_itr->ipowner;
+         process_single_buy_order( order, quantity, bought, deal_count, fee, ipowner );
 
          if (order.frozen == 0) {
             orders.erase( itr );
@@ -244,8 +245,9 @@ using namespace std;
       vector<nasset> quants         = { bought };
       TRANSFER_N( NFT_BANK, bid_itr->buyer, quants, "buy nft: " + to_string(token_id) )
       earned.amount = bought.amount * bid_price.value.amount;
-
-      maker_settlement( seller, earned, bought,  fee );
+      
+      auto ipowner         = nstats_itr->ipowner;
+      maker_settlement( seller, earned, bought, fee, ipowner );
 
       auto seller_order_id = sell_itr->id;
       auto maker           = sell_itr->maker;
