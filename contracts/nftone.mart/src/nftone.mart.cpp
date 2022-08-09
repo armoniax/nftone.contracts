@@ -301,7 +301,7 @@ using namespace std;
          total_fee =  total_fee + fee;
       }
 
-      if(_gstate.ipowner_fee_rate > 0.0 && ipowner.length() != 0){
+      if(_gstate.ipowner_fee_rate > 0.0 && ipowner.length() != 0 && is_account(ipowner)){
          auto ipfee        =  asset(0, _gstate.pay_symbol);
          int64_t ipfeeam   =  earned.amount * _gstate.ipowner_fee_rate;
          ipfee.amount      =  ipfeeam;
