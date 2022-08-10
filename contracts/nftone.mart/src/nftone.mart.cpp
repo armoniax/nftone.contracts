@@ -134,9 +134,10 @@ using namespace std;
       if (order.price <= bid_price) {
 
          auto fee             = asset(0, _gstate.pay_symbol);
+         auto ipfee           = asset(0, _gstate.pay_symbol);
          auto count           = bought.amount;
          auto ipowner         = nstats_itr->ipowner;
-         process_single_buy_order( order, quantity, bought, deal_count, fee, ipowner );
+         process_single_buy_order( order, quantity, bought, deal_count, fee, ipowner, ipfee );
 
          if (order.frozen == 0) {
             orders.erase( itr );
@@ -148,20 +149,18 @@ using namespace std;
             });
          }
 
-         auto seller_order_id = order.id;
-         auto maker           = order.maker;
-         auto price           = order.price;
-
-         _on_deal_trace(
-                        seller_order_id,
-                        0,
-                        maker,
-                        from,
-                        price,
-                        fee,
-                        deal_count,
-                        current_time_point()
-         );
+         deal_trace trace;
+         trace.seller_order_id   =  order.id;
+         trace.bid_id            =  0;
+         trace.maker             =  order.maker;
+         trace.buyer             =  from;
+         trace.price             =  order.price;
+         trace.fee               =  fee;
+         trace.count             =  deal_count;
+         trace.created_at        =  current_time_point();
+         trace.ipowner           =  ipowner;
+         trace.ipfee             =  ipfee;
+         _on_deal_trace( trace );
 
       } else {
          _gstate.last_deal_idx++;
@@ -247,28 +246,28 @@ using namespace std;
       earned.amount = bought.amount * bid_price.value.amount;
       
       auto ipowner         = nstats_itr->ipowner;
-      maker_settlement( seller, earned, bought, fee, ipowner );
+      auto ipfee           = asset(0, _gstate.pay_symbol);
+      maker_settlement( seller, earned, bought, fee, ipowner, ipfee );
 
-      auto seller_order_id = sell_itr->id;
-      auto maker           = sell_itr->maker;
-      auto buyer           = bid_itr->buyer;
-      _on_deal_trace(
-                     seller_order_id,
-                     bid_itr->id,
-                     maker,
-                     buyer,
-                     bid_price,
-                     fee,
-                     deal_count,
-                     current_time_point()
-      );
+      deal_trace trace;
+      trace.seller_order_id   =  sell_itr->id;
+      trace.bid_id            =  bid_itr->id;
+      trace.maker             =  sell_itr->maker;
+      trace.buyer             =  bid_itr->buyer;
+      trace.price             =  bid_price;
+      trace.fee               =  fee;
+      trace.count             =  deal_count;
+      trace.created_at        =  current_time_point();
+      trace.ipowner           =  ipowner;
+      trace.ipfee             =  ipfee;
+      _on_deal_trace( trace );
 
    }
 
 
    /////////////////////////////// private funcs below /////////////////////////////////////////////
 
-   void nftone_mart::process_single_buy_order(order_t& order, asset& quantity, nasset& bought, uint64_t& deal_count, asset& total_fee, name& ipowner) {
+   void nftone_mart::process_single_buy_order(order_t& order, asset& quantity, nasset& bought, uint64_t& deal_count, asset& fee, name& ipowner, asset& ipfee) {
       auto earned                = asset(0, _gstate.pay_symbol); //to seller
       auto offer_cost            = order.frozen * order.price.value.amount;
 
@@ -286,30 +285,25 @@ using namespace std;
          quantity.amount         -= offer_cost;
       }
 
-      maker_settlement( order.maker, earned, bought, total_fee, ipowner);
+      maker_settlement( order.maker, earned, bought, fee, ipowner, ipfee);
 
    }
 
-   void nftone_mart::maker_settlement(const name& maker, asset& earned, nasset& bought, asset& total_fee, name& ipowner) {
+   void nftone_mart::maker_settlement(const name& maker, asset& earned, nasset& bought, asset& fee, name& ipowner, asset& ipfee) {
 
       if(_gstate.dev_fee_rate > 0.0){
-         auto fee          =  asset(0, _gstate.pay_symbol);
          int64_t feeam     =  earned.amount * _gstate.dev_fee_rate;
          fee.amount        =  feeam;
          TRANSFER_X( _gstate.bank_contract, _gstate.dev_fee_collector, fee, "dev fee" )
-         total_fee         += fee;
       }
 
       if(_gstate.ipowner_fee_rate > 0.0 && ipowner.length() != 0 && is_account(ipowner)){
-         auto ipfee        =  asset(0, _gstate.pay_symbol);
          int64_t ipfeeam   =  earned.amount * _gstate.ipowner_fee_rate;
          ipfee.amount      =  ipfeeam;
          TRANSFER_X( _gstate.bank_contract, ipowner, ipfee, "ip fee" )
-         total_fee         += ipfee;
-
       }
 
-      earned -= total_fee;
+      earned = earned - fee - ipfee;
       TRANSFER_X( _gstate.bank_contract, maker, earned, "sell nft:" + to_string(bought.symbol.id) )
 
    }
@@ -357,34 +351,46 @@ using namespace std;
       CHECKC( price.amount > 0, err::PARAM_ERROR, " price non-positive quantity not allowed" )
    }
 
-   void nftone_mart::dealtrace(const uint64_t& seller_order_id,
-                     const uint64_t& bid_id,
-                     const name& seller,
-                     const name& buyer,
-                     const price_s& price,
-                     const asset& fee,
-                     const int64_t& count,
-                     const time_point_sec created_at
-                   )
+   // void nftone_mart::dealtrace(const uint64_t& seller_order_id,
+   //                   const uint64_t& bid_id,
+   //                   const name& seller,
+   //                   const name& buyer,
+   //                   const price_s& price,
+   //                   const asset& fee,
+   //                   const int64_t& count,
+   //                   const time_point_sec created_at
+   //                 )
+   // {
+   //    require_auth(get_self());
+   //    require_recipient(seller);
+   //    require_recipient(buyer);
+   // }
+
+   // void nftone_mart::_on_deal_trace(const uint64_t& seller_order_id,
+   //                   const uint64_t&   bid_id,
+   //                   const name&       maker,
+   //                   const name&       buyer,
+   //                   const price_s&    price,
+   //                   const asset&      fee,
+   //                   const int64_t     count,
+   //                   const time_point_sec created_at)
+   //  {
+   //       amax::nftone_mart::deal_trace_action act{ _self, { {_self, active_permission} } };
+	// 		act.send( seller_order_id, bid_id, maker, buyer, price, fee, count, created_at );
+
+   // }
+   void nftone_mart::dealtrace(const deal_trace& trace)
    {
       require_auth(get_self());
       require_recipient(seller);
       require_recipient(buyer);
    }
 
-   void nftone_mart::_on_deal_trace(const uint64_t& seller_order_id,
-                     const uint64_t&   bid_id,
-                     const name&       maker,
-                     const name&       buyer,
-                     const price_s&    price,
-                     const asset&      fee,
-                     const int64_t     count,
-                     const time_point_sec created_at)
+   void nftone_mart::_on_deal_trace(const deal_trace& trace)
     {
          amax::nftone_mart::deal_trace_action act{ _self, { {_self, active_permission} } };
-			act.send( seller_order_id, bid_id, maker, buyer, price, fee, count, created_at );
+			act.send( trace );
 
    }
-
 
 } //namespace amax

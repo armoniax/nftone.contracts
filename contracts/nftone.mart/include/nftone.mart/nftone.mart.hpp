@@ -20,6 +20,20 @@ static constexpr name      NFT_BANK    = "amax.ntoken"_n;
 static constexpr name      CNYD_BANK   = "cnyd.token"_n;
 static constexpr symbol    CNYD        = symbol(symbol_code("CNYD"), 4);
 
+struct deal_trace {
+    uint64_t         seller_order_id;
+    uint64_t         bid_id;
+    name             maker;
+    name             buyer;
+    price_s          price;
+    asset            fee;
+    int64_t          count;
+    time_point_sec   created_at;
+    name             ipowner;
+    asset            ipfee;
+
+};
+
 enum class err: uint8_t {
    NONE                 = 0,
    RECORD_NOT_FOUND     = 1,
@@ -81,15 +95,7 @@ class [[eosio::contract("nftone.mart")]] nftone_mart : public contract {
    // ACTION takeselorder( const name& issuer, const uint32_t& token_id, const uint64_t& sell_order_id );
    ACTION cancelbid( const name& buyer, const uint64_t& buyer_bid_id );
 
-   ACTION dealtrace(const uint64_t& seller_order_id,
-                     const uint64_t& bid_id,
-                     const name& seller,
-                     const name& buyer,
-                     const price_s& price,
-                     const asset& fee,
-                     const int64_t& count,
-                     const time_point_sec created_at
-                   );
+   ACTION dealtrace(const deal_trace& trace);
 
 
    using deal_trace_action = eosio::action_wrapper<"dealtrace"_n, &nftone_mart::dealtrace>;
@@ -104,16 +110,10 @@ class [[eosio::contract("nftone.mart")]] nftone_mart : public contract {
 
       void on_buy_transfer(const name& from, const name& to, const asset& quant, const string& memo);
 
-      void _on_deal_trace(const uint64_t& seller_order_id,
-                     const uint64_t& buy_order_id,
-                     const name& seller,
-                     const name& buyer,
-                     const price_s& price,
-                     const asset& fee,
-                     const int64_t count,
-                     const time_point_sec created_at);
-      void process_single_buy_order(order_t& order, asset& quantity, nasset& bought, uint64_t& deal_count, asset& total_fee, name& ipowner);
+      void _on_deal_trace(const deal_trace& trace);
 
-      void maker_settlement(const name& maker, asset& earned, nasset& bought, asset& total_fee, name& ipowner);
+      void process_single_buy_order(order_t& order, asset& quantity, nasset& bought, uint64_t& deal_count, asset& total_fee, name& ipowner, asset& ipfee);
+
+      void maker_settlement(const name& maker, asset& earned, nasset& bought, asset& total_fee, name& ipowner, asset& ipfee);
 };
 } //namespace amax
