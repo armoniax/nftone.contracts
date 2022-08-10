@@ -382,7 +382,7 @@ using namespace std;
    void nftone_mart::dealtrace(const deal_trace& trace)
    {
       require_auth(get_self());
-      require_recipient(trace.seller);
+      require_recipient(trace.maker);
       require_recipient(trace.buyer);
    }
 
