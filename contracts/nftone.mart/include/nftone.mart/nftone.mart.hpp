@@ -1,4 +1,4 @@
-#pragma once
+   #pragma once
 
 #include <eosio/asset.hpp>
 #include <eosio/eosio.hpp>
@@ -19,6 +19,20 @@ using namespace eosio;
 static constexpr name      NFT_BANK    = "amax.ntoken"_n;
 static constexpr name      CNYD_BANK   = "cnyd.token"_n;
 static constexpr symbol    CNYD        = symbol(symbol_code("CNYD"), 4);
+
+struct deal_trace {
+    uint64_t         seller_order_id;
+    uint64_t         bid_id;
+    name             maker;
+    name             buyer;
+    price_s          price;
+    asset            fee;
+    int64_t          count;
+    time_point_sec   created_at;
+    name             ipowner;
+    asset            ipfee;
+
+};
 
 enum class err: uint8_t {
    NONE                 = 0,
@@ -45,11 +59,11 @@ enum class err: uint8_t {
 
 /**
  * The `nftone.mart` sample system contract defines the structures and actions that allow users to create, issue, and manage tokens for AMAX based blockchains. It demonstrates one way to implement a smart contract which allows for creation and management of tokens. It is possible for one to create a similar contract which suits different needs. However, it is recommended that if one only needs a token with the below listed actions, that one uses the `nftone.mart` contract instead of developing their own.
- * 
+ *
  * The `nftone.mart` contract class also implements two useful public static methods: `get_supply` and `get_balance`. The first allows one to check the total supply of a specified token, created by an account and the second allows one to check the balance of a token for a specified account (the token creator account has to be specified as well).
- * 
+ *
  * The `nftone.mart` contract manages the set of tokens, accounts and their corresponding balances, by using two internal multi-index structures: the `accounts` and `stats`. The `accounts` multi-index table holds, for each row, instances of `account` object and the `account` object holds information about the balance of one token. The `accounts` table is scoped to an eosio account, and it keeps the rows indexed based on the token's symbol.  This means that when one queries the `accounts` multi-index table for an account name the result is all the tokens that account holds at the moment.
- * 
+ *
  * Similarly, the `stats` multi-index table, holds instances of `currency_stats` objects for each row, which contains information about current supply, maximum supply, and the creator account for a symbol token. The `stats` table is scoped to the token symbol.  Therefore, when one queries the `stats` table for a token symbol the result is one single entry/row corresponding to the queried symbol token if it was previously created, or nothing, otherwise.
  */
 class [[eosio::contract("nftone.mart")]] nftone_mart : public contract {
@@ -72,22 +86,16 @@ class [[eosio::contract("nftone.mart")]] nftone_mart : public contract {
 
    [[eosio::on_notify("amax.mtoken::transfer")]]
    void onbuytransfermtoken(const name& from, const name& to, const asset& quant, const string& memo);
-   
-   ACTION init(eosio::symbol symbol, name bank_contract);
+
+   ACTION init(const symbol& pay_symbol, const name& bank_contract, const name& admin,
+                              const float& devfeerate, const name& feecollector,
+                              const float& ipfeerate);
    ACTION cancelorder(const name& maker, const uint32_t& token_id, const uint64_t& order_id);
    ACTION takebuybid( const name& issuer, const uint32_t& token_id, const uint64_t& buyer_bid_id );
    // ACTION takeselorder( const name& issuer, const uint32_t& token_id, const uint64_t& sell_order_id );
    ACTION cancelbid( const name& buyer, const uint64_t& buyer_bid_id );
 
-   ACTION dealtrace(const uint64_t& seller_order_id,
-                     const uint64_t& bid_id,
-                     const name& seller,
-                     const name& buyer,
-                     const price_s& price,
-                     const asset& fee,
-                     const int64_t& count,
-                     const time_point_sec created_at
-                   );
+   ACTION dealtrace(const deal_trace& trace);
 
 
    using deal_trace_action = eosio::action_wrapper<"dealtrace"_n, &nftone_mart::dealtrace>;
@@ -97,20 +105,15 @@ class [[eosio::contract("nftone.mart")]] nftone_mart : public contract {
       global_t            _gstate;
 
    private:
-      void process_single_buy_order(order_t& order, asset& quantity, nasset& bought, uint64_t& deal_count );
 
       void compute_memo_price( const string& memo, asset& price );
 
       void on_buy_transfer(const name& from, const name& to, const asset& quant, const string& memo);
 
-      void _on_deal_trace(const uint64_t& seller_order_id,
-                     const uint64_t& buy_order_id,
-                     const name& seller,
-                     const name& buyer,
-                     const price_s& price,
-                     const asset& fee,
-                     const int64_t count,
-                     const time_point_sec created_at);
-                     
+      void _on_deal_trace(const deal_trace& trace);
+
+      void process_single_buy_order(order_t& order, asset& quantity, nasset& bought, uint64_t& deal_count, asset& total_fee, name& ipowner, asset& ipfee);
+
+      void maker_settlement(const name& maker, asset& earned, nasset& bought, asset& total_fee, name& ipowner, asset& ipfee);
 };
 } //namespace amax
