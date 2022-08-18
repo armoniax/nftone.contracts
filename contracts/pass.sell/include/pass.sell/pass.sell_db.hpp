@@ -25,6 +25,7 @@ namespace sell{
         name                 lock_contract ;
         name                 partner_account ;
         name                 nft_contract ;
+        name                 unclaimed_account;
         uint64_t             first_rate ;
         uint64_t             second_rate ;
         uint64_t             partner_rate ;
@@ -33,15 +34,17 @@ namespace sell{
         uint64_t             last_product_id = 0;
         uint64_t             last_order_id = 0;
         
-        EOSLIB_SERIALIZE( global_t, (admin)(total_sells)(total_rewards)(total_claimed_rewards)(lock_contract)(partner_account)(nft_contract)
-        (first_rate)(second_rate)(partner_rate)(operable_days)(started_at)(last_product_id)(last_order_id) )
+        EOSLIB_SERIALIZE( global_t, (admin)(total_sells)(total_rewards)(total_claimed_rewards)
+        (lock_contract)(partner_account)(nft_contract)(unclaimed_account)(first_rate)
+        (second_rate)(partner_rate)(operable_days)(started_at)
+        (last_product_id)(last_order_id) )
     };
     
     typedef eosio::singleton< "global"_n, global_t > global_singleton;
 
     struct rule_t{
         uint64_t single_amount = 0;
-        bool again_flag = false ;
+        bool buy_again_flag = true ;
     };
 
     TBL product_t{
@@ -88,8 +91,9 @@ namespace sell{
 
         uint64_t            product_id;
         asset               balance;
+        asset               total_claimed_rewards;
         nasset              card;
-        name                status;
+        name                status = account_status::none;
         time_point_sec      created_at;
         time_point_sec      updated_at;
         time_point_sec      operable_started_at;
@@ -109,7 +113,7 @@ namespace sell{
             indexed_by<"stausidx"_n, const_mem_fun<account_t,uint64_t, &account_t::by_status> >
         > tbl_t;
 
-        EOSLIB_SERIALIZE(account_t,(product_id)(balance)(card)(status)(created_at)(updated_at)
+        EOSLIB_SERIALIZE(account_t,(product_id)(balance)(total_claimed_rewards)(card)(status)(created_at)(updated_at)
                         (operable_started_at)(operable_ended_at)
                         )
     };
@@ -130,16 +134,16 @@ namespace sell{
                         )
     };
 
-    struct reward_t{
-        name owner;
-        asset quantity;
-        name type;
-        reward_t() {}
-        reward_t(const name& o,const asset& q,const name& t):owner(o),quantity(q),type(t) {}
+    // struct reward_t{
+    //     name owner;
+    //     asset quantity;
+    //     name type;
+    //     reward_t() {}
+    //     reward_t(const name& o,const asset& q,const name& t):owner(o),quantity(q),type(t) {}
 
-        EOSLIB_SERIALIZE(reward_t,(owner)(quantity)(type)
-                        )
-    };
+    //     EOSLIB_SERIALIZE(reward_t,(owner)(quantity)(type)
+    //                     )
+    // };
 
     TBL order_t{
 
@@ -148,7 +152,7 @@ namespace sell{
         name                owner;
         asset               quantity;
         nasset              nft_quantity;
-        vector<reward_t>    rewards;
+        //vector<reward_t>    rewards;
         time_point_sec      created_at;
       
 
@@ -161,7 +165,34 @@ namespace sell{
         typedef eosio::multi_index<"orders"_n, order_t> tbl_t;
         
         EOSLIB_SERIALIZE(order_t,(id)(product_id)(owner)(quantity)
-                        (nft_quantity)(rewards)
+                        (nft_quantity)
                         (created_at))
+    };
+
+    // struct deal_trace {
+
+    //     uint64_t            order_id;
+    //     name                buyer;
+    //     asset               quantity;
+    //     asset               price;
+    //     nasset              nft_quantity;
+    //     name                direct_name;
+    //     asset               direct_quantity;
+    //     name                indirect_name;
+    //     asset               indirect_quantity;
+    //     name                parent_name;
+    //     asset               parent_quantity;
+    //     time_point_sec      created_at;
+
+    // };
+
+    struct deal_trace {
+
+        uint64_t            order_id;
+        name                buyer;
+        name                receiver;
+        asset               quantity;
+        name                type = reward_type::none;
+        time_point_sec      created_at;
     };
 }

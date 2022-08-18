@@ -25,7 +25,8 @@ enum class err: uint8_t {
    FEE_INSUFFICIENT     = 16,
    FIRST_CREATOR        = 17,
    STATUS_ERROR         = 18,
-   RATE_OVERLOAD        = 19
+   RATE_OVERLOAD        = 19,
+   DATA_ERROR           = 20
 };
 
 namespace product_status {
@@ -42,8 +43,10 @@ namespace account_status{
 }
 
 namespace reward_type {
+    static constexpr eosio::name none           = "none"_n;
     static constexpr eosio::name direct         = "direct"_n;
     static constexpr eosio::name indirect       = "indirect"_n;
+    static constexpr eosio::name partner        = "partner"_n;
 }
 constexpr eosio::name BANK                      = "amax.mtoken"_n;
 

@@ -33,13 +33,20 @@ namespace sell{
             void init();
 
             [[eosio::action]]
+            void setclaimday(const name& admin, const uint64_t& days);
+            
+            [[eosio::action]]
             void setadmin(const name& admin,const name& newAdmin);
 
+            [[eosio::action]]
+            void setrule(const name& owner,const uint64_t& product_id,const rule_t& rule);
+            
             [[eosio::action]]
             void setaccouts(const name& owner,
                             const name& nft_contract,
                             const name& lock_contract,
-                            const name& partner_name);
+                            const name& partner_name,
+                            const name& unclaimed_account);
             
             [[eosio::action]]
             void setrates(const name& owner,
@@ -49,7 +56,7 @@ namespace sell{
 
             [[eosio::action]]
             void addproduct( const name& owner, const string& title, const nsymbol& nft_symbol,
-                                const asset& price, const rule_t& rule, const time_point_sec& started_at,
+                                const asset& price, const time_point_sec& started_at,
                                 const time_point_sec& ended_at);
  
             [[eosio::on_notify("passptoken11::transfer")]]
@@ -60,7 +67,11 @@ namespace sell{
 
             [[eosio::action]]
             void claimrewards( const name& owner, const uint64_t& product_id);
+            
+            [[eosio::action]]
+            void dealtrace(const deal_trace& trace);
 
+            using deal_trace_action = eosio::action_wrapper<"dealtrace"_n, &pass_sell::dealtrace>;
         private:
             global_singleton    _global;
             global_t            _gstate;
@@ -68,8 +79,9 @@ namespace sell{
 
             void _check_conf_auth(const name& owner);
             void _reward(const product_t& product, const name& owner, const asset& quantiy, const nasset& nft_quantity);
-            void _add_card( const product_t& product, const name& owner, const nasset& nft_quantity);
-            void _add_balance(const product_t& product, const name& owner, const asset& quantity);
+            //void _add_card( const product_t& product, const name& owner, const nasset& nft_quantity);
+            void _add_balance(const product_t& product, const name& owner, const asset& quantity, const nasset& nft_quantity);
+            void _on_deal_trace(const uint64_t&orer_id, const name&buyer, const name&receiver, const asset& quantity,const name& type);
 
     };
 }
