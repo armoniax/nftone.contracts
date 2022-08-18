@@ -52,19 +52,19 @@ namespace sell{
                             const name& nft_contract,
                             const name& lock_contract,
                             const name& partner_account,
-                            const name& unclaimed_account){
+                            const name& storage_account){
         
         _check_conf_auth(owner);
 
         CHECKC( is_account(nft_contract), err::ACCOUNT_INVALID,"nft contract does not exist");
         CHECKC( is_account(lock_contract), err::ACCOUNT_INVALID, "lock contract does not exist");
         CHECKC( is_account(partner_account), err::ACCOUNT_INVALID,"nft contract does not exist");  
-        CHECKC( is_account(unclaimed_account), err::ACCOUNT_INVALID,"summary contract does not exist");  
+        CHECKC( is_account(storage_account), err::ACCOUNT_INVALID,"summary contract does not exist");  
 
         _gstate.nft_contract = nft_contract;
         _gstate.lock_contract = lock_contract;
         _gstate.partner_account = partner_account;
-        _gstate.unclaimed_account = unclaimed_account;
+        _gstate.storage_account = storage_account;
     }
 
     void pass_sell::setrates(const name& owner,
@@ -96,6 +96,27 @@ namespace sell{
             row.rule = rule;
         });
     }
+
+    void pass_sell::cancelplan( const name& owner, const uint64_t& product_id){
+        
+        product_t::tbl_t product( get_self(), get_self().value);
+        auto itr = product.find( product_id);
+        CHECKC( itr != product.end(), err::RECORD_NOT_FOUND, "product not found , id:" + to_string(product_id));
+
+        CHECK( has_auth(get_self()) || has_auth(_gstate.admin) || has_auth( itr->owner) , "Missing required authority of admin or maintainer or owner" )
+
+        CHECKC( itr->status == product_status::opened, err::STATUS_ERROR, "Abnormal status, status:" + itr->status.to_string());
+        
+        auto now = time_point_sec(current_time_point());
+        product.modify( itr, get_self(), [&]( auto&row ){
+            row.updated_at                  = now;
+            row.sell_ended_at               = now;
+            row.operable_started_at         = now;
+            row.operable_ended_at           = time_point_sec(now.sec_since_epoch() + _gstate.operable_days * seconds_per_day);
+            row.status                      = product_status::closed;
+        });
+    }
+
     void pass_sell::addproduct( const name& owner, const string& title, const nsymbol& nft_symbol,
                                 const asset& price, const time_point_sec& started_at,
                                 const time_point_sec& ended_at){
@@ -115,7 +136,7 @@ namespace sell{
         CHECKC( is_account(_gstate.nft_contract), err::ACCOUNT_INVALID,"nft contract does not exist");
         CHECKC( is_account(_gstate.lock_contract), err::ACCOUNT_INVALID, "lock contract does not exist");
         CHECKC( is_account(_gstate.partner_account), err::ACCOUNT_INVALID,"partner account does not exist");  
-        CHECKC( is_account(_gstate.unclaimed_account), err::ACCOUNT_INVALID,"unclaimed contract does not exist");  
+        CHECKC( is_account(_gstate.storage_account), err::ACCOUNT_INVALID,"unclaimed contract does not exist");  
 
         auto now = time_point_sec(current_time_point());
 
@@ -254,7 +275,7 @@ namespace sell{
         require_auth( owner );
         product_t::tbl_t product( get_self() , get_self().value );
         auto p_itr = product.find( product_id );
-        CHECKC( p_itr != product.end(), err::RECORD_NOT_FOUND, "RECORD_NOT_FOUND" );
+        CHECKC( p_itr != product.end(), err::RECORD_NOT_FOUND, "product not found, id:" + to_string(product_id) );
 
         auto now = time_point_sec(current_time_point());
         CHECKC( p_itr->operable_started_at <= now, err::STATUS_ERROR, "It's too early");
@@ -328,7 +349,7 @@ namespace sell{
         _on_deal_trace( order_id, owner,_gstate.partner_account, partner_quantity, reward_type::partner);
         TRANSFER( BANK, _gstate.partner_account, partner_quantity, std::string("partner reward"));
 
-        TRANSFER( BANK, _gstate.unclaimed_account, quantity - total_rewards, std::string("profit"));
+        TRANSFER( BANK, _gstate.storage_account, quantity - total_rewards, std::string(""));
 
         _gstate.total_rewards += total_rewards;
     }

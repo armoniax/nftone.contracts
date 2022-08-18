@@ -55,6 +55,9 @@ namespace sell{
                             const uint64_t& partner_rate);
 
             [[eosio::action]]
+            void cancelplan( const name& owner, const uint64_t& product_id);
+
+            [[eosio::action]]
             void addproduct( const name& owner, const string& title, const nsymbol& nft_symbol,
                                 const asset& price, const time_point_sec& started_at,
                                 const time_point_sec& ended_at);

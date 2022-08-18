@@ -25,7 +25,7 @@ namespace sell{
         name                 lock_contract ;
         name                 partner_account ;
         name                 nft_contract ;
-        name                 unclaimed_account;
+        name                 storage_account;
         uint64_t             first_rate ;
         uint64_t             second_rate ;
         uint64_t             partner_rate ;
@@ -35,7 +35,7 @@ namespace sell{
         uint64_t             last_order_id = 0;
         
         EOSLIB_SERIALIZE( global_t, (admin)(total_sells)(total_rewards)(total_claimed_rewards)
-        (lock_contract)(partner_account)(nft_contract)(unclaimed_account)(first_rate)
+        (lock_contract)(partner_account)(nft_contract)(storage_account)(first_rate)
         (second_rate)(partner_rate)(operable_days)(started_at)
         (last_product_id)(last_order_id) )
     };
