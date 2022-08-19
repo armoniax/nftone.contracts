@@ -90,7 +90,7 @@ namespace sell{
     TBL account_t{
 
         uint64_t            product_id;
-        asset               balance;
+        asset               balance     = asset(0,MUSDT);
         asset               total_claimed_rewards;
         nasset              card;
         name                status = account_status::none;

@@ -59,7 +59,7 @@ namespace sell{
         CHECKC( is_account(nft_contract), err::ACCOUNT_INVALID,"nft contract does not exist");
         CHECKC( is_account(lock_contract), err::ACCOUNT_INVALID, "lock contract does not exist");
         CHECKC( is_account(partner_account), err::ACCOUNT_INVALID,"nft contract does not exist");  
-        CHECKC( is_account(storage_account), err::ACCOUNT_INVALID,"summary contract does not exist");  
+        CHECKC( is_account(storage_account), err::ACCOUNT_INVALID,"storage contract does not exist");  
 
         _gstate.nft_contract = nft_contract;
         _gstate.lock_contract = lock_contract;
@@ -285,11 +285,12 @@ namespace sell{
         auto a_itr = account.find( product_id );
         CHECKC( a_itr != account.end(), err::RECORD_NOT_FOUND, "RECORD_NOT_FOUND" ); 
         CHECKC( a_itr->balance.amount > 0 || a_itr-> total_claimed_rewards.amount >= 0, err::DATA_ERROR, "Data exception");
-        CHECKC( a_itr->status == account_status::ready, err::STATUS_ERROR, "No card");
+        CHECKC( a_itr->status == account_status::ready, err::STATUS_ERROR, "Claim failed,status:" + a_itr->status.to_string());
         // CHECKC( a_itr->operable_started_at <= now, err::STATUS_ERROR, "It's too early");
         // CHECKC( a_itr->operable_ended_at >= now,err::STATUS_ERROR, "It's too late");
         
         auto quantity = a_itr->balance - a_itr->total_claimed_rewards;
+        //auto quantity = a_itr->balance;
         CHECKC( quantity.amount > 0 ,err::NOT_POSITIVE, "No claim");
 
         account.modify( a_itr, get_self(), [&]( auto& row ){
@@ -413,14 +414,15 @@ namespace sell{
         auto a_itr = account.find(product.id);
         if ( a_itr == account.end()){
                 account.emplace( get_self(), [&]( auto& row){
-                    row.product_id          = product.id;
-                    row.balance             = quantity;
-                    row.card                = nft_quantity;
-                    row.updated_at          = now;
-                    row.created_at          = now;
-                    row.status              = status;
-                    row.operable_started_at = product.operable_started_at;
-                    row.operable_ended_at   = product.operable_ended_at;
+                    row.product_id              = product.id;
+                    row.balance                 = quantity;
+                    row.total_claimed_rewards   = asset(0,MUSDT);
+                    row.card                    = nft_quantity;
+                    row.updated_at              = now;
+                    row.created_at              = now;
+                    row.status                  = status;
+                    row.operable_started_at     = product.operable_started_at;
+                    row.operable_ended_at       = product.operable_ended_at;
                 });   
             }else {
                 account.modify( a_itr, get_self(), [&]( auto& row){
@@ -431,7 +433,6 @@ namespace sell{
                 });
         }
     }
-
     void pass_sell::dealtrace(const deal_trace& trace){
         
         require_auth(get_self());

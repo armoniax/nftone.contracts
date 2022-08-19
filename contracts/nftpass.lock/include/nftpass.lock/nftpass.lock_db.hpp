@@ -32,7 +32,7 @@ struct [[eosio::table("global"), eosio::contract("nftpass.lock")]] global_t {
     time_point_sec      started_at ;
     uint64_t            last_plan_id ;
     uint64_t            last_issue_id ;
-    EOSLIB_SERIALIZE( global_t, (admin)(last_plan_id)(last_issue_id))
+    EOSLIB_SERIALIZE( global_t, (admin)(started_at)(last_plan_id)(last_issue_id))
 };
 
 typedef eosio::singleton< "global"_n, global_t > global_singleton;
@@ -140,7 +140,7 @@ struct LOCK_TBL issue_t{
 
 };
 //Scope: owner's account
-struct LOCK_TBL balance_t{
+struct LOCK_TBL account_t{
     nasset              total_issued;
     nasset              locked;
     nasset              unlocked;
@@ -150,15 +150,15 @@ struct LOCK_TBL balance_t{
     time_point_sec      updated_at;
     time_point_sec      unlock_times;
 
-    balance_t() {}
-    balance_t(const nasset& asset): total_issued(asset) {}
+    account_t() {}
+    account_t(const nasset& asset): total_issued(asset) {}
 
     uint64_t primary_key()const { return total_issued.symbol.raw(); }
     uint64_t scope() const { return 0; }
     
-    typedef eosio::multi_index< "balances"_n, balance_t > tbl_t;
+    typedef eosio::multi_index< "accounts"_n, account_t > tbl_t;
 
-    EOSLIB_SERIALIZE(balance_t, (total_issued)(locked)(unlocked)
+    EOSLIB_SERIALIZE(account_t, (total_issued)(locked)(unlocked)
                     (plan_id)(status)(created_at)(updated_at)(unlock_times)
                     )
 };

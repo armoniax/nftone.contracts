@@ -37,7 +37,7 @@ namespace amax{
       check( asset_symbol.is_valid(), "Invalid asset symbol" );
   
       auto now = time_point_sec(current_time_point());
-      check(unlock_times > now,"The correct timestamp is required");
+      //check(unlock_times > now,"The correct timestamp is required");
 
       plan_t::tbl_t plan_tbl(_self,_self.value);
       auto nft_idx = plan_tbl.get_index<"nsyidx"_n>();
@@ -168,28 +168,30 @@ namespace amax{
     // auto now = time_point_sec(current_time_point());
     // check( issue_itr->unlock_times <= now,  "Unlocking date not reached");
 
-    balance_t::tbl_t balance( get_self(), owner.value);
-    auto itr = balance.find(symbol_id);
+    account_t::tbl_t account( get_self(), owner.value);
+    auto itr = account.find(symbol_id);
 
-    CHECKC( itr != balance.end(), err::RECORD_NOT_FOUND, "symbol not find, id:" + to_string(symbol_id));
-    CHECKC( itr->locked.amount >= 0, err::RECORD_NOT_FOUND,"overdrawn amount");
+    CHECKC( itr != account.end(), err::RECORD_NOT_FOUND, "symbol not find, id:" + to_string(symbol_id));
+    CHECKC( itr->locked.amount > 0, err::RECORD_NOT_FOUND,"overdrawn amount");
     CHECKC( itr->unlocked.amount + itr->locked.amount == itr->total_issued.amount, err::RECORD_NOT_FOUND,"Data exception");
-    
     auto now = time_point_sec(current_time_point());
+    
+    CHECKC( itr->unlock_times <= now, err::STATUS_ERROR, "The unlocking date has not arrived" );
 
     auto quantity = itr->locked;
-    balance.modify(itr,owner,[&](auto& row){
+    account.modify(itr,owner,[&](auto& row){
         row.locked        -= quantity;
         row.unlocked      += quantity;
         row.updated_at    = now;
+        row.status        = issue_status::unlocked;
     });
 
-    plan_t::tbl_t plan_tbl(_self,_self.value);
+    plan_t::tbl_t plan_tbl( get_self(), get_self().value);
     auto plan_itr = plan_tbl.find( itr->plan_id);
     check( plan_itr != plan_tbl.end(), "plan not found: " + to_string( itr->plan_id)  );
     check( plan_itr->status == plan_status::enabled, "plan not enabled, status:" + plan_itr->status.to_string());
 
-    vector<nasset> quants = { itr->locked };
+    vector<nasset> quants = { quantity };
     TRANSFER_N( plan_itr-> asset_contract, owner , quants,"unlock:" + to_string(symbol_id));
 
     plan_tbl.modify( plan_itr, _self, [&](auto& row){
@@ -209,12 +211,12 @@ namespace amax{
 
   void nft_lock::_add_locked_amount( const name& owner, const nasset& quantity, const plan_t& plan){
     
-      balance_t::tbl_t a_tbl( get_self(), owner.value);
+      account_t::tbl_t a_tbl( get_self(), owner.value);
       auto itr = a_tbl.find(quantity.symbol.raw());
 
       auto now = time_point_sec(current_time_point());
       if ( itr == a_tbl.end() ){
-        a_tbl.emplace( owner, [&](auto& row){
+        a_tbl.emplace( get_self(), [&](auto& row){
           row.total_issued      = quantity;
           row.locked            = quantity;
           row.unlocked          = nasset(0,quantity.symbol);
@@ -222,15 +224,17 @@ namespace amax{
           row.updated_at        = now;
           row.unlock_times      = plan.unlock_times;
           row.plan_id           = plan.id;
+          row.status            = issue_status::locked;
         });
       }else {
 
-        a_tbl.modify(itr,owner,[&](auto& row){
+        a_tbl.modify(itr,get_self(),[&](auto& row){
           row.total_issued      += quantity;
           row.locked            += quantity;
           row.updated_at        = now;
           row.unlock_times      = plan.unlock_times;
           row.plan_id           = plan.id;
+          row.status            = issue_status::locked;
         });
       }
   }
