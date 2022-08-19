@@ -85,13 +85,15 @@ namespace sell{
     }
 
     void pass_sell::setrule(const name& owner,const uint64_t& product_id,const rule_t& rule){
-        _check_conf_auth( owner );
-
+        
+        CHECK( has_auth(get_self()) || has_auth(_gstate.admin) || has_auth( owner), "Missing required authority of admin or maintainer or owner" )
+        
         product_t::tbl_t product( get_self(), get_self().value);
         auto itr = product.find(product_id);
         CHECKC( itr != product.end() , err::RECORD_NOT_FOUND, "product is not exist");
+        CHECKC( itr->owner == owner, err::NO_AUTH,"Unauthorized operation");
         CHECKC( rule.single_amount > 0, err::PARAM_ERROR,"Single purchase quantity should be greater than 0" );
-
+        
         product.modify( itr,get_self(), [&]( auto& row){
             row.rule = rule;
         });
@@ -99,12 +101,12 @@ namespace sell{
 
     void pass_sell::cancelplan( const name& owner, const uint64_t& product_id){
         
+        CHECK( has_auth(get_self()) || has_auth(_gstate.admin) || has_auth( owner) , "Missing required authority of admin or maintainer or owner" )
+
         product_t::tbl_t product( get_self(), get_self().value);
         auto itr = product.find( product_id);
         CHECKC( itr != product.end(), err::RECORD_NOT_FOUND, "product not found , id:" + to_string(product_id));
-
-        CHECK( has_auth(get_self()) || has_auth(_gstate.admin) || has_auth( itr->owner) , "Missing required authority of admin or maintainer or owner" )
-
+        CHECKC( itr->owner == owner, err::NO_AUTH,"Unauthorized operation");
         CHECKC( itr->status == product_status::opened, err::STATUS_ERROR, "Abnormal status, status:" + itr->status.to_string());
         
         auto now = time_point_sec(current_time_point());

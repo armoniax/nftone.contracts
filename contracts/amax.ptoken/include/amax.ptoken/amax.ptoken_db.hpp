@@ -22,6 +22,9 @@ using namespace eosio;
 #define TBL struct [[eosio::table, eosio::contract("amax.ptoken")]]
 #define NTBL(name) struct [[eosio::table(name), eosio::contract("amax.ptoken")]]
 
+
+constexpr eosio::name BANK                      = "amax.token"_n;
+
 NTBL("global") global_t {
     set<name> notaries;
 
@@ -123,5 +126,13 @@ TBL account_t {
 
     typedef eosio::multi_index< "accounts"_n, account_t > idx_t;
 };
+
+struct blacklist_t {
+    name     account;
+
+    uint64_t primary_key()const { return account.value; }
+    typedef eosio::multi_index< "blacklist"_n, blacklist_t > tbl_t;
+    EOSLIB_SERIALIZE(blacklist_t, (account) )
+ };
 
 } //namespace amax

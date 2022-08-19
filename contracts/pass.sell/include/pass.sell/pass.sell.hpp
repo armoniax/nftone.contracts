@@ -46,7 +46,7 @@ namespace sell{
                             const name& nft_contract,
                             const name& lock_contract,
                             const name& partner_name,
-                            const name& unclaimed_account);
+                            const name& storage_account);
             
             [[eosio::action]]
             void setrates(const name& owner,
