@@ -134,18 +134,23 @@ namespace sell{
         //CHECKC( rule.single_amount > 0, err::PARAM_ERROR,"Single purchase quantity should be greater than 0" );
 
         CHECKC( ended_at > started_at, err::PARAM_ERROR, "End time should be greater than start time");
-
+        
+        CHECKC( is_account(owner),err::ACCOUNT_INVALID,"owner does not exist");
         CHECKC( is_account(_gstate.nft_contract), err::ACCOUNT_INVALID,"nft contract does not exist");
         CHECKC( is_account(_gstate.lock_contract), err::ACCOUNT_INVALID, "lock contract does not exist");
         CHECKC( is_account(_gstate.partner_account), err::ACCOUNT_INVALID,"partner account does not exist");  
         CHECKC( is_account(_gstate.storage_account), err::ACCOUNT_INVALID,"unclaimed contract does not exist");  
 
+        nstats_t::idx_t nt( _gstate.lock_contract, _gstate.lock_contract.value );
+        auto nt_itr = nt.find( nft_symbol.id);
+        CHECKC( nt_itr != nt.end(), err::SYMBOL_MISMATCH,"nft not found, id:" + to_string(nft_symbol.id));
+        
         auto now = time_point_sec(current_time_point());
 
         product_t::tbl_t products( get_self(), get_self().value);
-        auto id = _gstate.last_product_id;
-        id++;
-        _gstate.last_product_id = id;
+
+        _gstate.last_product_id ++;
+        auto id = _gstate.last_product_id;;
 
         rule_t rule;
 
@@ -336,23 +341,38 @@ namespace sell{
         name second_name = get_account_creator(first_name);
 
         if ( first_name != name() ){
+
             _add_balance( product, first_name, first_quantity, nasset(0,product.balance.symbol));
             _on_deal_trace( order_id, owner,first_name, first_quantity, reward_type::direct);
+
         }else {
-            TRANSFER( BANK, product.owner, first_quantity, std::string("unclaimed"));
+
+            if ( first_quantity.amount > 0 )
+                TRANSFER( BANK, product.owner, first_quantity, std::string("unclaimed"));
         }
 
         if ( second_name != name() ){
+            
             _add_balance( product, second_name, second_quantity, nasset(0,product.balance.symbol));
             _on_deal_trace( order_id, owner,second_name, second_quantity, reward_type::indirect);
+
         } else {
-            TRANSFER( BANK, product.owner, second_quantity, std::string("unclaimed"));
+
+            if ( second_quantity.amount > 0 )
+                TRANSFER( BANK, product.owner, second_quantity, std::string("unclaimed"));
         }
        
         _on_deal_trace( order_id, owner,_gstate.partner_account, partner_quantity, reward_type::partner);
-        TRANSFER( BANK, _gstate.partner_account, partner_quantity, std::string("partner reward"));
 
-        TRANSFER( BANK, _gstate.storage_account, quantity - total_rewards, std::string(""));
+        if ( partner_quantity.amount > 0){
+            TRANSFER( BANK, _gstate.partner_account, partner_quantity, std::string("partner reward"));    
+        }
+        
+        auto storage_quantity = quantity - total_rewards;
+        
+        if ( storage_quantity.amount > 0){
+            TRANSFER( BANK, _gstate.storage_account, quantity - total_rewards, std::string(""));
+        }
 
         _gstate.total_rewards += total_rewards;
     }
@@ -403,14 +423,14 @@ namespace sell{
 
         if ( nft_quantity.amount > 0){
             if (card_itr == card.end()){
-                card.emplace( get_self(), [&]( auto& row){
+                card_itr = card.emplace( get_self(), [&]( auto& row){
                     row.owner = owner;
                     row.created_at = now;
                 });
             }
         }
         
-        auto status = card_itr != card.end() || nft_quantity.amount > 0 ? account_status::ready : account_status::none;
+        auto status = card_itr != card.end() ? account_status::ready : account_status::none;
         
         account_t::tbl_t account( get_self(), owner.value);
         auto a_itr = account.find(product.id);

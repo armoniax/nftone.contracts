@@ -1,6 +1,7 @@
 #include <nftpass.lock/nftpass.lock.hpp>
 #include <nftpass.lock/nftpass.lock_db.hpp>
 #include <nftpass.lock/amax.ntoken/amax.ntoken.hpp>
+#include <nftpass.lock/amax.ntoken/amax.ntoken_db.hpp>
 #include <nftpass.lock/thirdparty/utils.hpp>
 #include <nftpass.lock/thirdparty/wasm_db.hpp>
 #include <set>
@@ -38,6 +39,11 @@ namespace amax{
   
       auto now = time_point_sec(current_time_point());
       //check(unlock_times > now,"The correct timestamp is required");
+
+      nstats_t::idx_t nt( asset_contract, asset_contract.value );
+      auto nt_itr = nt.find( asset_symbol.id);
+      CHECKC( nt_itr != nt.end(), err::SYMBOL_MISMATCH,"nft not found, id:" + to_string(asset_symbol.id));
+
 
       plan_t::tbl_t plan_tbl(_self,_self.value);
       auto nft_idx = plan_tbl.get_index<"nsyidx"_n>();
