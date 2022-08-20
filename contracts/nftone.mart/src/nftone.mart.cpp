@@ -313,8 +313,8 @@ using namespace std;
       // devfee                     /= 10000;
       // ipfee.amount               =  wasm::safemath::mul(earned.amount, _gstate.ipowner_fee_rate * 10000, get_precision(earned.symbol));
       // ipfee                      /= 10000;
-      devfee = earned * _gstate.dev_fee_rate;
-      ipfee = earned * _gstate.ipowner_fee_rate;
+      devfee.amount                 = earned.amount * _gstate.dev_fee_rate;
+      ipfee.amount                  = earned.amount * _gstate.ipowner_fee_rate;
 
       if (devfee.amount > 0) {
          TRANSFER_X( _gstate.bank_contract, _gstate.dev_fee_collector, devfee, "nftone dev fee" )
