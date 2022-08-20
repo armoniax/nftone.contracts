@@ -309,21 +309,21 @@ using namespace std;
    }
 
    void nftone_mart::_settle_maker(const name& buyer, const name& maker, asset& earned, nasset& bought, asset& devfee, const name& ipowner, asset& ipfee) {
-      devfee                     =  earned * _gstate.dev_fee_rate;
-      ipfee                      =  earned * _gstate.ipowner_fee_rate;
+      devfee.amount                =  wasm::safemath::mul(earned.amount, _gstate.dev_fee_rate, get_precision(earned.symbol));
+      ipfee.amount                 =  wasm::safemath::mul(earned.amount, _gstate.ipowner_fee_rate, get_precision(earned.symbol));
       
       if (devfee.amount > 0) {
-         TRANSFER_X( _gstate.bank_contract, _gstate.dev_fee_collector, devfee, "dev fee" )
+         TRANSFER_X( _gstate.bank_contract, _gstate.dev_fee_collector, devfee, "nftone dev fee" )
 
          _reward_farmer( devfee, buyer );
       }
 
       if (ipfee.amount > 0 && ipowner.length() != 0 && is_account(ipowner))
-         TRANSFER_X( _gstate.bank_contract, ipowner, ipfee, "ip fee" )
+         TRANSFER_X( _gstate.bank_contract, ipowner, ipfee, "nftone ip fee" )
 
       earned -= devfee + ipfee;
       if (earned.amount > 0)
-         TRANSFER_X( _gstate.bank_contract, maker, earned, "sell nft:" + to_string(bought.symbol.id) )
+         TRANSFER_X( _gstate.bank_contract, maker, earned, "sell nft: " + to_string(bought.symbol.id) )
 
    }
 
