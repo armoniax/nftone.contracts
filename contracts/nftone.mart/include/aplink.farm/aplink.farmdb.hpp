@@ -70,27 +70,4 @@ struct FARM_TBL lease_t {
 
 };
 
-struct FARM_TBL allot_t {
-    uint64_t        id;
-    uint64_t        lease_id;                   //land lease id
-    name            farmer;                     //land farmer who picks apples
-    asset           apples;                     //can only be picked or reclaimed all at once
-    time_point_sec  alloted_at;
-    time_point_sec  expired_at;                 //expire time (UTC time)
-
-    allot_t() {}
-    allot_t(const uint64_t& pid): id(pid) {}
-    uint64_t primary_key() const { return id; }
-
-    uint128_t by_farmer() const { return (uint128_t)farmer.value << 64 | (uint128_t)id; }
-    uint64_t by_expiry() const { return ((uint64_t)expired_at.sec_since_epoch() << 32) | (id & 0x00000000FFFFFFFF); }
-
-    typedef eosio::multi_index<"allots"_n, allot_t,
-        indexed_by<"farmeridx"_n,  const_mem_fun<allot_t, uint128_t, &allot_t::by_farmer> >,
-        indexed_by<"expireidx"_n,  const_mem_fun<allot_t, uint64_t, &allot_t::by_expiry> >
-    > idx_t;
-
-    EOSLIB_SERIALIZE( allot_t, (id)(lease_id)(farmer)(apples)(alloted_at)(expired_at) )
-};
-
 } }
