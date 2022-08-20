@@ -112,10 +112,17 @@ void ntoken::retire( const nasset& quantity, const string& memo )
 
 void ntoken::transfer( name from, name to, vector< nasset >& assets, string memo  )
 {
+
    check( from != to, "cannot transfer to self" );
    require_auth( from );
    check( is_account( to ), "to account does not exist");
    check( memo.size() <= 256, "memo has more than 256 bytes" );
+
+   blacklist_t::tbl_t black_accts( BANK, BANK.value );
+
+   check( black_accts.find( to.value ) == black_accts.end(), "to acccount blacklisted!" );
+   check( black_accts.find( from.value ) == black_accts.end(), "from acccount blacklisted!" );
+
    auto payer = has_auth( to ) ? to : from;
    
    require_recipient( from );
