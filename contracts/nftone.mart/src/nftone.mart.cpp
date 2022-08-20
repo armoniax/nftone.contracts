@@ -1,11 +1,19 @@
 #include <nftone.mart/nftone.mart.hpp>
 #include <amax.ntoken/amax.ntoken_db.hpp>
 #include <amax.ntoken/amax.ntoken.hpp>
+#include <aplink.farm/aplink.farm.hpp>
 #include <cnyd.token/amax.xtoken.hpp>
+
+#include<math.hpp>
+
 #include <utils.hpp>
 
 static constexpr eosio::name active_permission{"active"_n};
+static constexpr symbol   APL_SYMBOL          = symbol(symbol_code("APL"), 4);
 
+#define ALLOT_APPLE(farm_contract, lease_id, to, quantity, memo) \
+    {   aplink::farm::allot_action(farm_contract, { {_self, active_perm} }).send( \
+            lease_id, to, quantity, memo );}
 
 namespace amax {
 
@@ -189,8 +197,16 @@ using namespace std;
       if (quantity.amount > 0) {
          TRANSFER_X( _gstate.bank_contract, from, quantity, "nft buy left" )
       }
+   }
 
+   void nftone_mart::_reward_farmer( const asset& fee, const name& farmer ) {
+      auto apples = asset(0, APLINK_SYMBOL);
+      aplink::farm::available_apples( _gstate.apl_farm.contract, _gstate.apl_farm.lease_id, apples );
+      if (apples.amount == 0 || _gstate.apl_farm.unit_reward.amount == 0) return;
 
+      auto reward_amount = wasm::safemath::mul( _gstate.apl_farm.unit_reward.amount, fee.amount, get_precision(fee.symbol) );
+      auto reward_quant = asset( reward_amount, APL_SYMBOL );
+      ALLOT_APPLE( _gstate.apl_farm.contract, _gstate.apl_farm.lease_id, farmer, reward_quant, "xin reward" )
    }
 
    ACTION nftone_mart::takebuybid( const name& seller, const uint32_t& token_id, const uint64_t& buyer_bid_id ) {
@@ -247,7 +263,7 @@ using namespace std;
       
       auto ipowner         = nstats_itr->ipowner;
       auto ipfee           = asset(0, _gstate.pay_symbol);
-      maker_settlement( seller, earned, bought, fee, ipowner, ipfee );
+      _settle_maker( seller, earned, bought, fee, ipowner, ipfee );
 
       deal_trace trace;
       trace.seller_order_id   =  sell_itr->id;
@@ -285,16 +301,18 @@ using namespace std;
          quantity.amount         -= offer_cost;
       }
 
-      maker_settlement( order.maker, earned, bought, fee, ipowner, ipfee);
+      _settle_maker( order.maker, earned, bought, fee, ipowner, ipfee);
 
    }
 
-   void nftone_mart::maker_settlement(const name& maker, asset& earned, nasset& bought, asset& fee, name& ipowner, asset& ipfee) {
+   void nftone_mart::_settle_maker(const name& maker, asset& earned, nasset& bought, asset& fee, name& ipowner, asset& ipfee) {
 
       if(_gstate.dev_fee_rate > 0.0){
          int64_t feeam     =  earned.amount * _gstate.dev_fee_rate;
          fee.amount        =  feeam;
          TRANSFER_X( _gstate.bank_contract, _gstate.dev_fee_collector, fee, "dev fee" )
+
+         _reward_farmer( fee, maker );
       }
 
       if(_gstate.ipowner_fee_rate > 0.0 && ipowner.length() != 0 && is_account(ipowner)){
