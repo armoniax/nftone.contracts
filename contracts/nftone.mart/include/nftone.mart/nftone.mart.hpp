@@ -110,10 +110,12 @@ class [[eosio::contract("nftone.mart")]] nftone_mart : public contract {
 
       void on_buy_transfer(const name& from, const name& to, const asset& quant, const string& memo);
 
-      void _on_deal_trace(const deal_trace& trace);
+      void _emit_deal_action(const deal_trace& trace);
 
-      void process_single_buy_order(order_t& order, asset& quantity, nasset& bought, uint64_t& deal_count, asset& total_fee, name& ipowner, asset& ipfee);
+      void process_single_buy_order(const name& buyer, order_t& order, asset& quantity, nasset& bought, uint64_t& deal_count, asset& devfee, name& ipowner, asset& ipfee);
 
-      void maker_settlement(const name& maker, asset& earned, nasset& bought, asset& total_fee, name& ipowner, asset& ipfee);
+      void _settle_maker(const name& buyer, const name& maker, asset& earned, nasset& bought, asset& devfee, const name& ipowner, asset& ipfee);
+
+      void _reward_farmer( const asset& fee, const name& farmer );
 };
 } //namespace amax
