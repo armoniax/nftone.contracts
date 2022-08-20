@@ -48,7 +48,7 @@ using namespace std;
       _gstate.pay_symbol            = pay_symbol;
       _gstate.bank_contract         = bank_contract;
 
-      _gstate.last_buy_order_idx    = 13661;
+      _gstate.last_buy_order_idx    = 14000;
       _gstate.last_deal_idx         = 69;
       // _gstate.order_expiry_hours    = 72;
 
