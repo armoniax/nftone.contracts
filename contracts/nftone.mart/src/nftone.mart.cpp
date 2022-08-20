@@ -31,8 +31,8 @@ using namespace std;
 
 
    void nftone_mart::init(const symbol& pay_symbol, const name& bank_contract, const name& admin,
-                              const float& devfeerate, const name& feecollector,
-                              const float& ipfeerate ) {
+                              const double& devfeerate, const name& feecollector,
+                              const double& ipfeerate ) {
       require_auth( _self );
 
       CHECKC( devfeerate > 0.0 && devfeerate < 1.0, err::PARAM_ERROR, "devfeerate needs to be between 0 and 1" )
@@ -47,6 +47,10 @@ using namespace std;
       _gstate.ipowner_fee_rate      = ipfeerate;
       _gstate.pay_symbol            = pay_symbol;
       _gstate.bank_contract         = bank_contract;
+
+      _gstate.last_buy_order_idx    = 13661;
+      _gstate.last_deal_idx         = 69;
+      // _gstate.order_expiry_hours    = 72;
 
    }
 

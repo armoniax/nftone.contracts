@@ -37,40 +37,41 @@ struct aplink_farm {
 NTBL("global") global_t {
     name admin;
     name dev_fee_collector;
-    float dev_fee_rate      = 0.0;
-    float creator_fee_rate  = 0.0;
-    float ipowner_fee_rate  = 0.0;
-    float notary_fee_rate   = 0.0;
-    uint32_t order_expiry_hours = 72;
+    double dev_fee_rate             = 0.0;
+    double creator_fee_rate         = 0.0;
+    double ipowner_fee_rate         = 0.0;
+    double notary_fee_rate          = 0.0;
+    uint32_t order_expiry_hours     = 72;
     eosio::symbol           pay_symbol;
     name                    bank_contract;
     aplink_farm             apl_farm;
-    uint64_t last_buy_order_idx = 0;
-    uint64_t last_deal_idx      = 0;
+    uint64_t last_buy_order_idx     = 0;
+    uint64_t last_deal_idx          = 0;
 
-    // EOSLIB_SERIALIZE( global_t, (admin)(dev_fee_collector)(dev_fee_rate)(creator_fee_rate)(ipowner_fee_rate)
-    //                             (notary_fee_rate)(order_expiry_hours)(pay_symbol)(bank_contract)(last_buy_order_idx)(last_deal_idx) )
+    EOSLIB_SERIALIZE( global_t, (admin)(dev_fee_collector)(dev_fee_rate)(creator_fee_rate)(ipowner_fee_rate)
+                                (notary_fee_rate)(order_expiry_hours)(pay_symbol)(bank_contract)
+                                (apl_farm)(last_buy_order_idx)(last_deal_idx) )
 
-    template<typename DataStream>
-    friend DataStream& operator << ( DataStream& ds, const global_t& t ) {
-        return ds   << t.admin
-                    << t.dev_fee_collector
-                    << t.dev_fee_rate
-                    << t.creator_fee_rate
-                    << t.ipowner_fee_rate
-                    << t.notary_fee_rate
-                    << t.order_expiry_hours 
-                    << t.pay_symbol
-                    << t.bank_contract
-                    << t.apl_farm
-                    << t.last_buy_order_idx
-                    << t.last_deal_idx;
-    }
+    // template<typename DataStream>
+    // friend DataStream& operator << ( DataStream& ds, const global_t& t ) {
+    //     return ds   << t.admin
+    //                 << t.dev_fee_collector
+    //                 << t.dev_fee_rate
+    //                 << t.creator_fee_rate
+    //                 << t.ipowner_fee_rate
+    //                 << t.notary_fee_rate
+    //                 << t.order_expiry_hours 
+    //                 << t.pay_symbol
+    //                 << t.bank_contract
+    //                 << t.apl_farm
+    //                 << t.last_buy_order_idx
+    //                 << t.last_deal_idx;
+    // }
 
-    template<typename DataStream>
-    friend DataStream& operator >> ( DataStream& ds, global_t& t ) {
-        return ds;
-    }
+    // template<typename DataStream>
+    // friend DataStream& operator >> ( DataStream& ds, global_t& t ) {
+    //     return ds;
+    // }
 };
 typedef eosio::singleton< "global"_n, global_t > global_singleton;
 
