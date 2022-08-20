@@ -206,7 +206,7 @@ using namespace std;
       aplink::farm::available_apples( _gstate.apl_farm.contract, _gstate.apl_farm.lease_id, apples );
       if (apples.amount == 0 || _gstate.apl_farm.unit_reward.amount == 0) return;
 
-      auto reward_amount = wasm::safemath::mul( _gstate.apl_farm.unit_reward.amount, fee.amount, get_precision(fee.symbol) );
+      auto reward_amount = wasm::safemath::mul( _gstate.apl_farm.unit_reward.amount, fee.amount, get_precision(APL_SYMBOL) );
       auto reward_quant = asset( reward_amount, APL_SYMBOL );
       ALLOT_APPLE( _gstate.apl_farm.contract, _gstate.apl_farm.lease_id, farmer, reward_quant, "nftone reward" )
    }
