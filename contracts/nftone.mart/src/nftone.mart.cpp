@@ -324,6 +324,8 @@ using namespace std;
 
       if (ipfee.amount > 0 && ipowner.length() != 0 && is_account(ipowner))
          TRANSFER_X( _gstate.bank_contract, ipowner, ipfee, "nftone ip fee" )
+      else
+         ipfee.amount = 0;
 
       earned -= devfee + ipfee;
       if (earned.amount > 0)
