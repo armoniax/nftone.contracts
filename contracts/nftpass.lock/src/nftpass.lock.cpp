@@ -226,6 +226,7 @@ namespace amax{
           row.total_issued      = quantity;
           row.locked            = quantity;
           row.unlocked          = nasset(0,quantity.symbol);
+          row.asset_contract    = plan.asset_contract;
           row.created_at        = now;
           row.updated_at        = now;
           row.unlock_times      = plan.unlock_times;

@@ -141,7 +141,7 @@ namespace sell{
         CHECKC( is_account(_gstate.partner_account), err::ACCOUNT_INVALID,"partner account does not exist");  
         CHECKC( is_account(_gstate.storage_account), err::ACCOUNT_INVALID,"unclaimed contract does not exist");  
 
-        nstats_t::idx_t nt( _gstate.lock_contract, _gstate.lock_contract.value );
+        nstats_t::idx_t nt( _gstate.nft_contract, _gstate.nft_contract.value );
         auto nt_itr = nt.find( nft_symbol.id);
         CHECKC( nt_itr != nt.end(), err::SYMBOL_MISMATCH,"nft not found, id:" + to_string(nft_symbol.id));
         
@@ -348,7 +348,7 @@ namespace sell{
         }else {
 
             if ( first_quantity.amount > 0 )
-                TRANSFER( BANK, product.owner, first_quantity, std::string("unclaimed"));
+                TRANSFER( BANK, _gstate.storage_account, first_quantity, std::string("unclaimed"));
         }
 
         if ( second_name != name() ){
@@ -359,7 +359,7 @@ namespace sell{
         } else {
 
             if ( second_quantity.amount > 0 )
-                TRANSFER( BANK, product.owner, second_quantity, std::string("unclaimed"));
+                TRANSFER( BANK, _gstate.storage_account, second_quantity, std::string("unclaimed"));
         }
        
         _on_deal_trace( order_id, owner,_gstate.partner_account, partner_quantity, reward_type::partner);

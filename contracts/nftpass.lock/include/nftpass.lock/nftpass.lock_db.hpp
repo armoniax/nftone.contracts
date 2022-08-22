@@ -145,6 +145,7 @@ struct LOCK_TBL account_t{
     nasset              locked;
     nasset              unlocked;
     uint64_t            plan_id;
+    name                asset_contract;
     name                status = issue_status::none;  
     time_point_sec      created_at;
     time_point_sec      updated_at;
@@ -159,7 +160,7 @@ struct LOCK_TBL account_t{
     typedef eosio::multi_index< "accounts"_n, account_t > tbl_t;
 
     EOSLIB_SERIALIZE(account_t, (total_issued)(locked)(unlocked)
-                    (plan_id)(status)(created_at)(updated_at)(unlock_times)
+                    (plan_id)(asset_contract)(status)(created_at)(updated_at)(unlock_times)
                     )
 };
 
