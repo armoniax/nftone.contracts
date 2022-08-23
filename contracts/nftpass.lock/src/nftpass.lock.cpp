@@ -121,7 +121,7 @@ namespace amax{
         auto nft_idx = plan_tbl.get_index<"nsyidx"_n>();
         auto plan_itr = nft_idx.find( quantity.symbol.id );
 
-        CHECKC( plan_itr != nft_idx.end(), err::RECORD_NOT_FOUND , "plan not found, symbol id: " + to_string(quantity.symbol.id) );
+        CHECKC( plan_itr != nft_idx.end(), err::RECORD_NOT_FOUND , "lock plan not found, symbol id: " + to_string(quantity.symbol.id) );
         CHECKC( plan_itr->status == plan_status::enabled, err::STATUS_ERROR, "plan not enabled, status:" + plan_itr->status.to_string() );
         CHECKC( plan_itr->asset_contract == get_first_receiver(),err::NO_AUTH, "issue asset contract mismatch" );
         CHECKC( from == plan_itr->owner, err::NO_AUTH, "owner mismatch" );

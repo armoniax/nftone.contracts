@@ -162,7 +162,11 @@ namespace sell{
         uint64_t primary_key() const { return id; }
         uint64_t scope() const { return 0; }
 
-        typedef eosio::multi_index<"orders"_n, order_t> tbl_t;
+        uint64_t by_pro_id() const { return product_id; }
+
+        typedef eosio::multi_index<"orders"_n, order_t,
+             indexed_by<"byproid"_n, const_mem_fun<order_t,uint64_t, &order_t::by_pro_id> >
+            > tbl_t;
         
         EOSLIB_SERIALIZE(order_t,(id)(product_id)(owner)(quantity)
                         (nft_quantity)
