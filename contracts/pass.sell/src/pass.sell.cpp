@@ -186,7 +186,11 @@ namespace sell{
         vector<string_view> memo_params = split(memo, ":");
         ASSERT(memo_params.size() > 0);
         auto now = time_point_sec(current_time_point());
-        if ( memo_params[0] == "add" ){
+
+        auto first_contract = get_first_receiver();
+        CHECK( first_contract == _gstate.nft_contract, "The contract is not supported : " + _gstate.nft_contract.to_string() )
+        
+        if ( memo_params[0] == "add" && first_contract== _gstate.nft_contract){
 
             CHECKC(memo_params.size() == 2 , err::MEMO_FORMAT_ERROR, "ontransfer:product params size of must be 2");
             
@@ -196,6 +200,9 @@ namespace sell{
             auto itr = product.find(product_id);
         
             CHECKC( itr != product.end() , err::RECORD_NOT_FOUND, "product is not exist");
+        
+            
+
             CHECKC( itr->balance.symbol == quantity.symbol, err::SYMBOL_MISMATCH, "Symbol mismatch");
             CHECKC( itr->status == product_status::processing, err::STATUS_ERROR, "Non processing products" );
             CHECKC( itr->owner == from, err::NO_AUTH, "Unauthorized operation");
@@ -223,14 +230,14 @@ namespace sell{
         //1. buy:${product_id}:${amount}, Eg:"buy:1:10"
         CHECK( quantity.amount > 0, "quantity must be positive" );
         auto first_contract = get_first_receiver();
-        CHECK( first_contract == BANK, "none MUSDT payment not allowed: " + first_contract.to_string() )
+        CHECK( first_contract == BANK, "The contract is not supported : " + first_contract.to_string() )
 
         auto now = time_point_sec(current_time_point());
 
         vector<string_view> memo_params = split(memo, ":");
         ASSERT(memo_params.size() > 0);
         
-         if ( memo_params[0] == "buy" ) {
+         if ( memo_params[0] == "buy") {
 
             CHECKC(memo_params.size() == 3 , err::MEMO_FORMAT_ERROR, "ontransfer:product params size of must be 3")
             product_t::tbl_t product( get_self(), get_self().value );
