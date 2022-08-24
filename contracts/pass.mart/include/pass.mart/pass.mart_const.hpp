@@ -61,13 +61,14 @@ static constexpr uint32_t seconds_per_day       = 24 * 3600;
 static constexpr uint32_t seconds_per_hour      = 3600;
 
 
-static constexpr uint32_t DEFAULT_FIRST_RATE    = 1500;
-static constexpr uint32_t DEFAULT_SECOND_RATE   = 1000;
-static constexpr uint32_t DEFAULT_PARTNER_RATE  = 1000;
+static constexpr uint32_t DEFAULT_FIRST_RATE    = 1000;
+static constexpr uint32_t DEFAULT_SECOND_RATE   = 500;
+static constexpr uint32_t DEFAULT_PARTNER_RATE  = 500;
 static constexpr uint32_t DEFAULT_OPERABLE_DAYS = 7;
 
 static constexpr uint32_t INITIALIZED_ID        = 0;
 
+static constexpr eosio::name TOP_ACCOUNT = "amax"_n;
 static constexpr eosio::name active_permission{"active"_n};
 
 #define TRANSFER(bank, to, quantity, memo) \

@@ -4,58 +4,57 @@
 #include <eosio/eosio.hpp>
 #include <eosio/singleton.hpp>
 #include <eosio/time.hpp>
-#include "pass.sell_db.hpp"
-#include <thirdparty/wasm_db.hpp>
+#include "pass.mart_db.hpp"
+#include <librarys/wasm_db.hpp>
 
 using namespace eosio;
 using namespace std;
 using namespace wasm::db;
 
-namespace sell{
+namespace mart{
 
-    class [[eosio::contract("pass.sell")]] pass_sell : public contract{
+    class [[eosio::contract("pass.mart")]] pass_mart : public contract{
 
         public:
             using contract::contract;
        
             
-            pass_sell(eosio::name receiver, eosio::name code, datastream<const char*> ds):
+            pass_mart(eosio::name receiver, eosio::name code, datastream<const char*> ds):
             contract(receiver, code, ds),_db(get_self()),
             _global(get_self(), get_self().value)
             {
                 _gstate = _global.exists() ? _global.get() : global_t{};
             }
 
-            ~pass_sell() { _global.set( _gstate, get_self() ); }
+            ~pass_mart() { _global.set( _gstate, get_self() ); }
 
 
             [[eosio::action]]
             void init();
 
             [[eosio::action]]
-            void setclaimday(const name& admin, const uint64_t& days);
+            void setclaimday( const uint64_t& days);
             
             [[eosio::action]]
-            void setadmin(const name& admin,const name& newAdmin);
+            void setadmin( const name& newAdmin);
 
             [[eosio::action]]
-            void setrule(const name& owner,const uint64_t& product_id,const rule_t& rule);
+            void setrule( const uint64_t& product_id,const rule_t& rule);
             
             [[eosio::action]]
-            void setaccouts(const name& owner,
-                            const name& nft_contract,
+            void setaccouts(const name& nft_contract,
                             const name& lock_contract,
-                            const name& partner_name,
-                            const name& storage_account);
+                            const name& partner_account,
+                            const name& storage_account,
+                            const name& unable_claimrewards_account);
             
             [[eosio::action]]
-            void setrates(const name& owner,
-                            const uint64_t& first_rate,
+            void setrates(  const uint64_t& first_rate,
                             const uint64_t& second_rate,
                             const uint64_t& partner_rate);
 
             [[eosio::action]]
-            void cancelplan( const name& owner, const uint64_t& product_id);
+            void cancelplan(  const uint64_t& product_id);
 
             [[eosio::action]]
             void addproduct( const name& owner, const string& title, const nsymbol& nft_symbol,
@@ -74,17 +73,17 @@ namespace sell{
             [[eosio::action]]
             void dealtrace(const deal_trace& trace);
 
-            using deal_trace_action = eosio::action_wrapper<"dealtrace"_n, &pass_sell::dealtrace>;
+            using deal_trace_action = eosio::action_wrapper<"dealtrace"_n, &pass_mart::dealtrace>;
         private:
             global_singleton    _global;
             global_t            _gstate;
             dbc                _db;
 
-            void _check_conf_auth(const name& owner);
-            void _reward(const product_t& product, const name& owner, const asset& quantiy, const nasset& nft_quantity);
-            //void _add_card( const product_t& product, const name& owner, const nasset& nft_quantity);
-            void _add_balance(const product_t& product, const name& owner, const asset& quantity, const nasset& nft_quantity);
-            void _on_deal_trace(const uint64_t&orer_id, const name&buyer, const name&receiver, const asset& quantity,const name& type);
+            
+            void _tally_rewards(const product_t& product, const name& owner, const asset& quantiy, const nasset& nft_quantity);
+            void _add_quantity(const product_t& product, const name& owner, const asset& quantity, const nasset& nft_quantity);
+            void _reward_by_creator( const product_t& product, const name& buyer,const name& creator, const asset& quantity, const name& status );
+            void _on_deal_trace(const uint64_t&product_id, const name&buyer, const name&receiver, const asset& quantity,const name& type);
 
     };
 }
