@@ -91,8 +91,8 @@ namespace mart{
     // scope: owner account
     TBL account_t{
 
-        uint64_t            product_id;                       // pri_key
-        asset               sum_balance = asset(0,MUSDT); // rewards
+        uint64_t            product_id;                     // pri_key
+        asset               sum_balance = asset(0,MUSDT);   // rewards
         asset               balance     = asset(0,MUSDT);
         nasset              pass; 
         name                status = account_status::none;
