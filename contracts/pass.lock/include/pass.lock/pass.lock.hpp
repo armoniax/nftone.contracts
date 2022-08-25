@@ -5,7 +5,7 @@
 #include <eosio/singleton.hpp>
 #include <eosio/time.hpp>
 #include "pass.lock_db.hpp"
-#include <pass.lock/librarys/wasm_db.hpp>
+#include <pass.lock/libraries/wasm_db.hpp>
 
 using namespace eosio;
 using namespace std;

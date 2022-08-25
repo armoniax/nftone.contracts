@@ -5,7 +5,7 @@
 #include <eosio/singleton.hpp>
 #include <eosio/time.hpp>
 #include "pass.mart_db.hpp"
-#include <librarys/wasm_db.hpp>
+#include <libraries/wasm_db.hpp>
 
 using namespace eosio;
 using namespace std;
@@ -82,7 +82,7 @@ namespace mart{
             
             void _tally_rewards(const product_t& product, const name& owner, const asset& quantiy, const nasset& nft_quantity);
             void _add_quantity(const product_t& product, const name& owner, const asset& quantity, const nasset& nft_quantity);
-            void _reward_by_creator( const product_t& product, const name& buyer,const name& creator, const asset& quantity, const name& status );
+            void _creator_reward( const product_t& product, const name& buyer,const name& creator, const asset& quantity, const name& status );
             void _on_deal_trace(const uint64_t&product_id, const name&buyer, const name&receiver, const asset& quantity,const name& type);
 
     };

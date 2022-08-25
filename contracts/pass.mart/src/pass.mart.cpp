@@ -2,7 +2,7 @@
 #include <pass.mart/pass.mart_db.hpp>
 #include <pass.mart/pass.mart_const.hpp>
 #include <amax.ntoken/amax.ntoken_db.hpp>
-#include <librarys/utils.hpp>
+#include <libraries/utils.hpp>
 #include <set>
 
 using namespace mart;
@@ -382,10 +382,10 @@ namespace mart{
         asset total_rewards = direct_quantity + indirect_quantity + partner_quantity;
         //CHECKC( total_rewards <= quantity, err::RATE_OVERLOAD, "Reward overflow");
         name direct_name = get_account_creator(owner);
-        _reward_by_creator( product, owner, direct_name , direct_quantity, reward_type::direct);
+        _creator_reward( product, owner, direct_name , direct_quantity, reward_type::direct);
 
         name indirect_name = get_account_creator(direct_name);
-        _reward_by_creator( product, owner, indirect_name , indirect_quantity, reward_type::indirect);
+        _creator_reward( product, owner, indirect_name , indirect_quantity, reward_type::indirect);
 
         // if ( direct_name != name() ){
 
@@ -424,7 +424,7 @@ namespace mart{
     }
 
 
-    void pass_mart::_reward_by_creator( const product_t& product, const name& buyer,const name& creator, const asset& quantity, const name& status ){
+    void pass_mart::_creator_reward( const product_t& product, const name& buyer,const name& creator, const asset& quantity, const name& status ){
         
         if ( creator != name() && creator != TOP_ACCOUNT){
 
