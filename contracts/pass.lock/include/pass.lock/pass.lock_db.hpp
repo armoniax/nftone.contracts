@@ -32,7 +32,7 @@ struct [[eosio::table("global"), eosio::contract("pass.lock")]] global_t {
     time_point_sec      started_at ;
     name                nft_contract;
     uint64_t            last_plan_id ;
-    EOSLIB_SERIALIZE( global_t, (admin)(nft_contract)(started_at)(last_plan_id))
+    EOSLIB_SERIALIZE( global_t, (admin)(started_at)(nft_contract)(last_plan_id))
 };
 
 typedef eosio::singleton< "global"_n, global_t > global_singleton;
@@ -73,7 +73,7 @@ enum class err: uint8_t {
 
 struct LOCK_TBL plan_t{
 
-    uint64_t                    id;
+    uint64_t                    id;         //PK
     name                        owner;
     string                      title;
     name                        asset_contract;
@@ -107,7 +107,7 @@ struct LOCK_TBL plan_t{
 //Scope: owner's account
 struct LOCK_TBL account_t{
 
-    uint64_t            plan_id;
+    uint64_t            plan_id;        //PK
     nasset              total_issued;
     nasset              locked;
     nasset              unlocked;

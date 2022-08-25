@@ -15,6 +15,7 @@ static constexpr eosio::name active_permission{"active"_n};
 namespace lock{
   
   void pass_lock::init( const name& nft_contract){
+    
      require_auth( get_self() );
      CHECK( _gstate.started_at == time_point_sec(), "already init");
      CHECKC( is_account(nft_contract), err::ACCOUNT_INVALID,"new admin does not exist");

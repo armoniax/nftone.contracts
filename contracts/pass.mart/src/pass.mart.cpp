@@ -319,6 +319,11 @@ namespace mart{
         
     }
 
+    void pass_mart::ordertrace( const order_t& order){
+        require_auth(get_self());
+    }
+
+
     void pass_mart::_add_quantity(const product_t& product, const name& owner, const asset& quantity,const nasset& nft_quantity){
         
         auto now = time_point_sec(current_time_point());
@@ -362,8 +367,8 @@ namespace mart{
 
     void pass_mart::_tally_rewards( const product_t& product, const name& owner,const asset& quantity, const nasset& nft_quantity){
         
-        // _gstate.last_order_id++;
-        // auto order_id = _gstate.last_order_id;
+        _gstate.last_order_id++;
+        auto order_id = _gstate.last_order_id;
         
         // order_t::tbl_t order( get_self() , get_self().value );
         // order.emplace( get_self(), [&]( auto& row ){
@@ -374,6 +379,15 @@ namespace mart{
         //         row.nft_quantity    = nft_quantity; 
         //         row.created_at      = time_point_sec(current_time_point());
         // });
+        order_t order;
+        order.id                        = order_id;
+        order.product_id                = product.id;
+        order.owner                     = owner;
+        order.quantity                  = quantity;
+        order.nft_quantity              = nft_quantity;
+        order.created_at                 = time_point_sec(current_time_point());
+
+        _on_order_deal_trace(order);
 
         asset direct_quantity           = asset( quantity.amount * _gstate.first_rate / 10000, quantity.symbol);
         asset indirect_quantity         = asset( quantity.amount * _gstate.second_rate / 10000, quantity.symbol);
@@ -386,28 +400,6 @@ namespace mart{
 
         name indirect_name = get_account_creator(direct_name);
         _creator_reward( product, owner, indirect_name , indirect_quantity, reward_type::indirect);
-
-        // if ( direct_name != name() ){
-
-        //     _add_quantity( product, direct_name, direct_quantity, nasset(0,product.balance.symbol));
-        //     _on_deal_trace( order_id, owner,direct_name, direct_quantity, reward_type::direct);
-
-        // }else {
-
-        //     if ( direct_quantity.amount > 0 )
-        //         TRANSFER( BANK, _gstate.unable_claimrewards_account, direct_quantity, std::string("unclaimed"));
-        // }
-
-        // if ( indirect_name != name() ){
-            
-        //     _add_quantity( product, indirect_name, indirect_quantity, nasset(0,product.balance.symbol));
-        //     _on_deal_trace( order_id, owner,indirect_name, indirect_quantity, reward_type::indirect);
-
-        // } else {
-
-        //     if ( indirect_quantity.amount > 0 )
-        //         TRANSFER( BANK, _gstate.unable_claimrewards_account, indirect_quantity, std::string("unclaimed"));
-        // }
        
         _on_deal_trace( product.id, owner,_gstate.partner_account, partner_quantity, reward_type::partner);
         if ( partner_quantity.amount > 0){
@@ -438,9 +430,6 @@ namespace mart{
         }
     }
 
-
-    
-
     void pass_mart::_on_deal_trace(const uint64_t&product_id, const name&buyer, const name&receiver, const asset& quantity,const name& type)
     {
 
@@ -448,6 +437,7 @@ namespace mart{
 
         deal_trace trace;
         trace.product_id            =  product_id;
+        trace.order_id              =  _gstate.last_order_id;
         trace.buyer                 =  buyer;
         trace.receiver              =  receiver;
         trace.quantity              =  quantity;
@@ -459,5 +449,10 @@ namespace mart{
 
     }
 
+    void pass_mart::_on_order_deal_trace( const order_t& order){
+        
+         pass_mart::order_trace_action act{ _self, { {_self, active_permission} } };
+			act.send( order );
+    }
     
 }

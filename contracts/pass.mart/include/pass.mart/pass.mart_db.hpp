@@ -49,7 +49,7 @@ namespace mart{
     };
 
     TBL product_t{
-        uint64_t            id;
+        uint64_t            id;             //PK
         string              title;
         name                owner;
         nasset              balance;
@@ -76,11 +76,11 @@ namespace mart{
         uint64_t by_parent_id()const    { return balance.symbol.parent_id; }
         uint64_t by_status()const    { return status.value; }
 
-        typedef eosio::multi_index<"products"_n,product_t,
-            indexed_by<"owneridx"_n, const_mem_fun<product_t,uint64_t, &product_t::by_owner> >,
-            indexed_by<"nsymbidx"_n, const_mem_fun<product_t,uint64_t, &product_t::by_nsymb_id> >,
-            indexed_by<"parentidx"_n, const_mem_fun<product_t,uint64_t, &product_t::by_parent_id> >,
-            indexed_by<"statusidx"_n, const_mem_fun<product_t,uint64_t, &product_t::by_status> >
+        typedef eosio::multi_index<"products"_n,product_t
+            //indexed_by<"owneridx"_n, const_mem_fun<product_t,uint64_t, &product_t::by_owner> >,
+            //indexed_by<"nsymbidx"_n, const_mem_fun<product_t,uint64_t, &product_t::by_nsymb_id> >,
+            //indexed_by<"parentidx"_n, const_mem_fun<product_t,uint64_t, &product_t::by_parent_id> >,
+            //indexed_by<"statusidx"_n, const_mem_fun<product_t,uint64_t, &product_t::by_status> >
         > tbl_t;
 
         EOSLIB_SERIALIZE(product_t,(id)(title)(owner)(balance)(total_issue)(price)(status)
@@ -91,7 +91,7 @@ namespace mart{
     // scope: owner account
     TBL account_t{
 
-        uint64_t            product_id;                     // pri_key
+        uint64_t            product_id;                     // PK
         asset               sum_balance = asset(0,MUSDT);   // rewards
         asset               balance     = asset(0,MUSDT);
         nasset              pass; 
@@ -114,7 +114,7 @@ namespace mart{
     };
 
     TBL pass_recv_t{
-        name             owner;
+        name             owner;     //PK
         time_point_sec   created_at;
 
         pass_recv_t(){}
@@ -129,36 +129,37 @@ namespace mart{
                         )
     };
 
-    // TBL order_t{
+    struct order_t{
 
-    //     uint64_t            id;
-    //     uint64_t            product_id;
-    //     name                owner;
-    //     asset               quantity;
-    //     nasset              nft_quantity;
-    //     time_point_sec      created_at;
+        uint64_t            id;
+        uint64_t            product_id;
+        name                owner;
+        asset               quantity;
+        nasset              nft_quantity;
+        time_point_sec      created_at;
       
 
-    //     order_t(){}
-    //     order_t(const uint64_t& pid) : id(pid){}
+        // order_t(){}
+        // order_t(const uint64_t& pid) : id(pid){}
 
-    //     uint64_t primary_key() const { return id; }
-    //     uint64_t scope() const { return 0; }
+        // uint64_t primary_key() const { return id; }
+        // uint64_t scope() const { return 0; }
 
-    //     uint64_t by_pro_id() const { return product_id; }
+        // uint64_t by_pro_id() const { return product_id; }
 
-    //     typedef eosio::multi_index<"orders"_n, order_t,
-    //          indexed_by<"byproid"_n, const_mem_fun<order_t,uint64_t, &order_t::by_pro_id> >
-    //         > tbl_t;
+        // typedef eosio::multi_index<"orders"_n, order_t,
+        //      indexed_by<"byproid"_n, const_mem_fun<order_t,uint64_t, &order_t::by_pro_id> >
+        //     > tbl_t;
         
-    //     EOSLIB_SERIALIZE(order_t,(id)(product_id)(owner)(quantity)
-    //                     (nft_quantity)
-    //                     (created_at))
-    // };
+        // EOSLIB_SERIALIZE(order_t,(id)(product_id)(owner)(quantity)
+        //                 (nft_quantity)
+        //                 (created_at))
+    };
 
     struct deal_trace {
 
         uint64_t            product_id;
+        uint64_t            order_id;     
         name                buyer;
         name                receiver;
         asset               quantity;
