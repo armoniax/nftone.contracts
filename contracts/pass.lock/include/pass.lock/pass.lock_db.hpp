@@ -32,7 +32,7 @@ struct [[eosio::table("global"), eosio::contract("pass.lock")]] global_t {
     time_point_sec      started_at ;
     name                nft_contract;
     uint64_t            last_plan_id ;
-    EOSLIB_SERIALIZE( global_t, (admin)(started_at)(last_plan_id))
+    EOSLIB_SERIALIZE( global_t, (admin)(nft_contract)(started_at)(last_plan_id))
 };
 
 typedef eosio::singleton< "global"_n, global_t > global_singleton;
