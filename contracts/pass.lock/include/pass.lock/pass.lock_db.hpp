@@ -10,29 +10,29 @@
 #include <eosio/action.hpp>
 #include <eosio/name.hpp>
 #include <eosio/time.hpp>
-#include <nftpass.lock/amax.ntoken/amax.ntoken_db.hpp>
+#include <pass.lock/amax.ntoken/amax.ntoken_db.hpp>
 
 #include <string>
 
 
 static constexpr uint32_t MAX_TITLE_SIZE        = 64;
 
-namespace amax{
+namespace lock{
 
 
 using namespace amax;
 
-#define LOCK_TBL  [[eosio::table, eosio::contract("nftpass.lock")]]
+#define LOCK_TBL  [[eosio::table, eosio::contract("pass.lock")]]
 
 static constexpr uint32_t INITIALIZED_ID        = 0;
 
 using std::string;
-struct [[eosio::table("global"), eosio::contract("nftpass.lock")]] global_t {
+struct [[eosio::table("global"), eosio::contract("pass.lock")]] global_t {
     name                admin ;
     time_point_sec      started_at ;
+    name                nft_contract;
     uint64_t            last_plan_id ;
-    uint64_t            last_issue_id ;
-    EOSLIB_SERIALIZE( global_t, (admin)(started_at)(last_plan_id)(last_issue_id))
+    EOSLIB_SERIALIZE( global_t, (admin)(started_at)(nft_contract)(last_plan_id))
 };
 
 typedef eosio::singleton< "global"_n, global_t > global_singleton;
@@ -43,7 +43,7 @@ namespace plan_status {
     static constexpr eosio::name disabled           = "disabled"_n;
 };
 
-namespace issue_status {
+namespace lock_status {
     static constexpr eosio::name none               = "none"_n;
     static constexpr eosio::name locked             = "locked"_n;
     static constexpr eosio::name unlocked           = "unlocked"_n;
@@ -73,7 +73,7 @@ enum class err: uint8_t {
 
 struct LOCK_TBL plan_t{
 
-    uint64_t                    id;
+    uint64_t                    id;         //PK
     name                        owner;
     string                      title;
     name                        asset_contract;
@@ -89,77 +89,41 @@ struct LOCK_TBL plan_t{
     plan_t(const uint64_t& pid) : id(pid){}
 
     uint64_t primary_key() const { return id; }
-    uint128_t by_owner() const { return (uint128_t)owner.value << 64 | (uint128_t)id; }
-    uint64_t by_nsy_id() const     { return asset_symbol.id; }
-    uint64_t by_parent_id()const    { return asset_symbol.parent_id; }
+    //uint128_t by_owner() const { return (uint128_t)owner.value << 64 | (uint128_t)id; }
+    uint64_t by_nsymb_id() const     { return asset_symbol.id; }
+    //uint64_t by_parent_id()const    { return asset_symbol.parent_id; }
 
 
     typedef eosio::multi_index<"plans"_n, plan_t,
-        indexed_by<"owneridx"_n,  const_mem_fun<plan_t, uint128_t, &plan_t::by_owner> >,
-        indexed_by<"nsyidx"_n,  const_mem_fun<plan_t, uint64_t, &plan_t::by_nsy_id> >,
-        indexed_by<"parentidx"_n,  const_mem_fun<plan_t, uint64_t, &plan_t::by_parent_id> >
+        //indexed_by<"owneridx"_n,  const_mem_fun<plan_t, uint128_t, &plan_t::by_owner> >,
+        indexed_by<"nsymbidx"_n,  const_mem_fun<plan_t, uint64_t, &plan_t::by_nsymb_id> >
+        //indexed_by<"parentidx"_n,  const_mem_fun<plan_t, uint64_t, &plan_t::by_parent_id> >
     > tbl_t;
 
      EOSLIB_SERIALIZE(plan_t, (id)(owner)(title)(asset_contract)(asset_symbol)(total_issued)
                     (total_unlocked)(status)(unlock_times)(created_at)(updated_at))
 };
 
-struct LOCK_TBL issue_t{
-    uint64_t                id;
-    uint64_t                plan_id;
-    name                    issuer;
-    name                    receiver;
-    nasset                  issued; 
-    nasset                  locked; 
-    nasset                  unlocked;  
-    name                    status = issue_status::none;  
-    time_point_sec          created_at;
-    time_point_sec          unlock_times;
-    time_point_sec          updated_at;
-    
-    issue_t(){}
-    issue_t(const uint64_t& pid) : id(pid){}
-
-    uint64_t primary_key()const     { return id; }
-    uint64_t scope() const { return 0; }
-    uint64_t by_plan_id() const {return plan_id;}
-    uint64_t by_issuer()const       { return issuer.value; }
-    uint64_t by_receiver()const       { return receiver.value; }
-    uint64_t by_nsy_id() const     { return locked.symbol.id; }
-    
-     typedef eosio::multi_index
-    < "issues"_n,  issue_t,
-        indexed_by<"planidx"_n,       const_mem_fun<issue_t, uint64_t, &issue_t::by_plan_id> >,
-        indexed_by<"issueridx"_n,       const_mem_fun<issue_t, uint64_t, &issue_t::by_issuer> >,
-        indexed_by<"receiveridx"_n,       const_mem_fun<issue_t, uint64_t, &issue_t::by_receiver> >,
-        indexed_by<"nsyidx"_n,      const_mem_fun<issue_t, uint64_t, &issue_t::by_nsy_id> >
-    > tbl_t;
-
-    EOSLIB_SERIALIZE(issue_t, (id)(plan_id)(issuer)(receiver)(locked)(unlocked)(status)
-                                (created_at)(unlock_times)(updated_at))
-
-};
 //Scope: owner's account
 struct LOCK_TBL account_t{
+
+    uint64_t            plan_id;        //PK
     nasset              total_issued;
     nasset              locked;
     nasset              unlocked;
-    uint64_t            plan_id;
-    name                status = issue_status::none;  
+    name                asset_contract;
+    name                status = lock_status::none;  
     time_point_sec      created_at;
     time_point_sec      updated_at;
     time_point_sec      unlock_times;
 
     account_t() {}
-    account_t(const nasset& asset): total_issued(asset) {}
-
-    uint64_t primary_key()const { return total_issued.symbol.raw(); }
-    uint64_t scope() const { return 0; }
+    uint64_t primary_key()const { return plan_id; }
     
     typedef eosio::multi_index< "accounts"_n, account_t > tbl_t;
 
-    EOSLIB_SERIALIZE(account_t, (total_issued)(locked)(unlocked)
-                    (plan_id)(status)(created_at)(updated_at)(unlock_times)
+    EOSLIB_SERIALIZE(account_t, (plan_id)(total_issued)(locked)(unlocked)
+                    (asset_contract)(status)(created_at)(updated_at)(unlock_times)
                     )
 };
 

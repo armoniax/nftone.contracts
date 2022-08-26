@@ -6,7 +6,7 @@
 
 #include <string>
 
-#include <nftpass.lock/amax.ntoken/amax.ntoken_db.hpp>
+#include <pass.lock/amax.ntoken/amax.ntoken_db.hpp>
 
 namespace amax {
 
