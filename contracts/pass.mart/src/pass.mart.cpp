@@ -122,6 +122,22 @@ namespace mart{
         });
     }
 
+    // void pass_mart::editclaimtime( const uint64_t& product_id, const time_point_sec& ended_time){
+
+    //     product_t::tbl_t product( get_self(), get_self().value);
+    //     auto itr = product.find( product_id);
+    //     CHECKC( itr != product.end(), err::RECORD_NOT_FOUND, "product not found , id:" + to_string(product_id));
+    //     CHECKC( itr->status == product_status::opened, err::STATUS_ERROR, "Abnormal status, status:" + itr->status.to_string());
+    //     CHECKC( has_auth(get_self()) || has_auth(_gstate.admin) || has_auth( itr->owner),err::NO_AUTH, "Missing required authority of admin or maintainer or owner" )
+    //     CHECKC( itr->claimrewards_started_at < ended_time, err::PARAM_ERROR, "End time should be greater than start time");
+
+    //     auto now = time_point_sec(current_time_point());
+    //     product.modify( itr, get_self(), [&]( auto&row ){
+    //         row.claimrewards_ended_at           = ended_time;
+    //         row.updated_at                      = now;
+    //     });
+
+    // }
     void pass_mart::addproduct( const name& owner, const string& title, const nsymbol& nft_symbol,
                                 const asset& price, const time_point_sec& started_at,
                                 const time_point_sec& ended_at){
@@ -296,8 +312,8 @@ namespace mart{
         account_t::tbl_t account( get_self(), owner.value );
         auto a_itr = account.find( product_id );
         CHECKC( a_itr != account.end(), err::RECORD_NOT_FOUND, "RECORD_NOT_FOUND" ); 
-        CHECKC( a_itr->sum_balance.amount > 0, err::DATA_ERROR, "Data exception");
         CHECKC( a_itr->status == account_status::ready, err::STATUS_ERROR, "Claim failed,status:" + a_itr->status.to_string());
+        CHECKC( a_itr->sum_balance.amount > 0, err::DATA_ERROR, "rewards empty");
 
         auto quantity = a_itr->balance ;
         CHECKC( quantity.amount > 0 ,err::NOT_POSITIVE, "No claim");

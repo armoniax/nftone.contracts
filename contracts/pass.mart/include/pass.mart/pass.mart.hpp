@@ -56,6 +56,8 @@ namespace mart{
             [[eosio::action]]
             void cancelplan(  const uint64_t& product_id);
 
+            // [[eosio::action]]
+            // void editclaimtime( const uint64_t& product_id, const time_point_sec& ended_time);
             [[eosio::action]]
             void addproduct( const name& owner, const string& title, const nsymbol& nft_symbol,
                                 const asset& price, const time_point_sec& started_at,

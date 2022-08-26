@@ -165,8 +165,8 @@ namespace lock{
 
     plan_t::tbl_t plan_tbl( get_self(), get_self().value);
     auto plan_itr = plan_tbl.find( itr->plan_id);
-    check( plan_itr != plan_tbl.end(), "plan not found: " + to_string( itr->plan_id)  );
-    check( plan_itr->status == plan_status::enabled, "plan not enabled, status:" + plan_itr->status.to_string());
+    CHECK( plan_itr != plan_tbl.end(), "plan not found: " + to_string( itr->plan_id)  );
+    CHECK( plan_itr->status == plan_status::enabled, "plan not enabled, status:" + plan_itr->status.to_string());
 
     vector<nasset> quants = { quantity };
     TRANSFER_N( plan_itr-> asset_contract, owner , quants , "unlock" );
