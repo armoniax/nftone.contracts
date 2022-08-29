@@ -6,7 +6,7 @@
 
 #include <string>
 
-#include <pass.lock/amax.ntoken/amax.ntoken_db.hpp>
+#include <pass.custody/amax.ntoken/amax.ntoken_db.hpp>
 
 namespace amax {
 

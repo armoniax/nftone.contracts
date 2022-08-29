@@ -10,7 +10,7 @@
 #include <eosio/action.hpp>
 #include <eosio/name.hpp>
 #include <eosio/time.hpp>
-#include <pass.lock/amax.ntoken/amax.ntoken_db.hpp>
+#include <pass.custody/amax.ntoken/amax.ntoken_db.hpp>
 
 #include <string>
 
@@ -22,12 +22,12 @@ namespace lock{
 
 using namespace amax;
 
-#define LOCK_TBL  [[eosio::table, eosio::contract("pass.lock")]]
+#define LOCK_TBL  [[eosio::table, eosio::contract("pass.custody")]]
 
 static constexpr uint32_t INITIALIZED_ID        = 0;
 
 using std::string;
-struct [[eosio::table("global"), eosio::contract("pass.lock")]] global_t {
+struct [[eosio::table("global"), eosio::contract("pass.custody")]] global_t {
     name                admin ;
     time_point_sec      started_at ;
     name                nft_contract;

@@ -4,14 +4,14 @@
 #include <eosio/eosio.hpp>
 #include <eosio/singleton.hpp>
 #include <eosio/time.hpp>
-#include "pass.lock_db.hpp"
-#include <pass.lock/libraries/wasm_db.hpp>
+#include "pass.custody_db.hpp"
+#include <pass.custody/libraries/wasm_db.hpp>
 
 using namespace eosio;
 using namespace std;
 
 namespace lock{
-    class [[eosio::contract("pass.lock")]] pass_lock: public contract {
+    class [[eosio::contract("pass.custody")]] pass_lock: public contract {
 
     private:
         global_singleton    _global;

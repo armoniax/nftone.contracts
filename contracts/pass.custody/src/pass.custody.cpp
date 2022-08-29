@@ -1,9 +1,9 @@
-#include <pass.lock/pass.lock.hpp>
-#include <pass.lock/pass.lock_db.hpp>
-#include <pass.lock/amax.ntoken/amax.ntoken.hpp>
-#include <pass.lock/amax.ntoken/amax.ntoken_db.hpp>
-#include <pass.lock/libraries/utils.hpp>
-#include <pass.lock/libraries/wasm_db.hpp>
+#include <pass.custody/pass.custody.hpp>
+#include <pass.custody/pass.custody_db.hpp>
+#include <pass.custody/amax.ntoken/amax.ntoken.hpp>
+#include <pass.custody/amax.ntoken/amax.ntoken_db.hpp>
+#include <pass.custody/libraries/utils.hpp>
+#include <pass.custody/libraries/wasm_db.hpp>
 #include <set>
 
 using namespace eosio;
