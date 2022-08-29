@@ -53,9 +53,9 @@ void custody::init() {
 void custody::setconfig(const asset &plan_fee, const name &fee_receiver) {
     require_auth(get_self());
 
-    CHECK(plan_fee.symbol == SYS_SYMBOL, "plan_fee symbol mismatch with sys symbol")
-    CHECK(plan_fee.amount >= 0, "plan_fee symbol amount can not be negative")
-    CHECK(is_account(fee_receiver), "fee_receiver account does not exist")
+    CHECKC(plan_fee.symbol == SYS_SYMBOL, err::SYMBOL_MISMATCH, "plan_fee symbol mismatch with sys symbol")
+    CHECKC(plan_fee.amount >= 0, err::NOT_POSITIVE, "plan_fee symbol amount can not be negative")
+    CHECKC(is_account(fee_receiver), err::ACCOUNT_INVALID, "fee_receiver account does not exist")
 
     _gstate.plan_fee = plan_fee;
     _gstate.fee_receiver = fee_receiver;
@@ -69,13 +69,13 @@ void custody::setconfig(const asset &plan_fee, const name &fee_receiver) {
 {
     require_auth(owner);
 
-    CHECK( title.size() <= MAX_TITLE_SIZE, "title size must be <= " + to_string(MAX_TITLE_SIZE) )
-    CHECK( is_account(asset_contract), "asset contract account does not exist" )
-    CHECK( asset_symbol.is_valid(), "Invalid asset symbol" )
-    CHECK( unlock_interval_days > 0 && unlock_interval_days <= MAX_LOCK_DAYS, "unlock_days must be > 0 and <= 365*10, i.e. 10 years" )
-    CHECK( unlock_times > 0, "unlock times must be > 0" )
+    CHECKC( title.size() <= MAX_TITLE_SIZE, err::OVERSIZED, "title size must be <= " + to_string(MAX_TITLE_SIZE) )
+    CHECKC( is_account(asset_contract), err::ACCOUNT_INVALID, "asset contract account does not exist" )
+    CHECKC( asset_symbol.is_valid(), err::PARAM_ERROR, "Invalid asset symbol" )
+    CHECKC( unlock_interval_days > 0 && unlock_interval_days <= MAX_LOCK_DAYS, err::PARAM_ERROR, "unlock_days must be > 0 and <= 365*10, i.e. 10 years" )
+    CHECKC( unlock_times > 0, err::NOT_POSITIVE, "unlock times must be > 0" )
     if (_gstate.plan_fee.amount > 0) {
-        CHECK(_gstate.fee_receiver.value != 0, "fee_receiver not set")
+        CHECKC(_gstate.fee_receiver.value != 0, err::FEE_INSUFFICIENT, "fee_receiver not set")
     }
     plan_t::tbl_t plan_tbl(get_self(), get_self().value);
 
@@ -109,10 +109,10 @@ void custody::setconfig(const asset &plan_fee, const name &fee_receiver) {
 void custody::setplanowner(const name& owner, const uint64_t& plan_id, const name& new_owner) {
     plan_t::tbl_t plan_tbl(get_self(), get_self().value);
     auto plan_itr = plan_tbl.find(plan_id);
-    CHECK( plan_itr != plan_tbl.end(), "plan not found: " + to_string(plan_id) )
-    CHECK( owner == plan_itr->owner, "owner mismatch" )
-    CHECK( has_auth(plan_itr->owner) || has_auth(get_self()), "Missing required authority of owner or maintainer" )
-    CHECK( is_account(new_owner), "new_owner account does not exist");
+    CHECKC( plan_itr != plan_tbl.end(), err::RECORD_NOT_FOUND, "plan not found: " + to_string(plan_id) )
+    CHECKC( owner == plan_itr->owner, err::DATA_MISMATCH, "owner mismatch" )
+    CHECKC( has_auth(plan_itr->owner) || has_auth(get_self()), err::NO_AUTH, "Missing required authority of owner or maintainer" )
+    CHECKC( is_account(new_owner), err::ACCOUNT_INVALID, "new_owner account does not exist");
 
     plan_tbl.modify( plan_itr, same_payer, [&]( auto& plan ) {
         plan.owner = new_owner;
@@ -155,7 +155,7 @@ void custody::setplanowner(const name& owner, const uint64_t& plan_id, const nam
 void custody::ontransfer(name from, name to, nasset quantity, string memo) {
     if (from == get_self() || to != get_self()) return;
 
-	CHECK( quantity.amount > 0, "quantity must be positive" )
+	CHECKC( quantity.amount > 0, err::NOT_POSITIVE, "quantity must be positive" )
 
     //memo params format:
     //1. plan:${plan_id}, Eg: "plan:" or "plan:1"
@@ -163,26 +163,26 @@ void custody::ontransfer(name from, name to, nasset quantity, string memo) {
     vector<string_view> memo_params = split(memo, ":");
     ASSERT(memo_params.size() > 0)
     if (memo_params[0] == "plan") {
-        CHECK(memo_params.size() == 2, "ontransfer:plan params size of must be 2")
+        CHECKC(memo_params.size() == 2, err::MEMO_FORMAT_ERROR, "ontransfer:plan params size of must be 2")
         auto param_plan_id = memo_params[1];
 
-        CHECK( quantity.amount == _gstate.plan_fee.amount,
+        CHECKC( quantity.amount == _gstate.plan_fee.amount, err::DATA_MISMATCH,
             "quantity amount mismatch with fee amount: " + to_string(_gstate.plan_fee.amount) );
         uint64_t plan_id = 0;
         if (param_plan_id.empty()) {
             account::tbl_t pay_account_tbl(get_self(), get_self().value);
             auto acct = pay_account_tbl.get(from.value, "from account does not exist in custody constract");
             plan_id = acct.last_plan_id;
-            CHECK( plan_id != 0, "from account does no have any plan" );
+            CHECKC( plan_id != 0, err::RECORD_NOT_FOUND, "from account does not have any plan" );
         } else {
             plan_id = to_uint64(param_plan_id.data(), "plan_id");
-            CHECK( plan_id != 0, "plan id can not be 0" );
+            CHECKC( plan_id != 0, err::NOT_POSITIVE, "plan id can not be 0" );
         }
 
         plan_t::tbl_t plan_tbl(get_self(), get_self().value);
         auto plan_itr           = plan_tbl.find(plan_id);
-        CHECK( plan_itr != plan_tbl.end(), "plan not found by plan_id: " + to_string(plan_id) )
-        CHECK( plan_itr->status == plan_status::feeunpaid, "plan must be unpaid fee, status:" + plan_itr->status.to_string() )
+        CHECKC( plan_itr != plan_tbl.end(), err::RECORD_NOT_FOUND, "plan not found by plan_id: " + to_string(plan_id) )
+        CHECKC( plan_itr->status == plan_status::feeunpaid, err::STATUS_ERROR, "plan must be unpaid fee, status:" + plan_itr->status.to_string() )
         plan_tbl.modify( plan_itr, same_payer, [&]( auto& plan ) {
             plan.status         = plan_status::enabled;
             plan.updated_at     = current_time_point();
@@ -191,22 +191,22 @@ void custody::ontransfer(name from, name to, nasset quantity, string memo) {
         TRANSFER_OUT( get_first_receiver(), _gstate.fee_receiver, quantity, memo )
 
     } else if (memo_params[0] == "issue") {
-        CHECK(memo_params.size() == 4, "ontransfer:issue params size of must be 4")
+        CHECKC(memo_params.size() == 4, err::MEMO_FORMAT_ERROR, "ontransfer:issue params size of must be 4")
         auto receiver           = name(memo_params[1]);
         auto plan_id            = to_uint64(memo_params[2], "plan_id");
         auto first_unlock_days  = to_uint64(memo_params[3], "first_unlock_days");
 
         plan_t::tbl_t plan_tbl(get_self(), get_self().value);
         auto plan_itr           = plan_tbl.find(plan_id);
-        CHECK( plan_itr != plan_tbl.end(), "plan not found: " + to_string(plan_id) )
-        CHECK( plan_itr->status == plan_status::enabled, "plan not enabled, status:" + plan_itr->status.to_string() )
+        CHECKC( plan_itr != plan_tbl.end(), err::RECORD_NOT_FOUND, "plan not found: " + to_string(plan_id) )
+        CHECKC( plan_itr->status == plan_status::enabled, err::STATUS_ERROR, "plan not enabled, status:" + plan_itr->status.to_string() )
 
-        CHECK( is_account(receiver), "receiver account not exist" );
-        CHECK( first_unlock_days <= MAX_LOCK_DAYS, "unlock_days must be > 0 and <= 365*10, i.e. 10 years" )
-        CHECK( quantity.symbol == plan_itr->asset_symbol, "symbol of quantity mismatch with symbol of plan" );
-        CHECK( quantity.amount > 0, "quantity must be positive" )
-        CHECK( plan_itr->asset_contract == get_first_receiver(), "issue asset contract mismatch" );
-        CHECK( plan_itr->asset_symbol == quantity.symbol, "issue asset symbol mismatch" );
+        CHECKC( is_account(receiver), err::ACCOUNT_INVALID, "receiver account not exist" );
+        CHECKC( first_unlock_days <= MAX_LOCK_DAYS, err::OVERSIZED, "unlock_days must be > 0 and <= 365*10, i.e. 10 years" )
+        CHECKC( quantity.symbol == plan_itr->asset_symbol, err::SYMBOL_MISMATCH, "symbol of quantity mismatch with symbol of plan" );
+        CHECKC( quantity.amount > 0, err::NOT_POSITIVE, "quantity must be positive" )
+        CHECKC( plan_itr->asset_contract == get_first_receiver(), err::DATA_MISMATCH, "issue asset contract mismatch" );
+        CHECKC( plan_itr->asset_symbol == quantity.symbol, err::SYMBOL_MISMATCH, "issue asset symbol mismatch" );
 
         auto new_lock_id = plan_itr->last_lock_id + 1;
         auto now = current_time_point();
@@ -239,7 +239,7 @@ void custody::ontransfer(name from, name to, nasset quantity, string memo) {
 
 [[eosio::action]]
 void custody::endissue(const name& issuer, const uint64_t& plan_id, const uint64_t& issue_id) {
-    CHECK( has_auth( issuer ) || has_auth( _self ), "not authorized to end issue" )
+    CHECKC( has_auth( issuer ) || has_auth( _self ), err::NO_AUTH, "not authorized to end issue" )
     // require_auth( issuer );
 
     _unlock(issuer, plan_id, issue_id, /*to_terminate=*/true);
@@ -261,20 +261,20 @@ void custody::_unlock(const name& issuer, const uint64_t& plan_id, const uint64_
 
     lock_t::tbl_t lock_tbl(get_self(), plan_id);
     auto lock_itr = lock_tbl.find(issue_id);
-    CHECK( lock_itr != lock_tbl.end(), "issue not found: " + to_string(issue_id) )
+    CHECKC( lock_itr != lock_tbl.end(), err::RECORD_NOT_FOUND, "issue not found: " + to_string(issue_id) )
 
     plan_t::tbl_t plan_tbl(get_self(), get_self().value);
     auto plan_itr = plan_tbl.find(plan_id);
-    CHECK( plan_itr != plan_tbl.end(), "plan not found: " + to_string(plan_id) )
-    CHECK( plan_itr->status == plan_status::enabled, "plan not enabled, status:" + plan_itr->status.to_string() )
+    CHECKC( plan_itr != plan_tbl.end(), err::RECORD_NOT_FOUND, "plan not found: " + to_string(plan_id) )
+    CHECKC( plan_itr->status == plan_status::enabled, err::STATUS_ERROR, "plan not enabled, status:" + plan_itr->status.to_string() )
 
     if (to_terminate) {
-        CHECK( lock_itr->status != lock_status::unlocked, "issue has been ended, status: " + lock_itr->status.to_string() );
+        CHECKC( lock_itr->status != lock_status::unlocked, err::STATUS_ERROR, "issue has been ended, status: " + lock_itr->status.to_string() );
 
-        CHECK( issuer == lock_itr->locker || issuer == _self, "not authorized" )
+        CHECKC( issuer == lock_itr->locker || issuer == _self, err::NO_AUTH, "not authorized" )
 
     } else {
-        CHECK( lock_itr->status == lock_status::locked, "issue is not normal, status: " + lock_itr->status.to_string() );
+        CHECKC( lock_itr->status == lock_status::locked, err::STATUS_ERROR, "issue is not normal, status: " + lock_itr->status.to_string() );
     }
 
     int64_t total_unlocked = 0;
@@ -308,7 +308,7 @@ void custody::_unlock(const name& issuer, const uint64_t& plan_id, const uint64_
 
         } else { // cur_unlocked == 0
             if (!to_terminate) {
-                CHECK( false, "It's not time to unlock yet" )
+                CHECKC( false, err::STATUS_ERROR, "It's not time to unlock yet" )
             } // else ignore
         }
 

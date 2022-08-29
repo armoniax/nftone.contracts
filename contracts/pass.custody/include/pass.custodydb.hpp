@@ -65,6 +65,7 @@ enum class err: uint8_t {
    FIRST_CREATOR        = 17,
    STATUS_ERROR         = 18,
    RATE_OVERLOAD        = 19,
+   DATA_MISMATCH        = 20,
    MISC                 = 255
 };
 
