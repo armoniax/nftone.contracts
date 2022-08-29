@@ -275,7 +275,8 @@ void custody::_unlock(const name& issuer, const uint64_t& plan_id, const uint64_
     int64_t total_unlocked = 0;
     int64_t remaining_locked = lock_itr->locked.amount;
     if (lock_itr->status == lock_status::locked) {
-        ASSERT(now >= lock_itr->locked_at)
+        ASSERT(now >= lock_itr->locked_at);
+        
         auto issued_days = (now.sec_since_epoch() - lock_itr->locked_at.sec_since_epoch()) / DAY_SECONDS;
         auto unlocked_days = issued_days > lock_itr->first_unlock_days ? issued_days - lock_itr->first_unlock_days : 0;
         ASSERT(plan_itr->unlock_interval_days > 0);
@@ -283,7 +284,7 @@ void custody::_unlock(const name& issuer, const uint64_t& plan_id, const uint64_
         if (unlocked_times >= plan_itr->unlock_times) {
             total_unlocked = lock_itr->issued.amount;
         } else {
-            ASSERT(plan_itr->unlock_times > 0)
+            ASSERT(plan_itr->unlock_times > 0);
             total_unlocked = multiply_decimal64(lock_itr->issued.amount, unlocked_times, plan_itr->unlock_times);
             ASSERT(total_unlocked >= lock_itr->unlocked.amount && lock_itr->issued.amount >= total_unlocked);
         }

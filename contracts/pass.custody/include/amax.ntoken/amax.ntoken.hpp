@@ -49,6 +49,10 @@ struct nasset {
     nasset(const uint32_t& id, const uint32_t& pid, const int64_t& am): symbol(id, pid), amount(am) {}
     nasset(const int64_t& amt, const nsymbol& symb): amount(amt), symbol(symb) {}
 
+    static bool operator==(const nasset& n1, const nasset& n2) { 
+        return( n1.symbol == n2.symbol && n1.amount == n2.amount ); 
+    }
+
     nasset& operator+=(const nasset& quantity) { 
         check( quantity.symbol.raw() == this->symbol.raw(), "nsymbol mismatch");
         this->amount += quantity.amount; return *this;

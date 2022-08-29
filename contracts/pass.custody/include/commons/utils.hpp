@@ -17,7 +17,7 @@ using namespace std;
 #define PRINT_PROPERTIES(...) eosio::print("{", __VA_ARGS__, "}")
 
 #ifndef ASSERT
-    #define ASSERT(exp) eosio::check(exp, #exp)
+    #define ASSERT(exp) eosio::check(exp, #exp);
 #endif
 
 #ifndef TRACE

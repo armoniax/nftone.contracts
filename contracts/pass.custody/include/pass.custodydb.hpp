@@ -129,8 +129,8 @@ struct CUSTODY_TBL lock_t {
     uint64_t        unlock_interval_days;         //interval between two consecutive unlock timepoints
     uint64_t        unlock_times;                 //unlock times, duration=unlock_interval_days*unlock_times
     name            status = lock_status::none;   //status of issue, see issue_status_t
-    time_point_sec  locked_at;                    //locker time (UTC time)
-    time_point_sec  updated_at;                   //update time: last unlocked at
+    time_point      locked_at;                    //locker time (UTC time)
+    time_point      updated_at;                   //update time: last unlocked at
 
     uint64_t primary_key() const { return id; }
 
