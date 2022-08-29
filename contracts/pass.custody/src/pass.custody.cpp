@@ -161,7 +161,7 @@ void custody::ontransfer(name from, name to, nasset quantity, string memo) {
     //1. plan:${plan_id}, Eg: "plan:" or "plan:1"
     //2. issue:${receiver}:${plan_id}:${first_unlock_days}, Eg: "issue:receiver1234:1:30"
     vector<string_view> memo_params = split(memo, ":");
-    ASSERT(memo_params.size() > 0);
+    ASSERT(memo_params.size() > 0)
     if (memo_params[0] == "plan") {
         CHECK(memo_params.size() == 2, "ontransfer:plan params size of must be 2")
         auto param_plan_id = memo_params[1];
@@ -208,22 +208,24 @@ void custody::ontransfer(name from, name to, nasset quantity, string memo) {
         CHECK( plan_itr->asset_contract == get_first_receiver(), "issue asset contract mismatch" );
         CHECK( plan_itr->asset_symbol == quantity.symbol, "issue asset symbol mismatch" );
 
+        auto new_lock_id = plan_itr->last_lock_id + 1;
         auto now = current_time_point();
         plan_tbl.modify( plan_itr, same_payer, [&]( auto& plan ) {
             plan.total_issued       += quantity;
-            plan.last_lock_id       += 1;
+            plan.total_locked       += quantity;
+            plan.last_lock_id       = new_lock_id;
             plan.updated_at         = now;
         });
 
         lock_t::tbl_t lock_tbl(get_self(), plan_id);
         lock_tbl.emplace( _self, [&]( auto& lock ) {
-            lock.id                 = plan_itr->last_lock_id;
+            lock.id                 = new_lock_id;
             lock.locker             = from;
             lock.receiver           = receiver;
-            lock.first_unlock_days  = first_unlock_days;
             lock.issued             = quantity;
             lock.locked             = quantity;
             lock.unlocked           = nasset(0, quantity.symbol);
+            lock.first_unlock_days  = first_unlock_days;
             lock.unlock_interval_days = plan_itr->unlock_interval_days;
             lock.unlock_times       = plan_itr->unlock_times;
             lock.status             = lock_status::locked;
@@ -240,7 +242,7 @@ void custody::endissue(const name& issuer, const uint64_t& plan_id, const uint64
     CHECK( has_auth( issuer ) || has_auth( _self ), "not authorized to end issue" )
     // require_auth( issuer );
 
-    _unlock(issuer, plan_id, issue_id, /*is_end_action=*/true);
+    _unlock(issuer, plan_id, issue_id, /*to_terminate=*/true);
 }
 
 /**
@@ -250,7 +252,7 @@ void custody::endissue(const name& issuer, const uint64_t& plan_id, const uint64
 void custody::unlock(const name& receiver, const uint64_t& plan_id, const uint64_t& issue_id) {
     require_auth(receiver);
 
-    _unlock(receiver, plan_id, issue_id, /*is_end_action=*/false);
+    _unlock(receiver, plan_id, issue_id, /*to_terminate=*/false);
 }
 
 void custody::_unlock(const name& issuer, const uint64_t& plan_id, const uint64_t& issue_id, bool to_terminate)
@@ -272,7 +274,7 @@ void custody::_unlock(const name& issuer, const uint64_t& plan_id, const uint64_
         CHECK( issuer == lock_itr->locker || issuer == _self, "not authorized" )
 
     } else {
-        CHECK( lock_itr->status == lock_status::locked, "issue not normal, status: " + lock_itr->status.to_string() );
+        CHECK( lock_itr->status == lock_status::locked, "issue is not normal, status: " + lock_itr->status.to_string() );
     }
 
     int64_t total_unlocked = 0;
@@ -324,6 +326,8 @@ void custody::_unlock(const name& issuer, const uint64_t& plan_id, const uint64_
             if (refunded > 0) {
                 plan.total_refunded.amount += refunded;
             }
+            ASSERT(plan.total_locked.amount >= cur_unlocked + refunded);
+            plan.total_locked.amount -= cur_unlocked + refunded;
             plan.updated_at = current_time_point();
         });
     }
