@@ -29,8 +29,8 @@ namespace mart{
         _gstate.partner_rate            = DEFAULT_PARTNER_RATE;
         _gstate.claimrewrads_day        = DEFAULT_OPERABLE_DAYS;
 
-        _gstate.last_product_id         = INITIALIZED_ID;
-        _gstate.last_order_id           = INITIALIZED_ID;
+        _gstate.last_product_id         = INITIAL_ID;
+        _gstate.last_order_id           = INITIAL_ID;
 
         _gstate.started_at              = time_point_sec(current_time_point());
     }

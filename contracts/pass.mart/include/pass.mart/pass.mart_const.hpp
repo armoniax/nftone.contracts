@@ -66,7 +66,7 @@ static constexpr uint32_t DEFAULT_SECOND_RATE   = 500;
 static constexpr uint32_t DEFAULT_PARTNER_RATE  = 500;
 static constexpr uint32_t DEFAULT_OPERABLE_DAYS = 7;
 
-static constexpr uint32_t INITIALIZED_ID        = 0;
+static constexpr uint32_t INITIAL_ID        = 0;
 
 static constexpr eosio::name TOP_ACCOUNT = "amax"_n;
 static constexpr eosio::name active_permission{"active"_n};
