@@ -20,13 +20,11 @@ public:
     }
 
     ACTION init();
-    ACTION setreceiver(const uint64_t& issue_id, const name& receiver);
     ACTION setconfig(const asset &plan_fee, const name &fee_receiver);
     ACTION setplanowner(const name& owner, const uint64_t& plan_id, const name& new_owner);
-    ACTION setplan(const name& owner, const uint64_t& plan_id, bool enabled);
 
     ACTION addplan(const name& owner, const string& title, const name& asset_contract, const nsymbol& asset_symbol, const uint64_t& unlock_interval_days, const int64_t& unlock_times);
-    
+
 
     /**
      * ontransfer, trigger by recipient of transfer()
@@ -34,7 +32,7 @@ public:
      *  @param to   - must be contract self
      *  @param quantity - issued quantity
      *  @param memo - memo format:
-     * 
+     *
      * 1. plan:${plan_id}, pay plan fee, Eg: "plan:" or "plan:1"
      *    pay plan fee
      *

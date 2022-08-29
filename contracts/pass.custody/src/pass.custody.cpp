@@ -12,9 +12,9 @@ using namespace amax;
 static constexpr eosio::name active_permission{"active"_n};
 
 // transfer out from contract self
-#define TRANSFER_OUT(token_contract, to, quantity, memo) ntoken::transfer_action(                                \
+#define TRANSFER_OUT(token_contract, to, quantity, memo) ntoken::transfer_action(                               \
                                                              token_contract, {{get_self(), active_permission}}) \
-                                                             .send( get_self(), to, quantity, memo );
+                                                             .send(get_self(), to, vector<nasset>{quantity}, memo);
 
 [[eosio::action]]
 void custody::init() {
@@ -29,7 +29,7 @@ void custody::init() {
     //     if (itr->plan_id != 1 || itr->issuer != "armoniaadmin"_n) {
     //         itr = issues.erase( itr );
     //         step++;
-    //     } else 
+    //     } else
     //         itr++;
     // }
 
@@ -42,7 +42,7 @@ void custody::init() {
     //     if (itr->id != 1) {
     //         itr = plans.erase( itr );
     //         step++;
-    //     } else 
+    //     } else
     //         itr++;
     // }
 
@@ -276,7 +276,7 @@ void custody::_unlock(const name& issuer, const uint64_t& plan_id, const uint64_
     int64_t remaining_locked = lock_itr->locked.amount;
     if (lock_itr->status == lock_status::locked) {
         ASSERT(now >= lock_itr->locked_at);
-        
+
         auto issued_days = (now.sec_since_epoch() - lock_itr->locked_at.sec_since_epoch()) / DAY_SECONDS;
         auto unlocked_days = issued_days > lock_itr->first_unlock_days ? issued_days - lock_itr->first_unlock_days : 0;
         ASSERT(plan_itr->unlock_interval_days > 0);
