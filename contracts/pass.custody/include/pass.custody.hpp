@@ -1,4 +1,5 @@
-#include "custodydb.hpp"
+#include "pass.custodydb.hpp"
+#include <amax.ntoken/amax.ntoken.hpp>
 
 using namespace std;
 using namespace wasm::db;
@@ -43,7 +44,7 @@ public:
      *    @param first_unlock_days - first unlock days after created
      *
      */
-    [[eosio::on_notify("*::transfer")]] void ontransfer(name from, name to, asset quantity, string memo);
+    [[eosio::on_notify("*::transfer")]] void ontransfer(name from, name to, nasset quantity, string memo);
 
     [[eosio::action]] void unlock(const name& unlocker, const uint64_t& plan_id, const uint64_t& issue_id);
     /**

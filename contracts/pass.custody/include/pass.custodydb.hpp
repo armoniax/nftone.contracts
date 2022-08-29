@@ -1,6 +1,7 @@
 #pragma once
 
-#include "wasm_db.hpp"
+#include <amax.ntoken/amax.ntoken.hpp>
+#include "commons/wasm_db.hpp"
 
 #include <eosio/eosio.hpp>
 #include <eosio/asset.hpp>
@@ -70,6 +71,8 @@ enum class err: uint8_t {
 
 namespace wasm { namespace db {
 
+using namespace amax;
+
 #define CUSTODY_TBL [[eosio::table, eosio::contract("pass.custody")]]
 #define CUSTODY_TBL_NAME(name) [[eosio::table(name), eosio::contract("pass.custody")]]
 
@@ -95,7 +98,7 @@ struct CUSTODY_TBL plan_t {
     nasset              total_locked;               //stats: updated upon lock & unlock
     nasset              total_unlocked;             //stats: updated upon unlock & endissue
     nasset              total_refunded;             //stats: updated upon and endissue
-    plan_status         status = plan_status::feeunpaid;   //status, see plan_status_t
+    name                status = plan_status::feeunpaid;   //status, see plan_status_t
     uint64_t            last_lock_id = 0;
 
     time_point_sec      created_at;                 //creation time (UTC time)
@@ -116,32 +119,30 @@ struct CUSTODY_TBL plan_t {
 
 // scope = plan_id
 struct CUSTODY_TBL lock_t {
-    uint64_t      id = 0;                       //PK, unique within the contract
-    name          locker;                       //locker
-    name          receiver;                     //receiver of issue who can unlock
-    nasset        issued;                       //originally issued amount
-    nasset        locked;                       //currently locked amount
-    nasset        unlocked;                     //currently unlocked amount
-    uint64_t      first_unlock_days = 0;        //unlock since issued_at
-    uint64_t      unlock_interval_days;         //interval between two consecutive unlock timepoints
-    uint64_t      unlock_times;                 //unlock times, duration=unlock_interval_days*unlock_times
-    lock_status   status = lock_status::none;   //status of issue, see issue_status_t
-    time_point    locked_at;                    //locker time (UTC time)
-    time_point    updated_at;                   //update time: last unlocked at
+    uint64_t        id = 0;                       //PK, unique within the contract
+    name            locker;                       //locker
+    name            receiver;                     //receiver of issue who can unlock
+    nasset          issued;                       //originally issued amount
+    nasset          locked;                       //currently locked amount
+    nasset          unlocked;                     //currently unlocked amount
+    uint64_t        first_unlock_days = 0;        //unlock since issued_at
+    uint64_t        unlock_interval_days;         //interval between two consecutive unlock timepoints
+    uint64_t        unlock_times;                 //unlock times, duration=unlock_interval_days*unlock_times
+    name            status = lock_status::none;   //status of issue, see issue_status_t
+    time_point_sec  locked_at;                    //locker time (UTC time)
+    time_point_sec  updated_at;                   //update time: last unlocked at
 
     uint64_t primary_key() const { return id; }
 
-    uint128_t by_plan() const { return (uint128_t)plan_id << 64 | (uint128_t)id; }
     uint128_t by_receiver_issue() const { return (uint128_t)receiver.value << 64 | (uint128_t)id; }
     uint64_t by_receiver()const { return receiver.value; }
 
-    typedef eosio::multi_index<"issues"_n, issue_t,
-        indexed_by<"planidx"_n,         const_mem_fun<issue_t, uint128_t, &issue_t::by_plan>>,
-        indexed_by<"receiveridx"_n,     const_mem_fun<issue_t, uint128_t, &issue_t::by_receiver_issue>>,
-        indexed_by<"receivers"_n,       const_mem_fun<issue_t, uint64_t, &issue_t::by_receiver>>
+    typedef eosio::multi_index<"locks"_n, lock_t,
+        indexed_by<"receiveridx"_n,     const_mem_fun<lock_t, uint128_t, &lock_t::by_receiver_issue>>,
+        indexed_by<"receivers"_n,       const_mem_fun<lock_t, uint64_t,  &lock_t::by_receiver>>
     > tbl_t;
 
-    EOSLIB_SERIALIZE( issue_t,  (id)(locker)(receiver)(issued)(locked)(unlocked)
+    EOSLIB_SERIALIZE( lock_t,   (id)(locker)(receiver)(issued)(locked)(unlocked)
                                 (first_unlock_days)(unlock_interval_days)(unlock_times)
                                 (status)(locked_at)(updated_at) )
 };
