@@ -80,7 +80,7 @@ void custody::setconfig(const asset &plan_fee, const name &fee_receiver) {
     plan_t::tbl_t plan_tbl(get_self(), get_self().value);
 
     plan_tbl.emplace( owner, [&]( auto& plan ) {
-        plan.id                     = ++_gstate.last_plan_id;
+        plan.id                     = ++_gstate.last_plan_id; // start from 1
         plan.owner                  = owner;
         plan.title                  = title;
         plan.asset_contract         = asset_contract;
@@ -88,9 +88,11 @@ void custody::setconfig(const asset &plan_fee, const name &fee_receiver) {
         plan.unlock_interval_days   = unlock_interval_days;
         plan.unlock_times           = unlock_times;
         plan.total_issued           = nasset(0, asset_symbol);
+        plan.total_locked         = nasset(0, asset_symbol);
         plan.total_unlocked         = nasset(0, asset_symbol);
         plan.total_refunded         = nasset(0, asset_symbol);
-        plan.status                 =  _gstate.plan_fee.amount != 0 ? plan_status::feeunpaid : plan_status::enabled;
+        plan.status                 = _gstate.plan_fee.amount != 0 ? plan_status::feeunpaid : plan_status::enabled;
+        plan.last_lock_id           = 0;
         plan.created_at             = current_time_point();
         plan.updated_at             = plan.created_at;
     });
@@ -100,6 +102,7 @@ void custody::setconfig(const asset &plan_fee, const name &fee_receiver) {
         acct.owner                  = owner;
         acct.last_plan_id           = _gstate.last_plan_id;
     });
+    _global.set( _gstate, get_self() );
 }
 
 [[eosio::action]]
