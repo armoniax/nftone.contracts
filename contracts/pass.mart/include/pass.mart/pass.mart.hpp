@@ -63,7 +63,7 @@ namespace mart{
                                 const asset& price, const time_point_sec& started_at,
                                 const time_point_sec& ended_at, uint64_t buy_lock_plan_id);
 
-            [[eosio::on_notify("amax.ptoken::transfer")]]
+            [[eosio::on_notify("pass.ntoken::transfer")]]
             void nft_transfer(const name& from, const name& to, const vector< nasset >& assets, const string& memo);
 
             [[eosio::on_notify("amax.mtoken::transfer")]]
