@@ -28,29 +28,29 @@ public:
 
     /**
      * ontransfer, trigger by recipient of transfer()
-     *  @param from - issuer
+     *  @param from - plan owner or locker
      *  @param to   - must be contract self
-     *  @param quantity - issued quantity
+     *  @param quantity - quantity
      *  @param memo - memo format:
      *
      * 1. plan:${plan_id}, pay plan fee, Eg: "plan:" or "plan:1"
      *    pay plan fee
      *
-     * 2. issue:${receiver}:${plan_id}:${first_unlock_days}, Eg: "issue:receiver1234:1:30"
+     * 2. lock:${receiver}:${plan_id}:${first_unlock_days}, Eg: "lock:receiver1234:1:30"
      *    @param receiver - owner name
      *    @param plan_id - plan id
-     *    @param first_unlock_days - first unlock days after created
+     *    @param first_unlock_days - first unlock days after created, range: [0, MAX_LOCK_DAYS)
      *
      */
     [[eosio::on_notify("*::transfer")]] void ontransfer(name from, name to, nasset quantity, string memo);
 
-    [[eosio::action]] void unlock(const name& unlocker, const uint64_t& plan_id, const uint64_t& issue_id);
+    [[eosio::action]] void unlock(const name& locker, const uint64_t& plan_id, const uint64_t& lock_id);
     /**
-     * @require run by issuer only
+     * @require run by locker only
      */
-    [[eosio::action]] void endissue(const name& issuer, const uint64_t& plan_id, const uint64_t& issue_id);
+    [[eosio::action]] void endlock(const name& locker, const uint64_t& plan_id, const uint64_t& lock_id);
 
 private:
-    void _unlock(const name& actor, const uint64_t& plan_id, const uint64_t& issue_id, bool is_end_action);
+    void _unlock(const name& actor, const uint64_t& plan_id, const uint64_t& lock_id, bool to_terminate);
 
 }; //contract pass.custody

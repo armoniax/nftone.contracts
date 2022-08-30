@@ -20,14 +20,14 @@ static constexpr eosio::name active_permission{"active"_n};
 void custody::init() {
     require_auth( _self );
 
-    // auto issues = lock_t::tbl_t(_self, _self.value);
-    // auto itr = issues.begin();
+    // auto locks = lock_t::tbl_t(_self, _self.value);
+    // auto itr = locks.begin();
     // int step = 0;
-    // while (itr != issues.end()) {
+    // while (itr != locks.end()) {
     //     if (step > 30) return;
 
-    //     if (itr->plan_id != 1 || itr->issuer != "armoniaadmin"_n) {
-    //         itr = issues.erase( itr );
+    //     if (itr->plan_id != 1 || itr->locker != "armoniaadmin"_n) {
+    //         itr = locks.erase( itr );
     //         step++;
     //     } else
     //         itr++;
@@ -150,7 +150,6 @@ void custody::setplanowner(const name& owner, const uint64_t& plan_id, const nam
 //     });
 // }
 
-//issue-in op: transfer tokens to the contract and lock them according to the given plan
 [[eosio::action]]
 void custody::ontransfer(name from, name to, nasset quantity, string memo) {
     if (from == get_self() || to != get_self()) return;
@@ -159,7 +158,7 @@ void custody::ontransfer(name from, name to, nasset quantity, string memo) {
 
     //memo params format:
     //1. plan:${plan_id}, Eg: "plan:" or "plan:1"
-    //2. issue:${receiver}:${plan_id}:${first_unlock_days}, Eg: "issue:receiver1234:1:30"
+    //2. lock:${receiver}:${plan_id}:${first_unlock_days}, Eg: "lock:receiver1234:1:30"
     vector<string_view> memo_params = split(memo, ":");
     ASSERT(memo_params.size() > 0)
     if (memo_params[0] == "plan") {
@@ -190,8 +189,8 @@ void custody::ontransfer(name from, name to, nasset quantity, string memo) {
 
         TRANSFER_OUT( get_first_receiver(), _gstate.fee_receiver, quantity, memo )
 
-    } else if (memo_params[0] == "issue") {
-        CHECKC(memo_params.size() == 4, err::MEMO_FORMAT_ERROR, "ontransfer:issue params size of must be 4")
+    } else if (memo_params[0] == "lock") {
+        CHECKC(memo_params.size() == 4, err::MEMO_FORMAT_ERROR, "ontransfer:lock params size of must be 4")
         auto receiver           = name(memo_params[1]);
         auto plan_id            = to_uint64(memo_params[2], "plan_id");
         auto first_unlock_days  = to_uint64(memo_params[3], "first_unlock_days");
@@ -205,8 +204,8 @@ void custody::ontransfer(name from, name to, nasset quantity, string memo) {
         CHECKC( first_unlock_days <= MAX_LOCK_DAYS, err::OVERSIZED, "unlock_days must be > 0 and <= 365*10, i.e. 10 years" )
         CHECKC( quantity.symbol == plan_itr->asset_symbol, err::SYMBOL_MISMATCH, "symbol of quantity mismatch with symbol of plan" );
         CHECKC( quantity.amount > 0, err::NOT_POSITIVE, "quantity must be positive" )
-        CHECKC( plan_itr->asset_contract == get_first_receiver(), err::DATA_MISMATCH, "issue asset contract mismatch" );
-        CHECKC( plan_itr->asset_symbol == quantity.symbol, err::SYMBOL_MISMATCH, "issue asset symbol mismatch" );
+        CHECKC( plan_itr->asset_contract == get_first_receiver(), err::DATA_MISMATCH, "lock asset contract mismatch" );
+        CHECKC( plan_itr->asset_symbol == quantity.symbol, err::SYMBOL_MISMATCH, "lock asset symbol mismatch" );
 
         auto new_lock_id = plan_itr->last_lock_id + 1;
         auto now = current_time_point();
@@ -238,30 +237,30 @@ void custody::ontransfer(name from, name to, nasset quantity, string memo) {
 }
 
 [[eosio::action]]
-void custody::endissue(const name& issuer, const uint64_t& plan_id, const uint64_t& issue_id) {
-    CHECKC( has_auth( issuer ) || has_auth( _self ), err::NO_AUTH, "not authorized to end issue" )
-    // require_auth( issuer );
+void custody::endlock(const name& locker, const uint64_t& plan_id, const uint64_t& lock_id) {
+    CHECKC( has_auth( locker ) || has_auth( _self ), err::NO_AUTH, "not authorized to end issue" )
+    // require_auth( locker );
 
-    _unlock(issuer, plan_id, issue_id, /*to_terminate=*/true);
+    _unlock(locker, plan_id, lock_id, /*to_terminate=*/true);
 }
 
 /**
- * withraw all available/unlocked assets belonging to the issuer
+ * withraw all available/unlocked assets belonging to the locker
  */
 [[eosio::action]]
-void custody::unlock(const name& receiver, const uint64_t& plan_id, const uint64_t& issue_id) {
+void custody::unlock(const name& receiver, const uint64_t& plan_id, const uint64_t& lock_id) {
     require_auth(receiver);
 
-    _unlock(receiver, plan_id, issue_id, /*to_terminate=*/false);
+    _unlock(receiver, plan_id, lock_id, /*to_terminate=*/false);
 }
 
-void custody::_unlock(const name& issuer, const uint64_t& plan_id, const uint64_t& issue_id, bool to_terminate)
+void custody::_unlock(const name& locker, const uint64_t& plan_id, const uint64_t& lock_id, bool to_terminate)
 {
     auto now = current_time_point();
 
     lock_t::tbl_t lock_tbl(get_self(), plan_id);
-    auto lock_itr = lock_tbl.find(issue_id);
-    CHECKC( lock_itr != lock_tbl.end(), err::RECORD_NOT_FOUND, "issue not found: " + to_string(issue_id) )
+    auto lock_itr = lock_tbl.find(lock_id);
+    CHECKC( lock_itr != lock_tbl.end(), err::RECORD_NOT_FOUND, "lock not found: " + to_string(lock_id) )
 
     plan_t::tbl_t plan_tbl(get_self(), get_self().value);
     auto plan_itr = plan_tbl.find(plan_id);
@@ -269,12 +268,12 @@ void custody::_unlock(const name& issuer, const uint64_t& plan_id, const uint64_
     CHECKC( plan_itr->status == plan_status::enabled, err::STATUS_ERROR, "plan not enabled, status:" + plan_itr->status.to_string() )
 
     if (to_terminate) {
-        CHECKC( lock_itr->status != lock_status::unlocked, err::STATUS_ERROR, "issue has been ended, status: " + lock_itr->status.to_string() );
+        CHECKC( lock_itr->status != lock_status::unlocked, err::STATUS_ERROR, "lock has been ended, status: " + lock_itr->status.to_string() );
 
-        CHECKC( issuer == lock_itr->locker || issuer == _self, err::NO_AUTH, "not authorized" )
+        CHECKC( locker == lock_itr->locker || locker == _self, err::NO_AUTH, "not authorized" )
 
     } else {
-        CHECKC( lock_itr->status == lock_status::locked, err::STATUS_ERROR, "issue is not normal, status: " + lock_itr->status.to_string() );
+        CHECKC( lock_itr->status == lock_status::locked, err::STATUS_ERROR, "lock is not normal, status: " + lock_itr->status.to_string() );
     }
 
     int64_t total_unlocked = 0;
@@ -282,8 +281,8 @@ void custody::_unlock(const name& issuer, const uint64_t& plan_id, const uint64_
     if (lock_itr->status == lock_status::locked) {
         ASSERT(now >= lock_itr->locked_at);
 
-        auto issued_days = (now.sec_since_epoch() - lock_itr->locked_at.sec_since_epoch()) / DAY_SECONDS;
-        auto unlocked_days = issued_days > lock_itr->first_unlock_days ? issued_days - lock_itr->first_unlock_days : 0;
+        auto locked_days = (now.sec_since_epoch() - lock_itr->locked_at.sec_since_epoch()) / DAY_SECONDS;
+        auto unlocked_days = locked_days > lock_itr->first_unlock_days ? locked_days - lock_itr->first_unlock_days : 0;
         ASSERT(plan_itr->unlock_interval_days > 0);
         auto unlocked_times = std::min(unlocked_days / plan_itr->unlock_interval_days, plan_itr->unlock_times);
         if (unlocked_times >= plan_itr->unlock_times) {
@@ -298,12 +297,12 @@ void custody::_unlock(const name& issuer, const uint64_t& plan_id, const uint64_
         remaining_locked = lock_itr->issued.amount - total_unlocked;
         ASSERT(remaining_locked >= 0);
 
-        TRACE("unlock detail: ", PP0(issued_days), PP(unlocked_days), PP(unlocked_times), PP(total_unlocked),
+        TRACE("unlock detail: ", PP0(locked_days), PP(unlocked_days), PP(unlocked_times), PP(total_unlocked),
             PP(cur_unlocked), PP(remaining_locked), "\n");
 
         if (cur_unlocked > 0) {
             auto unlock_quantity    = nasset(cur_unlocked, plan_itr->asset_symbol);
-            string memo             = "unlock: " + to_string(issue_id) + "@" + to_string(plan_id);
+            string memo             = "unlock: " + to_string(lock_id) + "@" + to_string(plan_id);
             TRANSFER_OUT( plan_itr->asset_contract, lock_itr->receiver, unlock_quantity, memo )
 
         } else { // cur_unlocked == 0
@@ -315,7 +314,7 @@ void custody::_unlock(const name& issuer, const uint64_t& plan_id, const uint64_
         uint64_t refunded = 0;
         if (to_terminate && remaining_locked > 0) {
             refunded                = remaining_locked;
-            auto memo               = "refund: " + to_string(issue_id);
+            auto memo               = "refund: " + to_string(lock_id);
             auto refunded_quantity  = nasset(refunded, plan_itr->asset_symbol);
             TRANSFER_OUT( plan_itr->asset_contract, lock_itr->locker, refunded_quantity, memo )
             remaining_locked        = 0;

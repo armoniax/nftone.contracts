@@ -97,8 +97,8 @@ struct CUSTODY_TBL plan_t {
     uint64_t            unlock_times;               //unlock times, duration=unlock_interval_days*unlock_times
     nasset              total_issued;               //stats: updated upon issue deposit
     nasset              total_locked;               //stats: updated upon lock & unlock
-    nasset              total_unlocked;             //stats: updated upon unlock & endissue
-    nasset              total_refunded;             //stats: updated upon and endissue
+    nasset              total_unlocked;             //stats: updated upon unlock & endlock
+    nasset              total_refunded;             //stats: updated upon and endlock
     name                status = plan_status::feeunpaid;   //status, see plan_status_t
     uint64_t            last_lock_id = 0;
 
