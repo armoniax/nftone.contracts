@@ -114,7 +114,7 @@ struct CUSTODY_TBL plan_t {
     > tbl_t;
 
     EOSLIB_SERIALIZE( plan_t, (id)(owner)(title)(asset_contract)(asset_symbol)(unlock_interval_days)(unlock_times)
-                              (total_issued)(total_locked)(total_unlocked)(total_refunded)(status)(created_at)(updated_at) )
+                              (total_issued)(total_locked)(total_unlocked)(total_refunded)(status)(last_lock_id)(created_at)(updated_at) )
 
 };
 
