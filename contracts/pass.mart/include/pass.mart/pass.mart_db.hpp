@@ -34,13 +34,13 @@ namespace mart{
         time_point_sec       started_at;
         uint64_t             last_product_id = 0;
         uint64_t             last_order_id = 0;
-        
+
         EOSLIB_SERIALIZE( global_t, (admin)(total_sells)(total_rewards)(total_claimed_rewards)
         (lock_contract)(partner_account)(nft_contract)(storage_account)(unable_claimrewards_account)
         (first_rate)(second_rate)(partner_rate)(claimrewrads_day)(started_at)
         (last_product_id)(last_order_id) )
     };
-    
+
     typedef eosio::singleton< "global"_n, global_t > global_singleton;
 
     struct rule_t{
@@ -49,12 +49,13 @@ namespace mart{
     };
 
     TBL product_t{
-        uint64_t            id;             //PK
+        uint64_t            id = 0;             //PK
         string              title;
         name                owner;
         nasset              balance;
         nasset              total_issue;
         asset               price;
+        uint64_t            buy_lock_plan_id = 0;
         name                status = product_status::none;
         rule_t              rule;
         time_point_sec      created_at;
@@ -66,10 +67,10 @@ namespace mart{
 
         product_t(){}
         product_t(const uint64_t& pid) : id(pid){}
-        
+
         uint64_t scope() const { return 0; }
 
-        uint64_t primary_key()const { return id; } 
+        uint64_t primary_key()const { return id; }
 
         uint64_t by_owner()const    { return owner.value; }
         uint64_t by_nsymb_id() const     { return balance.symbol.id; }
@@ -83,7 +84,7 @@ namespace mart{
             //indexed_by<"statusidx"_n, const_mem_fun<product_t,uint64_t, &product_t::by_status> >
         > tbl_t;
 
-        EOSLIB_SERIALIZE(product_t,(id)(title)(owner)(balance)(total_issue)(price)(status)
+        EOSLIB_SERIALIZE(product_t,(id)(title)(owner)(balance)(total_issue)(price)(buy_lock_plan_id)(status)
                         (rule)(created_at)(updated_at)(sell_started_at)(sell_ended_at)
                         (claimrewards_started_at)(claimrewards_ended_at))
     };
@@ -94,7 +95,7 @@ namespace mart{
         uint64_t            product_id;                     // PK
         asset               sum_balance = asset(0,MUSDT);   // rewards
         asset               balance     = asset(0,MUSDT);
-        nasset              pass; 
+        nasset              pass;
         name                status = account_status::none;
         time_point_sec      created_at;
         time_point_sec      updated_at;
@@ -103,8 +104,8 @@ namespace mart{
         account_t(){}
         account_t(const uint64_t& pid) : product_id(pid){}
 
-        uint64_t primary_key()const { return product_id; } 
-    
+        uint64_t primary_key()const { return product_id; }
+
         typedef eosio::multi_index<"accounts"_n,account_t
         > tbl_t;
 
@@ -124,7 +125,7 @@ namespace mart{
         uint64_t scope() const { return 0; }
 
         typedef eosio::multi_index<"passrecv"_n, pass_recv_t> tbl_t;
-        
+
         EOSLIB_SERIALIZE(pass_recv_t,(owner)(created_at)
                         )
     };
@@ -137,7 +138,7 @@ namespace mart{
         asset               quantity;
         nasset              nft_quantity;
         time_point_sec      created_at;
-      
+
 
         // order_t(){}
         // order_t(const uint64_t& pid) : id(pid){}
@@ -150,7 +151,7 @@ namespace mart{
         // typedef eosio::multi_index<"orders"_n, order_t,
         //      indexed_by<"byproid"_n, const_mem_fun<order_t,uint64_t, &order_t::by_pro_id> >
         //     > tbl_t;
-        
+
         // EOSLIB_SERIALIZE(order_t,(id)(product_id)(owner)(quantity)
         //                 (nft_quantity)
         //                 (created_at))
@@ -159,7 +160,7 @@ namespace mart{
     struct deal_trace {
 
         uint64_t            product_id;
-        uint64_t            order_id;     
+        uint64_t            order_id;
         name                buyer;
         name                receiver;
         asset               quantity;

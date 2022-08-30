@@ -17,8 +17,8 @@ namespace mart{
 
         public:
             using contract::contract;
-       
-            
+
+
             pass_mart(eosio::name receiver, eosio::name code, datastream<const char*> ds):
             contract(receiver, code, ds),_db(get_self()),
             _global(get_self(), get_self().value)
@@ -34,20 +34,20 @@ namespace mart{
 
             [[eosio::action]]
             void setclaimday( const uint64_t& days);
-            
+
             [[eosio::action]]
             void setadmin( const name& newAdmin);
 
             [[eosio::action]]
             void setrule( const uint64_t& product_id,const rule_t& rule);
-            
+
             [[eosio::action]]
             void setaccouts(const name& nft_contract,
                             const name& lock_contract,
                             const name& partner_account,
                             const name& storage_account,
                             const name& unable_claimrewards_account);
-            
+
             [[eosio::action]]
             void setrates(  const uint64_t& first_rate,
                             const uint64_t& second_rate,
@@ -61,8 +61,8 @@ namespace mart{
             [[eosio::action]]
             void addproduct( const name& owner, const string& title, const nsymbol& nft_symbol,
                                 const asset& price, const time_point_sec& started_at,
-                                const time_point_sec& ended_at);
- 
+                                const time_point_sec& ended_at, uint64_t buy_lock_plan_id);
+
             [[eosio::on_notify("amax.ptoken::transfer")]]
             void nft_transfer(const name& from, const name& to, const vector< nasset >& assets, const string& memo);
 
@@ -71,7 +71,7 @@ namespace mart{
 
             [[eosio::action]]
             void claimrewards( const name& owner, const uint64_t& product_id);
-            
+
             [[eosio::action]]
             void dealtrace(const deal_trace& trace);
 
@@ -86,7 +86,7 @@ namespace mart{
             global_t            _gstate;
             dbc                _db;
 
-            
+
             void _tally_rewards(const product_t& product, const name& owner, const asset& quantiy, const nasset& nft_quantity);
             void _add_quantity(const product_t& product, const name& owner, const asset& quantity, const nasset& nft_quantity);
             void _creator_reward( const product_t& product, const name& buyer,const name& creator, const asset& quantity, const name& status );
