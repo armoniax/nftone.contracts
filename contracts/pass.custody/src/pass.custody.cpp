@@ -11,10 +11,24 @@ using namespace amax;
 
 static constexpr eosio::name active_permission{"active"_n};
 
-// transfer out from contract self
-#define TRANSFER_OUT(token_contract, to, quantity, memo) ntoken::transfer_action(                               \
+namespace amax_token {
+
+    using std::string;
+    struct token {
+        void transfer( const name& from, const name& to, const asset& quantity, const string& memo );
+    };
+
+    using transfer_action = eosio::action_wrapper<"transfer"_n, &token::transfer>;
+};
+
+#define TOKEN_TRANSFER_OUT(token_contract, to, quantity, memo) amax_token::transfer_action(                     \
                                                              token_contract, {{get_self(), active_permission}}) \
-                                                             .send(get_self(), to, vector<nasset>{quantity}, memo);
+                                                             .send(get_self(), to, quantity, memo);
+
+// transfer out from contract self
+#define NFT_TRANSFER_OUT(token_contract, to, assets, memo) ntoken::transfer_action(                          \
+                                                             token_contract, {{get_self(), active_permission}}) \
+                                                             .send(get_self(), to, assets, memo);
 
 [[eosio::action]]
 void custody::init() {
@@ -88,7 +102,7 @@ void custody::setconfig(const asset &plan_fee, const name &fee_receiver) {
         plan.unlock_interval_days   = unlock_interval_days;
         plan.unlock_times           = unlock_times;
         plan.total_issued           = nasset(0, asset_symbol);
-        plan.total_locked         = nasset(0, asset_symbol);
+        plan.total_locked           = nasset(0, asset_symbol);
         plan.total_unlocked         = nasset(0, asset_symbol);
         plan.total_refunded         = nasset(0, asset_symbol);
         plan.status                 = _gstate.plan_fee.amount != 0 ? plan_status::feeunpaid : plan_status::enabled;
@@ -150,18 +164,17 @@ void custody::setplanowner(const name& owner, const uint64_t& plan_id, const nam
 //     });
 // }
 
-[[eosio::action]]
-void custody::ontransfer(name from, name to, nasset quantity, string memo) {
+void custody::ontokentrans(const name& from, const name& to, const asset& quantity, const string& memo) {
     if (from == get_self() || to != get_self()) return;
 
 	CHECKC( quantity.amount > 0, err::NOT_POSITIVE, "quantity must be positive" )
 
     //memo params format:
     //1. plan:${plan_id}, Eg: "plan:" or "plan:1"
-    //2. lock:${receiver}:${plan_id}:${first_unlock_days}, Eg: "lock:receiver1234:1:30"
     vector<string_view> memo_params = split(memo, ":");
     ASSERT(memo_params.size() > 0)
     if (memo_params[0] == "plan") {
+        CHECKC(SYS_BANK == get_first_receiver(), err::DATA_MISMATCH, "fee token contract mismatch. expected:" + SYS_BANK.to_string())
         CHECKC(memo_params.size() == 2, err::MEMO_FORMAT_ERROR, "ontransfer:plan params size of must be 2")
         auto param_plan_id = memo_params[1];
 
@@ -187,9 +200,24 @@ void custody::ontransfer(name from, name to, nasset quantity, string memo) {
             plan.updated_at     = current_time_point();
         });
 
-        TRANSFER_OUT( get_first_receiver(), _gstate.fee_receiver, quantity, memo )
+        TOKEN_TRANSFER_OUT( SYS_BANK, _gstate.fee_receiver, quantity, memo )
+    }
+    // else { ignore }
+}
+void custody::onnfttrans(const name& from, const name& to, const vector<nasset>& assets, const string& memo) {
+    if (from == get_self() || to != get_self()) return;
 
-    } else if (memo_params[0] == "lock") {
+    //memo params format:
+    //1. lock:${receiver}:${plan_id}:${first_unlock_days}, Eg: "lock:receiver1234:1:30"
+    vector<string_view> memo_params = split(memo, ":");
+    ASSERT(memo_params.size() > 0)
+
+    if (memo_params[0] == "lock") {
+
+        CHECKC( assets.size() == 1, err::DATA_MISMATCH, "assets size must be 1" )
+        const auto& quantity = assets[0];
+        CHECKC( quantity.amount > 0, err::NOT_POSITIVE, "quantity amount must be positive" )
+
         CHECKC(memo_params.size() == 4, err::MEMO_FORMAT_ERROR, "ontransfer:lock params size of must be 4")
         auto receiver           = name(memo_params[1]);
         auto plan_id            = to_uint64(memo_params[2], "plan_id");
@@ -301,9 +329,9 @@ void custody::_unlock(const name& locker, const uint64_t& plan_id, const uint64_
             PP(cur_unlocked), PP(remaining_locked), "\n");
 
         if (cur_unlocked > 0) {
-            auto unlock_quantity    = nasset(cur_unlocked, plan_itr->asset_symbol);
+            auto unlocked_assets    = vector<nasset>{ {cur_unlocked, plan_itr->asset_symbol} };
             string memo             = "unlock: " + to_string(lock_id) + "@" + to_string(plan_id);
-            TRANSFER_OUT( plan_itr->asset_contract, lock_itr->receiver, unlock_quantity, memo )
+            NFT_TRANSFER_OUT( plan_itr->asset_contract, lock_itr->receiver, unlocked_assets, memo )
 
         } else { // cur_unlocked == 0
             if (!to_terminate) {
@@ -315,8 +343,8 @@ void custody::_unlock(const name& locker, const uint64_t& plan_id, const uint64_
         if (to_terminate && remaining_locked > 0) {
             refunded                = remaining_locked;
             auto memo               = "refund: " + to_string(lock_id);
-            auto refunded_quantity  = nasset(refunded, plan_itr->asset_symbol);
-            TRANSFER_OUT( plan_itr->asset_contract, lock_itr->locker, refunded_quantity, memo )
+            auto refunded_assets  = vector<nasset>{ {refunded, plan_itr->asset_symbol} };
+            NFT_TRANSFER_OUT( plan_itr->asset_contract, lock_itr->locker, refunded_assets, memo )
             remaining_locked        = 0;
         }
 

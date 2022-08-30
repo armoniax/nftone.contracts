@@ -27,22 +27,30 @@ public:
 
 
     /**
-     * ontransfer, trigger by recipient of transfer()
-     *  @param from - plan owner or locker
+     * ontokentrans, trigger by recipient of amax.token::transfer()
+     *  @param from - plan owner
      *  @param to   - must be contract self
      *  @param quantity - quantity
      *  @param memo - memo format:
-     *
-     * 1. plan:${plan_id}, pay plan fee, Eg: "plan:" or "plan:1"
-     *    pay plan fee
-     *
-     * 2. lock:${receiver}:${plan_id}:${first_unlock_days}, Eg: "lock:receiver1234:1:30"
-     *    @param receiver - owner name
-     *    @param plan_id - plan id
-     *    @param first_unlock_days - first unlock days after created, range: [0, MAX_LOCK_DAYS)
+     *      1. plan:${plan_id}, pay plan fee, Eg: "plan:" or "plan:1"
+     *          @description pay plan fee
+     *          @param plan_id - plan id. if null, represents the last added plan of the `from` account
      *
      */
-    [[eosio::on_notify("*::transfer")]] void ontransfer(name from, name to, nasset quantity, string memo);
+    [[eosio::on_notify("amax.token::transfer")]] void ontokentrans(const name& from, const name& to, const asset& quantity, const string& memo);
+    /**
+     * onnfttrans, trigger by recipient of pass.ntoken::transfer()
+     *  @param from - locker
+     *  @param to   - must be contract self
+     *  @param assets - assets, size must be 1
+     *  @param memo - memo format:
+     *      1. lock:${receiver}:${plan_id}:${first_unlock_days}, Eg: "lock:receiver1234:1:30"
+     *          @description new lock
+     *          @param receiver - owner name
+     *          @param plan_id - plan id
+     *          @param first_unlock_days - first unlock days after created, range: [0, MAX_LOCK_DAYS)
+     */
+    [[eosio::on_notify("pass.ntoken::transfer")]] void onnfttrans(const name& from, const name& to, const vector<nasset>& assets, const string& memo);
 
     [[eosio::action]] void unlock(const name& locker, const uint64_t& plan_id, const uint64_t& lock_id);
     /**

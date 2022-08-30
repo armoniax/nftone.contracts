@@ -94,7 +94,7 @@ class [[eosio::contract("amax.ntoken")]] ntoken : public contract {
     * @param memo is transfers comment.
     * @return no return value.
     */
-   ACTION transfer( name from, name to, vector< nasset >& assets, string memo );
+   ACTION transfer( const name& from, const name& to, const vector<nasset>& assets, const string& memo );
    using transfer_action = action_wrapper< "transfer"_n, &ntoken::transfer >;
 
 };

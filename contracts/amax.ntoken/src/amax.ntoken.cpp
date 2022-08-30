@@ -21,11 +21,11 @@ void ntoken::create( const name& issuer, const int64_t& maximum_supply, const ns
    // check( lower_itr == idx.end() || lower_itr == upper_itr, "token with token_uri already exists" );
    check( idx.find(token_uri_hash) == idx.end(), "token with token_uri already exists" );
    check( nstats.find(nsymb.id) == nstats.end(), "token of ID: " + to_string(nsymb.id) + " alreay exists" );
-   if (nsymb.id != 0) 
+   if (nsymb.id != 0)
       check( nsymb.id != nsymb.parent_id, "parent id shall not be equal to id" );
    else
       nsymb.id         = nstats.available_primary_key();
-   
+
    nstats.emplace( issuer, [&]( auto& s ) {
       s.supply.symbol   = nsymb;
       s.max_supply      = nasset( maximum_supply, symbol );
@@ -42,7 +42,7 @@ void ntoken::setnotary(const name& notary, const bool& to_add) {
    if (to_add)
       _gstate.notaries.insert(notary);
 
-   else 
+   else
       _gstate.notaries.erase(notary);
 
 }
@@ -110,7 +110,7 @@ void ntoken::retire( const nasset& quantity, const string& memo )
     sub_balance( st.issuer, quantity );
 }
 
-void ntoken::transfer( name from, name to, vector< nasset >& assets, string memo  )
+void ntoken::transfer( const name& from, const name& to, const vector<nasset>& assets, const string& memo  )
 {
    check( from != to, "cannot transfer to self" );
    require_auth( from );
@@ -134,7 +134,7 @@ void ntoken::transfer( name from, name to, vector< nasset >& assets, string memo
       sub_balance( from, quantity );
       add_balance( to, quantity, payer );
     }
-   
+
 }
 
 void ntoken::sub_balance( const name& owner, const nasset& value ) {
