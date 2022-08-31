@@ -19,6 +19,8 @@ public:
         _gstate = _global.exists() ? _global.get() : global_t{};
     }
 
+    ~custody() { _global.set( _gstate, get_self() ); }
+
     ACTION init();
     ACTION setconfig(const asset &plan_fee, const name &fee_receiver);
     ACTION setplanowner(const name& owner, const uint64_t& plan_id, const name& new_owner);

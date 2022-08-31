@@ -80,9 +80,22 @@ using namespace amax;
 struct CUSTODY_TBL_NAME("global") global_t {
     asset plan_fee          = asset(0, SYS_SYMBOL);
     name fee_receiver       = "amax.daodev"_n;
-    uint64_t  last_plan_id  = 0;
+    uint64_t last_plan_id   = 0;
 
     EOSLIB_SERIALIZE( global_t, (plan_fee)(fee_receiver)(last_plan_id) )
+
+    // template<typename DataStream>
+    // friend DataStream& operator << ( DataStream& ds, const global_t& t ) {
+    //     return ds   << t.plan_fee
+    //                 << t.fee_receiver
+    //                 << t.last_plan_id;
+    // }
+    
+    // //read op (read as is)
+    // template<typename DataStream>
+    // friend DataStream& operator >> ( DataStream& ds, global_t& t ) {  
+    //     return ds;
+    // }  
 };
 typedef eosio::singleton< "global"_n, global_t > global_singleton;
 

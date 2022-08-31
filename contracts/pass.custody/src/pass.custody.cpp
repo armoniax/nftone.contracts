@@ -34,6 +34,7 @@ namespace amax_token {
 void custody::init() {
     require_auth( _self );
 
+    // _global.remove();
     // auto locks = lock_t::tbl_t(_self, _self.value);
     // auto itr = locks.begin();
     // int step = 0;
@@ -60,7 +61,7 @@ void custody::init() {
     //         itr++;
     // }
 
-    CHECKC( false, err::MISC, "n/a" )
+    // CHECKC( false, err::MISC, "n/a" )
 }
 
 [[eosio::action]]
