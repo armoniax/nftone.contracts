@@ -284,53 +284,52 @@ void custody::unlock(const name& receiver, const uint64_t& plan_id, const uint64
 
 void custody::_unlock(const name& locker, const uint64_t& plan_id, const uint64_t& lock_id, bool to_terminate)
 {
-    auto now = current_time_point();
+    auto now                        = current_time_point();
 
     lock_t::tbl_t lock_tbl(get_self(), plan_id);
-    auto lock_itr = lock_tbl.find(lock_id);
+    auto lock_itr                   = lock_tbl.find(lock_id);
     CHECKC( lock_itr != lock_tbl.end(), err::RECORD_NOT_FOUND, "lock not found: " + to_string(lock_id) )
 
     plan_t::tbl_t plan_tbl(get_self(), get_self().value);
-    auto plan_itr = plan_tbl.find(plan_id);
+    auto plan_itr                   = plan_tbl.find(plan_id);
     CHECKC( plan_itr != plan_tbl.end(), err::RECORD_NOT_FOUND, "plan not found: " + to_string(plan_id) )
     CHECKC( plan_itr->status == plan_status::enabled, err::STATUS_ERROR, "plan not enabled, status:" + plan_itr->status.to_string() )
 
     if (to_terminate) {
-        CHECKC( lock_itr->status != lock_status::unlocked, err::STATUS_ERROR, "lock has been ended, status: " + lock_itr->status.to_string() );
-
+        CHECKC( lock_itr->status != lock_status::unlocked, err::STATUS_ERROR, "lock has been ended, status: " + lock_itr->status.to_string() )
         CHECKC( locker == lock_itr->locker || locker == _self, err::NO_AUTH, "not authorized" )
 
     } else {
-        CHECKC( lock_itr->status == lock_status::locked, err::STATUS_ERROR, "lock is not normal, status: " + lock_itr->status.to_string() );
+        CHECKC( lock_itr->status == lock_status::locked, err::STATUS_ERROR, "lock is not normal, status: " + lock_itr->status.to_string() )
     }
 
-    int64_t total_unlocked = 0;
-    int64_t remaining_locked = lock_itr->locked.amount;
+    int64_t total_unlocked              = 0;
+    int64_t remaining_locked            = lock_itr->locked.amount;
     if (lock_itr->status == lock_status::locked) {
         ASSERT(now >= lock_itr->locked_at);
 
-        auto locked_days = (now.sec_since_epoch() - lock_itr->locked_at.sec_since_epoch()) / DAY_SECONDS;
-        auto unlocked_days = locked_days > lock_itr->first_unlock_days ? locked_days - lock_itr->first_unlock_days : 0;
+        auto locked_days                = (now.sec_since_epoch() - lock_itr->locked_at.sec_since_epoch()) / DAY_SECONDS;
+        auto unlocked_days              = locked_days > lock_itr->first_unlock_days ? locked_days - lock_itr->first_unlock_days : 0;
         ASSERT(plan_itr->unlock_interval_days > 0);
-        auto unlocked_times = std::min(unlocked_days / plan_itr->unlock_interval_days, plan_itr->unlock_times);
+        auto unlocked_times             = std::min(unlocked_days / plan_itr->unlock_interval_days, plan_itr->unlock_times);
         if (unlocked_times >= plan_itr->unlock_times) {
-            total_unlocked = lock_itr->issued.amount;
+            total_unlocked              = lock_itr->issued.amount;
         } else {
             ASSERT(plan_itr->unlock_times > 0);
-            total_unlocked = multiply_decimal64(lock_itr->issued.amount, unlocked_times, plan_itr->unlock_times);
+            total_unlocked              = multiply_decimal64(lock_itr->issued.amount, unlocked_times, plan_itr->unlock_times);
             ASSERT(total_unlocked >= lock_itr->unlocked.amount && lock_itr->issued.amount >= total_unlocked);
         }
 
-        int64_t cur_unlocked = total_unlocked - lock_itr->unlocked.amount;
-        remaining_locked = lock_itr->issued.amount - total_unlocked;
+        int64_t cur_unlocked            = total_unlocked - lock_itr->unlocked.amount;
+        remaining_locked                = lock_itr->issued.amount - total_unlocked;
         ASSERT(remaining_locked >= 0);
 
         TRACE("unlock detail: ", PP0(locked_days), PP(unlocked_days), PP(unlocked_times), PP(total_unlocked),
             PP(cur_unlocked), PP(remaining_locked), "\n");
 
         if (cur_unlocked > 0) {
-            auto unlocked_assets    = vector<nasset>{ {cur_unlocked, plan_itr->asset_symbol} };
-            string memo             = "unlock: " + to_string(lock_id) + "@" + to_string(plan_id);
+            auto unlocked_assets        = vector<nasset>{ {cur_unlocked, plan_itr->asset_symbol} };
+            string memo                 = "unlock: " + to_string(lock_id) + "@" + to_string(plan_id);
             NFT_TRANSFER_OUT( plan_itr->asset_contract, lock_itr->receiver, unlocked_assets, memo )
 
         } else { // cur_unlocked == 0
@@ -339,13 +338,13 @@ void custody::_unlock(const name& locker, const uint64_t& plan_id, const uint64_
             } // else ignore
         }
 
-        uint64_t refunded = 0;
+        uint64_t refunded               = 0;
         if (to_terminate && remaining_locked > 0) {
-            refunded                = remaining_locked;
-            auto memo               = "refund: " + to_string(lock_id);
-            auto refunded_assets  = vector<nasset>{ {refunded, plan_itr->asset_symbol} };
+            refunded                    = remaining_locked;
+            auto memo                   = "refund: " + to_string(lock_id);
+            auto refunded_assets        = vector<nasset>{ {refunded, plan_itr->asset_symbol} };
             NFT_TRANSFER_OUT( plan_itr->asset_contract, lock_itr->locker, refunded_assets, memo )
-            remaining_locked        = 0;
+            remaining_locked            = 0;
         }
 
         plan_tbl.modify( plan_itr, same_payer, [&]( auto& plan ) {
@@ -354,18 +353,18 @@ void custody::_unlock(const name& locker, const uint64_t& plan_id, const uint64_
                 plan.total_refunded.amount += refunded;
             }
             ASSERT(plan.total_locked.amount >= cur_unlocked + refunded);
-            plan.total_locked.amount -= cur_unlocked + refunded;
-            plan.updated_at = current_time_point();
+            plan.total_locked.amount    -= cur_unlocked + refunded;
+            plan.updated_at             = current_time_point();
         });
     }
 
     lock_tbl.modify( lock_itr, same_payer, [&]( auto& lock ) {
-        lock.unlocked.amount = total_unlocked;
-        lock.locked.amount = remaining_locked;
+        lock.unlocked.amount            = total_unlocked;
+        lock.locked.amount              = remaining_locked;
         if (to_terminate || lock.unlocked == lock.issued) {
             lock.status = lock_status::unlocked;
         }
-        lock.updated_at = current_time_point();
+        lock.updated_at                 = current_time_point();
     });
 }
 
