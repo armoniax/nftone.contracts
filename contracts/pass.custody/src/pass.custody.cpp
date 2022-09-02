@@ -95,7 +95,7 @@ void custody::setconfig(const asset &plan_fee, const name &fee_receiver) {
     plan_t::tbl_t plan_tbl(get_self(), get_self().value);
 
     plan_tbl.emplace( owner, [&]( auto& plan ) {
-        plan.id                     = ++_gstate.last_plan_id; // start from 1
+        plan.id                     = _gstate.last_plan_id++; // start from 0
         plan.owner                  = owner;
         plan.title                  = title;
         plan.asset_contract         = asset_contract;
