@@ -167,8 +167,7 @@ namespace mart{
 
         product_t::tbl_t products( get_self(), get_self().value);
 
-        _gstate.last_product_id ++;
-        auto id = _gstate.last_product_id;;
+        auto id = _gstate.last_product_id++;    //starting from 0
 
         rule_t rule;
 
