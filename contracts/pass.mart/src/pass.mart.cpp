@@ -16,23 +16,33 @@ namespace mart{
 
         require_auth( get_self() );
 
-        CHECK( _gstate.started_at == time_point_sec(), "already init");
+        // CHECK( _gstate.started_at == time_point_sec(), "already init");
 
-        _gstate.admin = get_self();
+        // _gstate.admin = get_self();
 
-        _gstate.total_sells             = asset(0,MUSDT);
-        _gstate.total_rewards           = asset(0,MUSDT);
-        _gstate.total_claimed_rewards   = asset(0,MUSDT);
+        // _gstate.total_sells             = asset(0,MUSDT);
+        // _gstate.total_rewards           = asset(0,MUSDT);
+        // _gstate.total_claimed_rewards   = asset(0,MUSDT);
 
-        _gstate.first_rate              = DEFAULT_FIRST_RATE;
-        _gstate.second_rate             = DEFAULT_SECOND_RATE;
-        _gstate.partner_rate            = DEFAULT_PARTNER_RATE;
-        _gstate.claimrewrads_day        = DEFAULT_OPERABLE_DAYS;
+        // _gstate.first_rate              = DEFAULT_FIRST_RATE;
+        // _gstate.second_rate             = DEFAULT_SECOND_RATE;
+        // _gstate.partner_rate            = DEFAULT_PARTNER_RATE;
+        // _gstate.claimrewrads_day        = DEFAULT_OPERABLE_DAYS;
 
-        _gstate.last_product_id         = INITIAL_ID;
-        _gstate.last_order_id           = INITIAL_ID;
+        // _gstate.last_product_id         = INITIAL_ID;
+        // _gstate.last_order_id           = INITIAL_ID;
 
-        _gstate.started_at              = time_point_sec(current_time_point());
+        // _gstate.started_at              = time_point_sec(current_time_point());
+
+        product_t::tbl_t products( get_self(), get_self().value);
+        auto itr = products.find(0);
+        auto now = time_point_sec(current_time_point());
+        products.modify( itr, get_self(), [&]( auto&row ){
+            row.updated_at                      = now;
+            row.sell_ended_at                   += time_point_sec(7200);
+            row.claimrewards_started_at         = row.sell_ended_at;
+            row.buy_lock_plan_id                = 0;
+        });
     }
 
     void pass_mart::setclaimday( const uint64_t& days){
