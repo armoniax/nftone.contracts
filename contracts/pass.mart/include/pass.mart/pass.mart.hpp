@@ -69,6 +69,9 @@ namespace mart{
             [[eosio::on_notify("amax.mtoken::transfer")]]
             void token_transfer(const name& from, const name& to, const asset& quantity, const string& memo);
 
+            [[eosio::on_notify("verso.kid::transfer")]]
+            void ontransverso(const name& from, const name& to, const vector< nasset >& assets, const string& memo);
+            
             [[eosio::action]]
             void claimrewards( const name& owner, const uint64_t& product_id);
 
@@ -87,7 +90,7 @@ namespace mart{
             dbc                _db;
 
 
-            void _tally_rewards(const product_t& product, const name& owner, const asset& quantiy, const nasset& nft_quantity);
+            void _tally_rewards(const product_t& product, const name& owner, const asset& quantiy, const nasset& nft_quantity, const nasset& gift_quantity);
             void _add_quantity(const product_t& product, const name& owner, const asset& quantity, const nasset& nft_quantity);
             void _creator_reward( const product_t& product, const name& buyer,const name& creator, const asset& quantity, const name& status );
             void _on_deal_trace(const uint64_t&product_id, const name&buyer, const name&receiver, const asset& quantity,const name& type);

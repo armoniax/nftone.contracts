@@ -1,11 +1,13 @@
 #include <pass.mart/pass.mart.hpp>
 #include <pass.mart/pass.mart_db.hpp>
 #include <pass.mart/pass.mart_const.hpp>
+#include <pass.custody/pass.custody_db.hpp>
 #include <amax.ntoken/amax.ntoken_db.hpp>
 #include <libraries/utils.hpp>
 #include <set>
 
 using namespace mart;
+using namespace custody;
 using namespace std;
 using std::string;
 using namespace amax;
@@ -16,7 +18,7 @@ namespace mart{
 
         require_auth( get_self() );
 
-        // CHECK( _gstate.started_at == time_point_sec(), "already init");
+        CHECK( _gstate.started_at == time_point_sec(), "already init");
 
         // _gstate.admin = get_self();
 
@@ -34,27 +36,27 @@ namespace mart{
 
         // _gstate.started_at              = time_point_sec(current_time_point());
 
-//        product_t::tbl_t products( get_self(), get_self().value);
-//        auto itr = products.find(0);
-//        auto now = time_point_sec(current_time_point());
-//        products.modify( itr, get_self(), [&]( auto&row ){
-//            row.updated_at                      = now;
-//            row.sell_ended_at                   += time_point_sec(7200);
-//            row.claimrewards_started_at         = row.sell_ended_at;
-//            row.buy_lock_plan_id                = 0;
-//        });
+        // product_t::tbl_t products( get_self(), get_self().value);
+        // auto itr = products.find(0);
+        // auto now = time_point_sec(current_time_point());
+        // products.modify( itr, get_self(), [&]( auto&row ){
+        //     row.updated_at                      = now;
+        //     row.sell_ended_at                   += time_point_sec(7200);
+        //     row.claimrewards_started_at         = row.sell_ended_at;
+        //     row.buy_lock_plan_id                = 0;
+        // });
 
-        product_t::tbl_t products( get_self(), get_self().value);
-        auto p_itr = products.begin();
-        while( p_itr != products.end() ){
-            p_itr = products.erase( p_itr );
-        }
-        _gstate.last_product_id         = INITIAL_ID;
-//        pass_recv_t::tbl_t recv( get_self(), get_self().value);
-//        auto r_itr = recv.begin();
-//        while( r_itr != recv.end() ){
-//            r_itr = recv.erase( r_itr );
-//        }
+        // product_t::tbl_t products( get_self(), get_self().value);
+        // auto p_itr = products.begin();
+        // while( p_itr != products.end() ){
+        //     p_itr = products.erase( p_itr );
+        // } 
+        // _gstate.last_product_id         = INITIAL_ID;
+        // pass_recv_t::tbl_t recv( get_self(), get_self().value);
+        // auto r_itr = recv.begin();
+        // while( r_itr != recv.end() ){
+        //     r_itr = recv.erase( r_itr );
+        // } 
     }
 
     void pass_mart::setclaimday( const uint64_t& days){
@@ -185,6 +187,12 @@ namespace mart{
         auto nt_itr = nt.find( nft_symbol.id);
         CHECKC( nt_itr != nt.end(), err::SYMBOL_MISMATCH,"nft not found, id:" + to_string(nft_symbol.id));
 
+        plan_t::tbl_t lock_t( _gstate.lock_contract, _gstate.lock_contract.value );
+        auto lock_itr = lock_t.find( buy_lock_plan_id );
+        CHECKC( lock_itr != lock_t.end(), err::SYMBOL_MISMATCH,"custody not found, id:" + to_string(buy_lock_plan_id));
+        CHECKC( lock_itr->asset_contract == _gstate.nft_contract, err::DATA_ERROR,"lock contract mismatch");
+        CHECKC( lock_itr->asset_symbol.id == nft_symbol.id, err::SYMBOL_MISMATCH,"lock asset symbol mismatch");
+        
         auto now = time_point_sec(current_time_point());
 
         product_t::tbl_t products( get_self(), get_self().value);
@@ -192,7 +200,7 @@ namespace mart{
         auto id = _gstate.last_product_id++;    //starting from 0
 
         rule_t rule;
-
+        gift_t gift;
         products.emplace( get_self(), [&]( auto& row ){
             row.id                          = id;
             row.title                       = title;
@@ -209,8 +217,55 @@ namespace mart{
             row.sell_ended_at               = ended_at;
             row.claimrewards_started_at     = ended_at;
             row.claimrewards_ended_at       = time_point_sec(ended_at.sec_since_epoch() + _gstate.claimrewrads_day * seconds_per_day);
+            row.gift_nft                    = gift;
         });
 
+    }
+
+    void pass_mart::ontransverso(const name& from, const name& to, const vector< nasset >& assets, const string& memo){
+
+        if ( from == get_self() || to != get_self()) return;
+
+        CHECKC( assets.size() == 1, err::OVERSIZED, "Only one NFT is allowed at a time point" );
+
+        nasset quantity = assets[0];
+
+        vector<string_view> memo_params = split(memo, ":");
+
+        ASSERT(memo_params.size() > 0);
+        auto now = time_point_sec(current_time_point());
+
+        auto first_contract = get_first_receiver();
+
+         if ( memo_params[0] == "add" ){
+
+            CHECKC(memo_params.size() == 2 , err::MEMO_FORMAT_ERROR, "ontransfer:product params size of must be 2");
+            
+            product_t::tbl_t product( get_self(), get_self().value );
+
+            uint64_t product_id = std::stoul(string(memo_params[1]));
+            auto itr = product.find(product_id);
+
+            CHECKC( itr != product.end() , err::RECORD_NOT_FOUND, "product is not exist");
+            CHECKC( itr->status == product_status::opened, err::STATUS_ERROR, "Non opended products" );
+            CHECKC( itr->owner == from, err::NO_AUTH, "Unauthorized operation");
+            CHECKC( itr->balance.amount == quantity.amount , err::DATA_ERROR , "nft amount must be :" + to_string(itr->balance.amount));
+            gift_t gift = itr->gift_nft;
+
+            CHECKC( gift.contract_name == ""_n, err::RECORD_EXISTING,"Existing data");
+
+            if ( gift.contract_name == ""_n ) {
+                gift.contract_name  = first_contract;
+                gift.balance        = quantity;
+                gift.total_issue    = quantity;
+            }
+
+            product.modify( itr, get_self() , [&]( auto& row ){
+
+                row.gift_nft    = gift;
+                row.updated_at  = now;
+            });
+         }
     }
 
     void pass_mart::nft_transfer(const name& from, const name& to, const vector< nasset >& assets, const string& memo){
@@ -301,22 +356,24 @@ namespace mart{
                 CHECKC( a_itr->pass.amount == 0, err::STATUS_ERROR, "Cannot continue to purchase");
             }
 
-            auto nft_quantity = nasset(amount,itr->balance.symbol);
-            product.modify( itr, get_self(), [&]( auto& row){
-                row.balance         -= nft_quantity;
-                row.updated_at      = now;
-            });
-
             product_t pt = product.get(product_id);
 
+            auto nft_quantity = nasset(amount,itr->balance.symbol);
+            auto gift_quantity= itr->gift_nft.balance.amount>=amount ? nasset(amount,itr->gift_nft.balance.symbol) : nasset(0,itr->gift_nft.balance.symbol);
+            
             _add_quantity( pt, from, asset( 0, MUSDT), nft_quantity);
-            _tally_rewards( pt, from, quantity, nft_quantity);
+            _tally_rewards( pt, from, quantity, nft_quantity,gift_quantity);
+        
+            product.modify( itr, get_self(), [&]( auto& row){
+                row.balance             -= nft_quantity;
+                row.gift_nft.balance    -= gift_quantity;
+                row.updated_at          = now;
+            });
 
             vector<nasset> quants = { nft_quantity };
-
+            
             // lock params: `first_unlock_days` = 0
-            TRANSFER( _gstate.nft_contract, _gstate.lock_contract, quants, std::string("lock:") + from.to_string() + ":" + to_string(pt.buy_lock_plan_id) + ":0" );
-
+            TRANSFER( _gstate.nft_contract, _gstate.lock_contract, quants, std::string("lock:") + from.to_string() + ":" + to_string(pt.buy_lock_plan_id) + ":0" );            
             _gstate.total_sells += quantity;
         }
     }
@@ -404,27 +461,19 @@ namespace mart{
         }
     }
 
-    void pass_mart::_tally_rewards( const product_t& product, const name& owner,const asset& quantity, const nasset& nft_quantity){
+    void pass_mart::_tally_rewards( const product_t& product, const name& owner,const asset& quantity, const nasset& nft_quantity, const nasset& gift_quantity){
 
         _gstate.last_order_id++;
         auto order_id = _gstate.last_order_id;
 
-        // order_t::tbl_t order( get_self() , get_self().value );
-        // order.emplace( get_self(), [&]( auto& row ){
-        //         row.id              = order_id;
-        //         row.product_id      = product.id;
-        //         row.owner           = owner;
-        //         row.quantity        = quantity;
-        //         row.nft_quantity    = nft_quantity;
-        //         row.created_at      = time_point_sec(current_time_point());
-        // });
         order_t order;
         order.id                        = order_id;
         order.product_id                = product.id;
         order.owner                     = owner;
         order.quantity                  = quantity;
         order.nft_quantity              = nft_quantity;
-        order.created_at                 = time_point_sec(current_time_point());
+        order.gift_quantity             = gift_quantity;
+        order.created_at                = time_point_sec(current_time_point());
 
         _on_order_deal_trace(order);
 
@@ -449,6 +498,12 @@ namespace mart{
 
         if ( storage_quantity.amount > 0){
             TRANSFER( BANK, _gstate.storage_account, storage_quantity , std::string(""));
+        }
+
+        if (gift_quantity.amount > 0){
+
+            vector<nasset> giftquants = { gift_quantity };
+            TRANSFER( product.gift_nft.contract_name, owner, giftquants, std::string("KID") );
         }
 
         _gstate.total_rewards += total_rewards;

@@ -26,7 +26,8 @@ enum class err: uint8_t {
    FIRST_CREATOR        = 17,
    STATUS_ERROR         = 18,
    RATE_OVERLOAD        = 19,
-   DATA_ERROR           = 20
+   DATA_ERROR           = 20,
+   MISC                 = 255
 };
 
 namespace product_status {
