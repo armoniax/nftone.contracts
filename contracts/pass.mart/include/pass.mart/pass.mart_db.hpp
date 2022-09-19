@@ -47,7 +47,13 @@ namespace mart{
         uint64_t onetime_buy_amount = 0;
         bool allow_to_buy_again = true ;
     };
-
+    
+    struct gift_t{
+        name                contract_name = ""_n;
+        nasset              balance       = nasset(0,nsymbol(0,0));
+        nasset              total_issue   = nasset(0,nsymbol(0,0));
+    };
+    
     TBL product_t{
         uint64_t            id = 0;             //PK
         string              title;
@@ -65,6 +71,7 @@ namespace mart{
         time_point_sec      claimrewards_started_at;
         time_point_sec      claimrewards_ended_at;
 
+        gift_t              gift_nft;               // Purchase pass to obtain ID
         product_t(){}
         product_t(const uint64_t& pid) : id(pid){}
 
@@ -86,7 +93,7 @@ namespace mart{
 
         EOSLIB_SERIALIZE(product_t,(id)(title)(owner)(balance)(total_issue)(price)(buy_lock_plan_id)(status)
                         (rule)(created_at)(updated_at)(sell_started_at)(sell_ended_at)
-                        (claimrewards_started_at)(claimrewards_ended_at))
+                        (claimrewards_started_at)(claimrewards_ended_at)(gift_nft))
     };
 
     // scope: owner account
@@ -138,23 +145,7 @@ namespace mart{
         asset               quantity;
         nasset              nft_quantity;
         time_point_sec      created_at;
-
-
-        // order_t(){}
-        // order_t(const uint64_t& pid) : id(pid){}
-
-        // uint64_t primary_key() const { return id; }
-        // uint64_t scope() const { return 0; }
-
-        // uint64_t by_pro_id() const { return product_id; }
-
-        // typedef eosio::multi_index<"orders"_n, order_t,
-        //      indexed_by<"byproid"_n, const_mem_fun<order_t,uint64_t, &order_t::by_pro_id> >
-        //     > tbl_t;
-
-        // EOSLIB_SERIALIZE(order_t,(id)(product_id)(owner)(quantity)
-        //                 (nft_quantity)
-        //                 (created_at))
+        nasset              gift_quantity;
     };
 
     struct deal_trace {
