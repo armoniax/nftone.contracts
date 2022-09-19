@@ -50,11 +50,11 @@ namespace mart{
             p_itr = products.erase( p_itr );
         }
         _gstate.last_product_id         = INITIAL_ID;
-        pass_recv_t::tbl_t recv( get_self(), get_self().value);
-        auto r_itr = recv.begin();
-        while( r_itr != recv.end() ){
-            r_itr = recv.erase( r_itr );
-        }
+//        pass_recv_t::tbl_t recv( get_self(), get_self().value);
+//        auto r_itr = recv.begin();
+//        while( r_itr != recv.end() ){
+//            r_itr = recv.erase( r_itr );
+//        }
     }
 
     void pass_mart::setclaimday( const uint64_t& days){
