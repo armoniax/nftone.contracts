@@ -34,15 +34,27 @@ namespace mart{
 
         // _gstate.started_at              = time_point_sec(current_time_point());
 
+//        product_t::tbl_t products( get_self(), get_self().value);
+//        auto itr = products.find(0);
+//        auto now = time_point_sec(current_time_point());
+//        products.modify( itr, get_self(), [&]( auto&row ){
+//            row.updated_at                      = now;
+//            row.sell_ended_at                   += time_point_sec(7200);
+//            row.claimrewards_started_at         = row.sell_ended_at;
+//            row.buy_lock_plan_id                = 0;
+//        });
+
         product_t::tbl_t products( get_self(), get_self().value);
-        auto itr = products.find(0);
-        auto now = time_point_sec(current_time_point());
-        products.modify( itr, get_self(), [&]( auto&row ){
-            row.updated_at                      = now;
-            row.sell_ended_at                   += time_point_sec(7200);
-            row.claimrewards_started_at         = row.sell_ended_at;
-            row.buy_lock_plan_id                = 0;
-        });
+        auto p_itr = products.begin();
+        while( p_itr != products.end() ){
+            p_itr = products.erase( p_itr );
+        }
+        _gstate.last_product_id         = INITIAL_ID;
+//        pass_recv_t::tbl_t recv( get_self(), get_self().value);
+//        auto r_itr = recv.begin();
+//        while( r_itr != recv.end() ){
+//            r_itr = recv.erase( r_itr );
+//        }
     }
 
     void pass_mart::setclaimday( const uint64_t& days){

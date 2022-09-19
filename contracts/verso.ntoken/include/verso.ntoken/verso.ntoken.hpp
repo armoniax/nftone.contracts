@@ -6,7 +6,7 @@
 
 #include <string>
 
-#include <verso.itoken/verso.itoken_db.hpp>
+#include <verso.ntoken/verso.ntoken_db.hpp>
 
 namespace amax {
 
@@ -16,25 +16,25 @@ using std::vector;
 using namespace eosio;
 
 /**
- * The `verso.itoken` sample system contract defines the structures and actions that allow users to create, issue, and manage tokens for AMAX based blockchains. It demonstrates one way to implement a smart contract which allows for creation and management of tokens. It is possible for one to create a similar contract which suits different needs. However, it is recommended that if one only needs a token with the below listed actions, that one uses the `verso.itoken` contract instead of developing their own.
+ * The `verso.ntoken` sample system contract defines the structures and actions that allow users to create, issue, and manage tokens for AMAX based blockchains. It demonstrates one way to implement a smart contract which allows for creation and management of tokens. It is possible for one to create a similar contract which suits different needs. However, it is recommended that if one only needs a token with the below listed actions, that one uses the `verso.ntoken` contract instead of developing their own.
  *
- * The `verso.itoken` contract class also implements two useful public static methods: `get_supply` and `get_balance`. The first allows one to check the total supply of a specified token, created by an account and the second allows one to check the balance of a token for a specified account (the token creator account has to be specified as well).
+ * The `verso.ntoken` contract class also implements two useful public static methods: `get_supply` and `get_balance`. The first allows one to check the total supply of a specified token, created by an account and the second allows one to check the balance of a token for a specified account (the token creator account has to be specified as well).
  *
- * The `verso.itoken` contract manages the set of tokens, accounts and their corresponding balances, by using two internal multi-index structures: the `accounts` and `stats`. The `accounts` multi-index table holds, for each row, instances of `account` object and the `account` object holds information about the balance of one token. The `accounts` table is scoped to an eosio account, and it keeps the rows indexed based on the token's symbol.  This means that when one queries the `accounts` multi-index table for an account name the result is all the tokens that account holds at the moment.
+ * The `verso.ntoken` contract manages the set of tokens, accounts and their corresponding balances, by using two internal multi-index structures: the `accounts` and `stats`. The `accounts` multi-index table holds, for each row, instances of `account` object and the `account` object holds information about the balance of one token. The `accounts` table is scoped to an eosio account, and it keeps the rows indexed based on the token's symbol.  This means that when one queries the `accounts` multi-index table for an account name the result is all the tokens that account holds at the moment.
  *
  * Similarly, the `stats` multi-index table, holds instances of `currency_stats` objects for each row, which contains information about current supply, maximum supply, and the creator account for a symbol token. The `stats` table is scoped to the token symbol.  Therefore, when one queries the `stats` table for a token symbol the result is one single entry/row corresponding to the queried symbol token if it was previously created, or nothing, otherwise.
  */
-class [[eosio::contract("verso.itoken")]] itoken : public contract {
+class [[eosio::contract("verso.ntoken")]] ntoken : public contract {
    public:
       using contract::contract;
 
-   itoken(eosio::name receiver, eosio::name code, datastream<const char*> ds): contract(receiver, code, ds),
+   ntoken(eosio::name receiver, eosio::name code, datastream<const char*> ds): contract(receiver, code, ds),
         _global(get_self(), get_self().value)
     {
         _gstate = _global.exists() ? _global.get() : global_t{};
     }
 
-    ~itoken() { _global.set( _gstate, get_self() ); }
+    ~ntoken() { _global.set( _gstate, get_self() ); }
 
    /**
     * @brief Allows `issuer` account to create a token in supply of `maximum_supply`. If validation is successful a new entry in statsta
@@ -43,7 +43,7 @@ class [[eosio::contract("verso.itoken")]] itoken : public contract {
     * @param maximum_supply - the maximum supply set for the token created
     * @return ACTION
     */
-   ACTION create( const name& issuer, const int64_t& maximum_supply, const nsymbol& symbol, const string& token_uri, const name& ipowner );
+   ACTION create( const name& issuer, const int64_t& maximum_supply, const nsymbol& symbol, const string& token_uri, const name& ipowner ,const name& token_type);
 
    /**
     * @brief This action issues to `to` account a `quantity` of tokens.
@@ -69,7 +69,9 @@ class [[eosio::contract("verso.itoken")]] itoken : public contract {
     * @return no return value.
     */
    ACTION transfer( const name& from, const name& to, const vector<nasset>& assets, const string& memo );
-   using transfer_action = action_wrapper< "transfer"_n, &itoken::transfer >;
+
+   ACTION transferfrom( const name& sender, const name& from, const name& to, const vector<nasset>& assets, const string& memo  );
+   using transfer_action = action_wrapper< "transfer"_n, &ntoken::transfer >;
 
    /**
     * @brief fragment a NFT into multiple common or unique NFT pieces
@@ -88,6 +90,9 @@ class [[eosio::contract("verso.itoken")]] itoken : public contract {
     */
    ACTION notarize(const name& notary, const uint32_t& token_id);
 
+   ACTION test( const name& sender,const name& spender,const name& token_type );
+
+   ACTION approve( const name& spender, const name& sender, const name& token_type, const uint64_t& amount );
    private:
       void add_balance( const name& owner, const nasset& value, const name& ram_payer );
       void sub_balance( const name& owner, const nasset& value );

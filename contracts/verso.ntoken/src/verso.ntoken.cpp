@@ -1,9 +1,9 @@
-#include <verso.itoken/verso.itoken.hpp>
+#include <verso.ntoken/verso.ntoken.hpp>
 
 namespace amax {
 
 
-void itoken::create( const name& issuer, const int64_t& maximum_supply, const nsymbol& symbol, const string& token_uri, const name& ipowner )
+void ntoken::create( const name& issuer, const int64_t& maximum_supply, const nsymbol& symbol, const string& token_uri, const name& ipowner ,const name& token_type)
 {
    require_auth( issuer );
 
@@ -33,10 +33,11 @@ void itoken::create( const name& issuer, const int64_t& maximum_supply, const ns
       s.ipowner         = ipowner;
       s.issuer          = issuer;
       s.issued_at       = current_time_point();
+      s.token_type      = token_type;
    });
 }
 
-void itoken::setnotary(const name& notary, const bool& to_add) {
+void ntoken::setnotary(const name& notary, const bool& to_add) {
    require_auth( _self );
 
    if (to_add)
@@ -47,7 +48,7 @@ void itoken::setnotary(const name& notary, const bool& to_add) {
 
 }
 
-void itoken::notarize(const name& notary, const uint32_t& token_id) {
+void ntoken::notarize(const name& notary, const uint32_t& token_id) {
    require_auth( notary );
    check( _gstate.notaries.find(notary) != _gstate.notaries.end(), "not authorized notary" );
 
@@ -60,7 +61,7 @@ void itoken::notarize(const name& notary, const uint32_t& token_id) {
     });
 }
 
-void itoken::issue( const name& to, const nasset& quantity, const string& memo )
+void ntoken::issue( const name& to, const nasset& quantity, const string& memo )
 {
     auto sym = quantity.symbol;
     check( sym.is_valid(), "invalid symbol name" );
@@ -86,7 +87,7 @@ void itoken::issue( const name& to, const nasset& quantity, const string& memo )
     add_balance( st.issuer, quantity, st.issuer );
 }
 
-void itoken::retire( const nasset& quantity, const string& memo )
+void ntoken::retire( const nasset& quantity, const string& memo )
 {
     auto sym = quantity.symbol;
     check( sym.is_valid(), "invalid symbol name" );
@@ -110,7 +111,7 @@ void itoken::retire( const nasset& quantity, const string& memo )
     sub_balance( st.issuer, quantity );
 }
 
-void itoken::transfer( const name& from, const name& to, const vector<nasset>& assets, const string& memo  )
+void ntoken::transfer( const name& from, const name& to, const vector<nasset>& assets, const string& memo  )
 {
    check( from != to, "cannot transfer to self" );
    require_auth( from );
@@ -137,18 +138,80 @@ void itoken::transfer( const name& from, const name& to, const vector<nasset>& a
 
 }
 
-void itoken::sub_balance( const name& owner, const nasset& value ) {
+
+void ntoken::transferfrom( const name& spender, const name& from, const name& to, const vector<nasset>& assets, const string& memo  )
+{
+   check( from != to, "cannot transfer to self" );
+   require_auth( spender );
+   check( is_account( to ), "to account does not exist");
+   check( memo.size() <= 256, "memo has more than 256 bytes" );
+   auto payer = spender;
+
+   allowance_t::idx_t allow( _self, from.value);
+   auto itr = allow.find(spender.value);
+   check( itr != allow.end(), "Unauthorized");
+
+   
+   require_recipient( spender );
+   require_recipient( from );
+   require_recipient( to );
+
+   for( auto& quantity : assets) {
+
+      auto sym = quantity.symbol;
+      auto nstats = nstats_t::idx_t( _self, _self.value );
+      const auto& st = nstats.get( sym.id );
+      
+      
+      check( quantity.is_valid(), "invalid quantity" );
+      check( quantity.amount > 0, "must transfer positive quantity" );
+      check( quantity.symbol == st.supply.symbol, "symbol precision mismatch" );
+
+      check( itr->allowances.at(st.token_type) >= quantity.amount, "Unauthorized type:" + st.token_type.to_string() );
+
+      allow.modify( itr,same_payer, [&](auto& row){
+         row.allowances[st.token_type] -= quantity.amount;
+      });
+
+      sub_balance( from, quantity );
+      add_balance( to, quantity, payer );
+    }
+
+}
+
+void ntoken::approve( const name& owner, const name& spender, const name& token_type, const uint64_t& amount ){
+
+   require_auth( owner );
+
+   allowance_t::idx_t allow( _self, owner.value);
+   
+   auto itr = allow.find( owner.value );
+
+   if ( itr == allow.end()){
+      allow.emplace( owner, [&](auto& row){
+          row.spender = spender;
+          row.allowances[token_type] = amount;
+      });
+   }else {
+       allow.modify( itr,same_payer, [&](auto& row){
+          row.allowances[token_type] = amount;
+      });
+   }
+
+}
+
+void ntoken::sub_balance( const name& owner, const nasset& value ) {
    auto from_acnts = account_t::idx_t( get_self(), owner.value );
 
    const auto& from = from_acnts.get( value.symbol.raw(), "no balance object found" );
-   check( from.balance.amount > value.amount, "overdrawn balance" );
+   check( from.balance.amount >= value.amount, "overdrawn balance" );
 
    from_acnts.modify( from, owner, [&]( auto& a ) {
          a.balance -= value;
       });
 }
 
-void itoken::add_balance( const name& owner, const nasset& value, const name& ram_payer )
+void ntoken::add_balance( const name& owner, const nasset& value, const name& ram_payer )
 {
    auto to_acnts = account_t::idx_t( get_self(), owner.value );
    auto to = to_acnts.find( value.symbol.raw() );
@@ -163,7 +226,7 @@ void itoken::add_balance( const name& owner, const nasset& value, const name& ra
    }
 }
 
-// void itoken::open( const name& owner, const symbol& symbol, const name& ram_payer )
+// void ntoken::open( const name& owner, const symbol& symbol, const name& ram_payer )
 // {
 //    require_auth( ram_payer );
 
@@ -183,7 +246,7 @@ void itoken::add_balance( const name& owner, const nasset& value, const name& ra
 //    }
 // }
 
-// void itoken::close( const name& owner, const symbol& symbol )
+// void ntoken::close( const name& owner, const symbol& symbol )
 // {
 //    require_auth( owner );
 //    accounts acnts( get_self(), owner.value );
