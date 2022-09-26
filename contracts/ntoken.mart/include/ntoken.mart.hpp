@@ -1,10 +1,10 @@
-#include "nftone.swap_db.hpp"
+#include "ntoken.mart_db.hpp"
 #include <amax.ntoken/amax.ntoken.hpp>
 
 using namespace std;
 using namespace wasm::db;
 
-class [[eosio::contract("nftone.swap")]] blindbox: public eosio::contract {
+class [[eosio::contract("ntoken.mart")]] blindbox: public eosio::contract {
 private:
     global_singleton    _global;
     global_t            _gstate;
@@ -50,7 +50,7 @@ public:
     using deal_trace_action = eosio::action_wrapper<"dealtrace"_n, &blindbox::dealtrace>;
 private:
     uint64_t _rand(uint64_t max_uint,  uint16_t min_unit, name owner , uint64_t pool_id);
-    void _random_nft( pool_t& pool , const name& owner ,deal_trace_t trace);
+    void _buy_one_nft( pool_t& pool , const name& owner ,deal_trace_t trace, const uint64_t& amount);
     void _on_deal_trace( const deal_trace_t& deal_trace);
     void _add_times( const uint64_t& pool_id, const name& owner);
     void _on_open_transfer( const name& from, const name& to, const asset& quantity, const string& memo);

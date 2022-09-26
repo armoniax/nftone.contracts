@@ -1,5 +1,5 @@
 #include <amax.ntoken/amax.ntoken.hpp>
-#include "nftone.swap.hpp"
+#include "ntoken.mart.hpp"
 #include "commons/utils.hpp"
 
 #include <cstdlib>
@@ -21,6 +21,8 @@ void blindbox::init( const name& owner){
     //CHECKC( false, err::MISC ,"error");
     require_auth( _self );
     _gstate.admin  = owner;
+    _gstate.last_pool_id=0;
+    _gstate.last_order_id=0;
     // pool_t::tbl_t pool( get_self(), get_self().value);
     // auto p_itr = pool.begin();
     // while( p_itr != pool.end() ){
@@ -74,7 +76,7 @@ void blindbox::enableplan(const name& owner, const uint64_t& pool_id, bool enabl
     auto pool_itr = pool_tbl.find(pool_id);
     CHECKC( pool_itr != pool_tbl.end(),  err::RECORD_NOT_FOUND,"pool not found: " + to_string(pool_id) )
 
-    CHECKC( has_auth( owner ) || has_auth( _self ) || has_auth(_gstate.admin), err::NO_AUTH, "not authorized" )
+    CHECKC( has_auth( owner ) || has_auth( _self ), err::NO_AUTH, "not authorized" )
 
     CHECKC( owner == pool_itr->owner,  err::NO_AUTH, "not authorized" )
     name new_status = enabled ? pool_status::enabled : pool_status::disabled ;
@@ -92,7 +94,7 @@ void blindbox::editplantime(const name& owner, const uint64_t& pool_id, const ti
     auto pool_itr = pool_tbl.find(pool_id);
     CHECKC( pool_itr != pool_tbl.end(),  err::RECORD_NOT_FOUND,"pool not found: " + to_string(pool_id) )
 
-    CHECKC( has_auth( owner ) || has_auth( _self ) || has_auth(_gstate.admin), err::NO_AUTH, "not authorized" )
+    CHECKC( has_auth( owner ) || has_auth( _self ), err::NO_AUTH, "not authorized" )
 
     CHECKC( owner == pool_itr->owner,  err::NO_AUTH, "not authorized" )
 
@@ -115,7 +117,7 @@ void blindbox::ontransnft( const name& from, const name& to, const vector<nasset
 
 void blindbox::endpool(const name& owner, const uint64_t& pool_id){
 
-    CHECKC( has_auth( owner ) || has_auth( _self ) || has_auth(_gstate.admin), err::NO_AUTH, "not authorized to end pool" )
+    CHECKC( has_auth( owner ) || has_auth( _self ), err::NO_AUTH, "not authorized to end pool" )
     
     pool_t::tbl_t pool( get_self() ,get_self().value );
     auto pool_itr = pool.find( pool_id );
@@ -132,9 +134,13 @@ void blindbox::endpool(const name& owner, const uint64_t& pool_id){
     CHECKC( itr != nft.end(), err::RECORD_NOT_FOUND, "Completed");
     uint64_t amount = 0;
     while (itr != nft.end()) {
+
         if (step > 30) return;
         amount += itr->quantity.amount;
-        quants.emplace_back( itr-> quantity);
+
+        if ( itr->transfer_type == transfer_type::transfer)
+            quants.emplace_back( itr-> quantity);
+
         itr = nft.erase( itr );
         step++;
     }
@@ -145,47 +151,11 @@ void blindbox::endpool(const name& owner, const uint64_t& pool_id){
         row.updated_at              = now;
         row.max_table_distance      -= step;
     });
-    TRANSFER( pool_itr->blindbox_contract, owner, quants , std::string("end pool"));
+    if ( quants.size() > 0 ){
+        TRANSFER( pool_itr->blindbox_contract, owner, quants , std::string("end pool"));
+    }
 }
 
-void blindbox::dealtrace(const deal_trace_t& trace){
-
-    require_auth(get_self());
-    require_recipient(trace.receiver);
-
-}
-
-void blindbox::_random_nft( pool_t& pool , const name& owner , deal_trace_t trace){
-
-    nft_boxes_t::tbl_t nft( get_self(), pool.id);
-    uint64_t rand = _rand( pool.max_table_distance , 1 , owner, pool.id);
-    auto itr = nft.begin();
-    advance( itr , rand - 1 );
-    uint64_t amount = itr->quantity.amount;
-    vector<nasset> quants = { itr->quantity };
-    TRANSFER( pool.blindbox_contract, owner, quants , std::string("get blindbox"));
-    trace.recv_quantity = itr->quantity;
-    trace.recv_contract = pool.blindbox_contract;
-    nft.erase( itr );
-    
-    pool.max_table_distance --;
-    pool.not_exchange_nft_amount     -= amount;
-    pool.exchange_nft_amount         += amount;
-
-    _add_times( pool.id, owner);
-    _on_deal_trace(trace);
-}
-
-uint64_t blindbox::_rand(uint64_t max_uint,  uint16_t min_unit, name owner , uint64_t pool_id){
-
-    auto mixid = tapos_block_prefix() * tapos_block_num() + owner.value + pool_id - current_time_point().sec_since_epoch();
-    const char *mixedChar = reinterpret_cast<const char *>(&mixid);
-    auto hash = sha256( (char *)mixedChar, sizeof(mixedChar));
-
-    auto r1 = (uint64_t)hash.data()[0];
-    uint64_t rand = r1 % max_uint + min_unit;
-    return rand;
-}
 
 void blindbox::_on_open_transfer( const name& from, const name& to, const asset& quantity, const string& memo){
 
@@ -210,12 +180,12 @@ void blindbox::_on_open_transfer( const name& from, const name& to, const asset&
 
         auto amount = quantity.amount / pool_itr->price.value.amount;
 
-        CHECKC( amount == 1,err::PARAM_ERROR, "random type quantity must be 1");
-
+        CHECKC( amount >= 1,err::PARAM_ERROR, "Minimum purchase quantity 1");
+        CHECKC( amount * pool_itr->price.value.amount == quantity.amount , err::PARAM_ERROR ,"Quantity does not match price");
         CHECKC( pool_itr->asset_contract == get_first_receiver(), err::DATA_MISMATCH, "issue asset contract mismatch" );
         CHECKC( pool_itr->price.value.symbol == quantity.symbol, err::SYMBOL_MISMATCH, "blindbox asset symbol mismatch" );
 
-        CHECKC( pool_itr->max_table_distance >= amount ,  err::OVERSIZED, "Remaining blind box:" + to_string( pool_itr->not_exchange_nft_amount) );
+        CHECKC( pool_itr->not_exchange_nft_amount >= amount ,  err::OVERSIZED, "Remaining blind box:" + to_string( pool_itr->not_exchange_nft_amount) );
 
         if ( !pool_itr ->allow_to_buy_again){
             buyer_t::tbl_t buyer( _self, pool_id);
@@ -232,7 +202,7 @@ void blindbox::_on_open_transfer( const name& from, const name& to, const asset&
         trace.pay_quantity = quantity;
         trace.created_at = now;
         trace.pay_contract  = pool_itr->asset_contract;
-        _random_nft( p , from, trace);
+        _buy_one_nft( p , from, trace,amount);
         
 
         pool.modify( pool_itr, same_payer, [&]( auto& row ) {
@@ -253,8 +223,10 @@ void blindbox::_on_mint_transfer( const name& from, const name& to, const vector
     vector<string_view> memo_params = split(memo, ":");
     ASSERT(memo_params.size() > 0)
 
+    CHECKC( assets.size() == 1, err::OVERSIZED, "Only one NFT is allowed at a time point" );
+    nasset quantity = assets[0];
     auto now = time_point_sec(current_time_point());
-    if (memo_params[0] == "mint" || memo_params[0] == "mint_loop") {
+    if (memo_params[0] == "mint") {
 
         CHECKC(memo_params.size() == 2, err::MEMO_FORMAT_ERROR, "ontransfer:issue params size of must be 2")
         auto pool_id            = std::stoul(string(memo_params[1]));
@@ -263,54 +235,75 @@ void blindbox::_on_mint_transfer( const name& from, const name& to, const vector
         auto pool_itr           = pool.find( pool_id );
         CHECKC( pool_itr != pool.end(), err::RECORD_NOT_FOUND, "pool not found: " + to_string(pool_id) )
         CHECKC( pool_itr->status == pool_status::enabled, err::STATUS_ERROR, "pool not enabled, status:" + pool_itr->status.to_string() )
-        //CHECKC( pool_itr->opended_at <= now, err::STATUS_ERROR, "Time is not up ");
         CHECKC( pool_itr->blindbox_contract == get_first_receiver(), err::DATA_MISMATCH, "issue asset contract mismatch" );
-        // CHECKC( pool_itr->asset_symbol == quantity.symbol, err::SYMBOL_MISMATCH, "issue asset symbol mismatch" );
         CHECKC( pool_itr->owner == from,  err::NO_AUTH, "not authorized" );
-
+        CHECKC( pool_itr->total_nft_amount == 0, err::RECORD_EXISTING, "mint fail , total amount" + to_string(pool_itr->total_nft_amount));
         auto new_nft_id = pool_itr->last_nft_id;
         uint64_t max_distance = 0;
-        uint64_t amount = 0;
-        for( nasset quantity : assets){
+        uint64_t amount = quantity.amount;
 
-            CHECKC( quantity.amount > 0, err::NOT_POSITIVE, "quantity must be positive" )
-
-            amount += quantity.amount;
-
-            if ( memo_params[0] == "mint_loop" ){
-
-                max_distance += quantity.amount; 
-
-                for ( auto i = 0; i < quantity.amount ; i++ ){
-                    nft_boxes_t::tbl_t nft( get_self(), pool_id);
-                    nft.emplace( _self, [&]( auto& row ) {
-                        row.id                 = ++new_nft_id;
-                        row.quantity           = nasset(1,quantity.symbol);  
-                        row.transfer_type      = transfer_type::transfer;            
-                    });
-                }
-            }else {
-                max_distance ++;
-                nft_boxes_t::tbl_t nft( get_self(), pool_id);
-                nft.emplace( _self, [&]( auto& row ) {
-                    row.id                 = ++new_nft_id;
-                    row.quantity           = quantity;    
-                    row.transfer_type      = transfer_type::transfer;          
-                });
-            }
-        }
+        nft_boxes_t::tbl_t nft( get_self(), pool_id);
+        nft.emplace( _self, [&]( auto& row ) {
+            row.id                 = ++new_nft_id;
+            row.quantity           = quantity;    
+            row.transfer_type      = transfer_type::transfer;          
+        });
+          
 
         auto now = current_time_point();
         pool.modify( pool_itr, same_payer, [&]( auto& row ) {
             row.total_nft_amount            += amount;
             row.not_exchange_nft_amount     += amount;
-            row.max_table_distance          += max_distance;
+            row.max_table_distance          = 1;
             row.last_nft_id                 = new_nft_id;
             row.updated_at                  = now;
         });
 
+    }else{
+        CHECKC( false,err::MISC,"not supported");
     }
 }
+
+void blindbox::dealtrace(const deal_trace_t& trace){
+
+    require_auth(get_self());
+    require_recipient(trace.receiver);
+
+}
+
+void blindbox::_buy_one_nft( pool_t& pool , const name& owner , deal_trace_t trace, const uint64_t& amount){
+
+    nft_boxes_t::tbl_t nft( get_self(), pool.id);
+    auto itr = nft.begin();
+    CHECKC( itr != nft.end(), err::RECORD_NOT_FOUND, "No data available");
+    CHECKC( itr->quantity.amount >= amount, err::OVERSIZED, "Insufficient remaining quantity");
+
+    auto quantity = nasset( amount, itr-> quantity.symbol );
+    vector<nasset> quants = { quantity };
+
+    TRANSFER( pool.blindbox_contract, owner, quants , std::string("get nft"));
+    trace.recv_quantity = quantity;
+    trace.recv_contract = pool.blindbox_contract;
+    
+    if ( itr->quantity.amount == amount){
+
+        nft.erase( itr );
+        pool.max_table_distance --;
+
+    }else {
+        
+        nft.modify( itr ,same_payer, [&]( auto& row){
+            row.quantity.amount -= amount;
+        });
+    }
+   
+    pool.not_exchange_nft_amount     -= amount;
+    pool.exchange_nft_amount         += amount;
+
+    _add_times( pool.id, owner);
+    _on_deal_trace(trace);
+}
+
 void blindbox::_add_times( const uint64_t& pool_id, const name& owner){
 
     buyer_t::tbl_t buyer( get_self() ,pool_id );
