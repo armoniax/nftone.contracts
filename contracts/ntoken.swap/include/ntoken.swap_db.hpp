@@ -39,6 +39,7 @@ enum class err: uint8_t {
    STATUS_ERROR         = 18,
    RATE_OVERLOAD        = 19,
    DATA_MISMATCH        = 20,
+   OVERDRAWN            = 21,
    MISC                 = 255
 };
 
@@ -141,14 +142,14 @@ struct BLINDBOX nft_boxes_t {
 
     uint64_t        id = 0;                       //PK, unique within the contract
     nasset          quantity;  
-    name            truansfer_t = transfer_type::none;               
+    name            transfer_type = transfer_type::none;               
       
     uint64_t primary_key() const { return id; }
 
     typedef eosio::multi_index<"boxes"_n, nft_boxes_t
     > tbl_t;
 
-    EOSLIB_SERIALIZE( nft_boxes_t,   (id)(quantity)(truansfer_t)
+    EOSLIB_SERIALIZE( nft_boxes_t,   (id)(quantity)(transfer_type)
                                )
 };
 

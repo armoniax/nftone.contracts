@@ -151,9 +151,75 @@ void blindbox::endpool(const name& owner, const uint64_t& pool_id){
         row.updated_at              = now;
         row.max_table_distance      -= step;
     });
+
     if ( quants.size() > 0 ){
         TRANSFER( pool_itr->blindbox_contract, owner, quants , std::string("end pool"));
     }
+}
+
+
+void blindbox::fillnftinc( const name& owner, const uint64_t& pool_id, const uint64_t& begin_id, const uint64_t& end_id){
+    
+    CHECKC( has_auth( owner ) || has_auth( _self ) || has_auth(_gstate.admin), err::NO_AUTH, "not authorized" )
+    pool_t::tbl_t pool_tbl( get_self() ,get_self().value );
+    auto pool_itr = pool_tbl.find(pool_id);
+
+    CHECKC( pool_itr != pool_tbl.end(),  err::RECORD_NOT_FOUND,"pool not found: " + to_string(pool_id) )
+    CHECKC( owner == pool_itr->owner,  err::NO_AUTH, "not authorized" )
+    CHECKC( pool_itr->status == pool_status::enabled, err::STATUS_ERROR, "pool not enabled, status:" + pool_itr->status.to_string() )
+
+    auto p = pool_tbl.get(pool_id);
+
+    vector<nasset> quants;
+    account_t::idx_t account_tbl( p.blindbox_contract, p.owner.value );
+
+    for ( auto i = begin_id; i <= end_id; i ++){
+        
+        auto account_itr = account_tbl.find( i );
+        CHECKC( account_itr != account_tbl.end(),  err::RECORD_NOT_FOUND,"balance not found: " + to_string(i) )
+        CHECKC( account_itr->balance.amount > 0 , err::OVERDRAWN,"overdrawn balance , id:" + to_string(i));
+        quants.push_back(nasset(1, account_itr->balance.symbol));
+    }
+    
+    _add_nfts( p, quants );
+
+    pool_tbl.modify( pool_itr, same_payer, [&]( auto& pool ) {
+        pool.total_nft_amount            = p.total_nft_amount;
+        pool.not_exchange_nft_amount     = p.not_exchange_nft_amount;
+        pool.max_table_distance          = p.max_table_distance;
+        pool.last_nft_id                 = p.last_nft_id;        
+        pool.updated_at                  = current_time_point();
+    });
+}
+
+void blindbox::fillnftids(const name& owner, const uint64_t& pool_id, const vector<nasset>& quants){
+    CHECKC( has_auth( owner ) || has_auth( _self ) || has_auth(_gstate.admin), err::NO_AUTH, "not authorized" )
+    pool_t::tbl_t pool_tbl( get_self() ,get_self().value );
+    auto pool_itr = pool_tbl.find(pool_id);
+
+    CHECKC( pool_itr != pool_tbl.end(),  err::RECORD_NOT_FOUND,"pool not found: " + to_string(pool_id) )
+    CHECKC( owner == pool_itr->owner,  err::NO_AUTH, "not authorized" )
+    CHECKC( pool_itr->status == pool_status::enabled, err::STATUS_ERROR, "pool not enabled, status:" + pool_itr->status.to_string() )
+    
+    auto p = pool_tbl.get(pool_id);
+    
+    account_t::idx_t account_tbl( p.blindbox_contract, p.owner.value );
+
+    for( nasset quantity : quants){
+        auto account_itr = account_tbl.find( quantity.symbol.id );
+        CHECKC( account_itr != account_tbl.end(),  err::RECORD_NOT_FOUND,"balance not found: " + to_string(quantity.symbol.id) )
+        CHECKC( account_itr->balance.amount > 0 , err::OVERDRAWN,"overdrawn balance , id:" + to_string(quantity.symbol.id));
+    }
+
+    _add_nfts( p, quants );
+
+    pool_tbl.modify( pool_itr, same_payer, [&]( auto& pool ) {
+        pool.total_nft_amount            = p.total_nft_amount;
+        pool.not_exchange_nft_amount     = p.not_exchange_nft_amount;
+        pool.max_table_distance          = p.max_table_distance;
+        pool.last_nft_id                 = p.last_nft_id;        
+        pool.updated_at                  = current_time_point();
+    });
 }
 
 
@@ -303,6 +369,29 @@ void blindbox::_buy_one_nft( pool_t& pool , const name& owner , deal_trace_t tra
     _add_times( pool.id, owner);
     _on_deal_trace(trace);
 }
+
+
+
+void blindbox::_add_nfts( pool_t& p, const vector<nasset>& quants ){
+    
+    for( nasset quantity : quants){
+
+        CHECKC( quantity.amount > 0, err::NOT_POSITIVE, "quantity must be positive" )
+
+        p.max_table_distance++;
+        p.total_nft_amount += quantity.amount;
+        p.not_exchange_nft_amount += quantity.amount;
+
+        nft_boxes_t::tbl_t nft( get_self(), p.id);
+        nft.emplace( _self, [&]( auto& row ) {
+            row.id                 = ++p.last_nft_id;
+            row.quantity           = quantity;  
+            row.transfer_type        = transfer_type::allowance;           
+        });
+        
+    }
+}
+
 
 void blindbox::_add_times( const uint64_t& pool_id, const name& owner){
 

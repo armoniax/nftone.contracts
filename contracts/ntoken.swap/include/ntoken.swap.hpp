@@ -41,14 +41,19 @@ public:
     [[eosio::action]]
     void dealtrace(const deal_trace_t& trace);
 
-  
+    [[eosio::action]]
+    void fillnftinc( const name& owner, const uint64_t& pool_id, const uint64_t& begin_id, const uint64_t& end_id);
+    [[eosio::action]]
+    void fillnftids(const name& owner, const uint64_t& pool_id, const vector<nasset>& quants);
+
     //  void transfer( const name& to,const name& from,const asset& quantity,const string& memo);  
     [[eosio::on_notify("*::transfer")]] void ontransnft(const name& from, const name& to, const vector<nasset>& assets, const string& memo);
 
     using deal_trace_action = eosio::action_wrapper<"dealtrace"_n, &blindbox::dealtrace>;
 private:
     uint64_t _rand(uint64_t max_uint,  uint16_t min_unit, name owner , uint64_t pool_id);
-    void _rand_nft( pool_t& pool , const name& owner ,deal_trace_t trace);
+    void _random_nft( pool_t& pool , const name& owner ,deal_trace_t trace);
     void _on_deal_trace( const deal_trace_t& deal_trace);
     void _add_times( const uint64_t& pool_id, const name& owner);
+    void _add_nfts( pool_t& p, const vector<nasset>& quants );
 }; //contract one.blindbox

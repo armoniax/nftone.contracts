@@ -18,6 +18,9 @@ constexpr name active_perm = "active"_n;
 #define TRANSFER_N(bank, to, quants, memo) \
     {	ntoken::transfer_action act{ bank, { {_self, active_perm} } };\
 			act.send( _self, to, quants , memo );}
+#define TRANSFERFROM_N(bank,from, to, quants, memo) \
+    {	ntoken::transferfrom_action act{ bank, { {_self, active_perm} } };\
+			act.send( _self, from, to, quants , memo );}
 
 
 struct nsymbol {
@@ -67,6 +70,19 @@ struct nasset {
     EOSLIB_SERIALIZE( nasset, (amount)(symbol) )
 };
 
+struct account_t {
+    nasset      balance;
+    bool        paused = false;   //if true, it can no longer be transferred
+
+    account_t() {}
+    account_t(const nasset& asset): balance(asset) {}
+
+    uint64_t primary_key()const { return balance.symbol.raw(); }
+
+    EOSLIB_SERIALIZE(account_t, (balance)(paused) )
+
+    typedef eosio::multi_index< "accounts"_n, account_t > idx_t;
+};
 
 /**
  * The `amax.ntoken` sample system contract defines the structures and actions that allow users to create, issue, and manage tokens for AMAX based blockchains. It demonstrates one way to implement a smart contract which allows for creation and management of tokens. It is possible for one to create a similar contract which suits different needs. However, it is recommended that if one only needs a token with the below listed actions, that one uses the `amax.ntoken` contract instead of developing their own.
@@ -95,7 +111,11 @@ class [[eosio::contract("amax.ntoken")]] ntoken : public contract {
     * @return no return value.
     */
    ACTION transfer( name from, name to, vector< nasset >& assets, string memo );
-   using transfer_action = action_wrapper< "transfer"_n, &ntoken::transfer >;
 
+   ACTION transferfrom( const name& sender, const name& from, const name& to, const vector<nasset>& assets, const string& memo  );
+
+   using transfer_action = action_wrapper< "transfer"_n, &ntoken::transfer >;
+   using transferfrom_action = action_wrapper< "transferfrom"_n, &ntoken::transferfrom >;
+    
 };
 } //namespace amax

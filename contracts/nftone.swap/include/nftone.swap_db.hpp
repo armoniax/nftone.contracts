@@ -39,6 +39,7 @@ enum class err: uint8_t {
    STATUS_ERROR         = 18,
    RATE_OVERLOAD        = 19,
    DATA_MISMATCH        = 20,
+   OVERDRAWN            = 21,
    MISC                 = 255
 };
 
@@ -164,9 +165,4 @@ struct deal_trace_t {
         name                recv_contract;
 };
 
-
-    name from;
-    name to;
-    string memo;
-};
 } }
