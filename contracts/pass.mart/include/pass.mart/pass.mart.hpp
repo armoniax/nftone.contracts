@@ -81,6 +81,8 @@ namespace mart{
             [[eosio::action]]
             void ordertrace(const order_t& order);
 
+            ACTION setendtime( const uint64_t& prod_id, const time_point_sec& sell_ended_at );
+
             using deal_trace_action = eosio::action_wrapper<"dealtrace"_n, &pass_mart::dealtrace>;
 
             using order_trace_action = eosio::action_wrapper<"ordertrace"_n, &pass_mart::ordertrace>;
