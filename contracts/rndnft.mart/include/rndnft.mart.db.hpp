@@ -48,8 +48,8 @@ namespace wasm { namespace db {
 
 using namespace amax;
 
-#define BLINDBOX [[eosio::table, eosio::contract("nftone.swap")]]
-#define BLINDBOX_NAME(name) [[eosio::table(name), eosio::contract("nftone.swap")]]
+#define BLINDBOX [[eosio::table, eosio::contract("rndnft.mart")]]
+#define BLINDBOX_NAME(name) [[eosio::table(name), eosio::contract("rndnft.mart")]]
 
 static constexpr eosio::name active_permission{"active"_n};
 
