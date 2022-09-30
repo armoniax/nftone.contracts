@@ -182,7 +182,7 @@ void blindbox::ontransnft( const name& from, const name& to, const vector<nasset
     ASSERT(memo_params.size() > 0)
     
     auto now = time_point_sec(current_time_point());
-    if (memo_params[0] == "mint" || memo_params[0] == "mint_loop") {
+    if (memo_params[0] == "fill" || memo_params[0] == "fill_loop") {
 
         CHECKC(memo_params.size() == 2, err::MEMO_FORMAT_ERROR, "ontransfer:issue params size of must be 2")
         auto pool_id            = std::stoul(string(memo_params[1]));
@@ -205,7 +205,7 @@ void blindbox::ontransnft( const name& from, const name& to, const vector<nasset
 
             amount += quantity.amount;
 
-            if ( memo_params[0] == "mint_loop" ){
+            if ( memo_params[0] == "fill_loop" ){
 
                 max_distance += quantity.amount; 
 
