@@ -57,6 +57,6 @@ private:
     void _on_deal_trace( const deal_trace_t& deal_trace);
     void _add_times( const uint64_t& pool_id, const name& owner);
     void _on_open_transfer( const name& from, const name& to, const asset& quantity, const string& memo);
-    void _on_mint_transfer( const name& from, const name& to, const vector<nasset>& assets, const string& memo );
+    void _on_fill_transfer( const name& from, const name& to, const vector<nasset>& assets, const string& memo );
     void _add_nfts( pool_t& p, const vector<nasset>& quants );
 }; //contract one.blindbox

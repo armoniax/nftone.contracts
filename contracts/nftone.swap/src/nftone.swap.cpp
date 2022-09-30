@@ -110,7 +110,7 @@ void blindbox::ontranstoken( const name& from, const name& to, const asset& quan
 
 void blindbox::ontransnft( const name& from, const name& to, const vector<nasset>& assets, const string& memo){
 
-    _on_mint_transfer( from, to, assets, memo);
+    _on_fill_transfer( from, to, assets, memo);
 }
 
 void blindbox::endpool(const name& owner, const uint64_t& pool_id){
@@ -337,7 +337,7 @@ void blindbox::_on_open_transfer( const name& from, const name& to, const asset&
     }
 }
 
-void blindbox::_on_mint_transfer( const name& from, const name& to, const vector<nasset>& assets, const string& memo ){
+void blindbox::_on_fill_transfer( const name& from, const name& to, const vector<nasset>& assets, const string& memo ){
     if (from == get_self() || to != get_self()) return;
     require_auth( from );
     vector<string_view> memo_params = split(memo, ":");
