@@ -94,44 +94,6 @@ void rndnft_mart::setshoptime( const name& owner, const uint64_t& shop_id, const
 }
 
 
-/// buyer to send mtoken to buy NFTs (with random NFT return, 1 only)
-/// memo format:     shop:${shop_id}
-///
-void rndnft_mart::on_transfer_mtoken( const name& from, const name& to, const asset& quantity, const string& memo ) {
-    if (from == get_self() || to != get_self()) return;
-    
-    vector<string_view> memo_params = split(memo, ":");
-    CHECKC( memo_params.size() == 2, err::MEMO_FORMAT_ERROR, "ontransfer:issue params size of must be 2")
-    CHECKC( memo_params[0] == "shop", err::MEMO_FORMAT_ERROR, "memo must be 'shop'" )
-
-    auto now                = time_point_sec(current_time_point());
-    auto shop_id            = std::stoul(string(memo_params[1]));
-    auto shop               = shop_t( shop_id );
-    CHECKC( _db.get( shop ), err::RECORD_NOT_FOUND, "shop not found: " + to_string(shop_id) )
-    CHECKC( shop.status == shop_status::enabled, err::STATUS_ERROR, "shop not enabled, status:" + shop.status.to_string() )
-    CHECKC( shop.opened_at <= now, err::STATUS_ERROR, "shop not opened yet" )
-    CHECKC( shop.closed_at >= now,err::STATUS_ERROR, "shop closed already" )
-
-    auto count              = quantity.amount / shop.price.amount;
-    CHECKC( count == 1, err::PARAM_ERROR, "can only buy just about 1 NFT");
-    CHECKC( shop.fund_contract == get_first_receiver(), err::DATA_MISMATCH, "pay contract mismatches with specified" );
-    CHECKC( shop.price.symbol == quantity.symbol, err::SYMBOL_MISMATCH, "pay symbol mismatches with price" );
-    CHECKC( shop.nft_num > 0, err::OVERSIZED, "zero nft left" )
-
-    shop.fund_recd          += quantity;
-    shop.updated_at         = now;
-    TRANSFER( shop.fund_contract, shop.fund_receiver, quantity, "" )
-    
-    nasset nft;
-    _one_nft( from, shop, nft );
-    vector<nasset> quants_to_send = { nft };
-    TRANSFER_N( shop.nft_contract, from, quants_to_send , "" )
-
-    auto trace = deal_trace_s( shop_id, from, shop.nft_contract, shop.fund_contract, quantity, nft, now );
-    _on_deal_trace(trace);
-   
-}
-
 /// @brief admin to add nft tokens into the shop
 /// @param from 
 /// @param to 
@@ -185,6 +147,45 @@ void rndnft_mart::on_transfer_ntoken( const name& from, const name& to, const ve
     shop.updated_at          = now;
 
     _db.set( shop );
+}
+
+
+/// buyer to send mtoken to buy NFTs (with random NFT return, 1 only)
+/// memo format:     shop:${shop_id}
+///
+void rndnft_mart::on_transfer_mtoken( const name& from, const name& to, const asset& quantity, const string& memo ) {
+    if (from == get_self() || to != get_self()) return;
+    
+    vector<string_view> memo_params = split(memo, ":");
+    CHECKC( memo_params.size() == 2, err::MEMO_FORMAT_ERROR, "ontransfer:issue params size of must be 2")
+    CHECKC( memo_params[0] == "shop", err::MEMO_FORMAT_ERROR, "memo must be 'shop'" )
+
+    auto now                = time_point_sec(current_time_point());
+    auto shop_id            = std::stoul(string(memo_params[1]));
+    auto shop               = shop_t( shop_id );
+    CHECKC( _db.get( shop ), err::RECORD_NOT_FOUND, "shop not found: " + to_string(shop_id) )
+    CHECKC( shop.status == shop_status::enabled, err::STATUS_ERROR, "shop not enabled, status:" + shop.status.to_string() )
+    CHECKC( shop.opened_at <= now, err::STATUS_ERROR, "shop not opened yet" )
+    CHECKC( shop.closed_at >= now,err::STATUS_ERROR, "shop closed already" )
+
+    auto count              = quantity.amount / shop.price.amount;
+    CHECKC( count == 1, err::PARAM_ERROR, "can only buy just about 1 NFT");
+    CHECKC( shop.fund_contract == get_first_receiver(), err::DATA_MISMATCH, "pay contract mismatches with specified" );
+    CHECKC( shop.price.symbol == quantity.symbol, err::SYMBOL_MISMATCH, "pay symbol mismatches with price" );
+    CHECKC( shop.nft_num > 0, err::OVERSIZED, "zero nft left" )
+
+    shop.fund_recd          += quantity;
+    shop.updated_at         = now;
+    TRANSFER( shop.fund_contract, shop.fund_receiver, quantity, "" )
+    
+    nasset nft;
+    _one_nft( from, shop, nft );
+    vector<nasset> nfts = { nft };
+    TRANSFER_N( shop.nft_contract, from, nfts , "shop: " + to_string(shop.id) )
+
+    auto trace = deal_trace_s( shop_id, from, shop.nft_contract, shop.fund_contract, quantity, nft, now );
+    _on_deal_trace(trace);
+   
 }
 
 void rndnft_mart::closeshop(const name& owner, const uint64_t& shop_id){
