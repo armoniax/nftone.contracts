@@ -20,10 +20,9 @@ public:
 
     ~rndnft_mart() { _global.set( _gstate, get_self() ); }
 
-    ACTION init( const name& owner);
+    ACTION init( const name& admin, const name& fund_distributor);
     ACTION createshop(   const name& owner,const string& title,const name& fund_contract, const name& nft_contract,
-                           const asset& price, const name& fund_receiver, const name& nft_random,
-                           const time_point_sec& opened_at, const uint64_t& opened_days);
+                           const asset& price, const name& nft_random, const time_point_sec& opened_at, const uint64_t& opened_days);
     ACTION enableshop( const name& owner, const uint64_t& shop_id, bool enabled);
     ACTION setshoptime( const name& owner, const uint64_t& shop_id, const time_point_sec& opened_at, const time_point_sec& closed_at);
     ACTION closeshop( const name& owner, const uint64_t& shop_id);

@@ -55,10 +55,11 @@ static constexpr eosio::name active_permission{"active"_n};
 
 TBL_NAME("global") global_t {
     name        admin;
+    name        fund_distributor;
     uint16_t    max_shop_boxes      = 30;
     uint64_t    last_shop_id        = 0;
 
-    EOSLIB_SERIALIZE( global_t, (admin)(max_shop_boxes)(last_shop_id) )
+    EOSLIB_SERIALIZE( global_t, (admin)(fund_distributor)(max_shop_boxes)(last_shop_id) )
 };
 
 typedef eosio::singleton< "global"_n, global_t > global_singleton;
@@ -82,7 +83,6 @@ TBL shop_t {
     name                nft_contract;
     name                fund_contract;
     asset               price; 
-    name                fund_receiver;
     asset               fund_recd;
     uint64_t            nft_box_num                 = 0;
     uint64_t            nft_num                     = 0;        
@@ -104,7 +104,7 @@ TBL shop_t {
         indexed_by<"owneridx"_n,  const_mem_fun<shop_t, uint128_t, &shop_t::by_owner> >
     > tbl_t;
 
-    EOSLIB_SERIALIZE( shop_t, (id)(owner)(title)(nft_contract)(fund_contract)(price)(fund_receiver)(fund_recd)
+    EOSLIB_SERIALIZE( shop_t, (id)(owner)(title)(nft_contract)(fund_contract)(price)(fund_recd)
                               (nft_box_num)(nft_num)(random_type)(status)
                               (created_at)(updated_at)(opened_at)(closed_at) )
 

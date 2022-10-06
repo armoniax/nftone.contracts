@@ -17,11 +17,12 @@ using namespace std;
 { action(permission_level{get_self(), "active"_n }, bank, "transfer"_n, std::make_tuple( _self, to, quantity, memo )).send(); }
 
 
-void rndnft_mart::init( const name& owner){
+void rndnft_mart::init( const name& admin, const name& fund_distributor){
 
     //CHECKC( false, err::MISC ,"error");
     require_auth( _self );
-    _gstate.admin  = owner;
+    _gstate.admin  = admin;
+    _gstate.fund_distributor = fund_distributor;
     // shop_t::tbl_t shop( get_self(), get_self().value);
     // auto p_itr = shop.begin();
     // while( p_itr != shop.end() ){
@@ -30,15 +31,13 @@ void rndnft_mart::init( const name& owner){
 }
 
 void rndnft_mart::createshop( const name& owner,const string& title,const name& fund_contract, const name& nft_contract,
-                           const asset& price, const name& fund_receiver, const name& random_type,
-                           const time_point_sec& opened_at, const uint64_t& opened_days){
+                           const asset& price, const name& random_type, const time_point_sec& opened_at, const uint64_t& opened_days){
  
     CHECKC( has_auth(get_self()) || has_auth(_gstate.admin), err::NO_AUTH, "Missing required authority of admin or maintainer" );
     
     CHECKC( is_account(owner),          err::ACCOUNT_INVALID,   "owner does not exist" )
-    CHECKC( is_account(fund_contract),  err::ACCOUNT_INVALID,   "asset contract does not exist" )
-    CHECKC( is_account(fund_receiver),  err::ACCOUNT_INVALID,   "fee receiver does not exist" )
-    CHECKC( is_account(nft_contract),   err::ACCOUNT_INVALID,   "blinbox contract does not exist" )
+    CHECKC( is_account(fund_contract),  err::ACCOUNT_INVALID,   "fund contract does not exist" )
+    CHECKC( is_account(nft_contract),   err::ACCOUNT_INVALID,   "nft contract does not exist" )
     CHECKC( price.amount > 0,           err::PARAM_ERROR ,      "price amount not positive" )
 
     auto now                    = current_time_point();
@@ -49,7 +48,6 @@ void rndnft_mart::createshop( const name& owner,const string& title,const name& 
     shop.nft_contract           = nft_contract;
     shop.fund_contract          = fund_contract;
     shop.price                  = price;
-    shop.fund_receiver          = fund_receiver;
     shop.random_type            = random_type;
     shop.status                 = shop_status::enabled;
     shop.created_at             = now;
@@ -178,7 +176,7 @@ void rndnft_mart::on_transfer_mtoken( const name& from, const name& to, const as
     shop.fund_recd          += quantity;
     shop.updated_at         = now;
     auto recv_memo          = shop.owner.to_string() + ":" + to_string( shop.id );
-    TRANSFER( shop.fund_contract, shop.fund_receiver, quantity, recv_memo )
+    TRANSFER( shop.fund_contract, _gstate.fund_distributor, quantity, recv_memo )
     
     nasset nft;
     _one_nft( from, shop, nft );
