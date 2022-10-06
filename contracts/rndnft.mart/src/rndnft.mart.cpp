@@ -156,6 +156,7 @@ void rndnft_mart::on_transfer_ntoken( const name& from, const name& to, const ve
     CHECKC( shop.owner == from,  err::NO_AUTH, "non-shop owner not authorized" );
 
     uint64_t nft_count      = 0;
+   
     set<nsymbol> unique_nfts;
     for( nasset nft : assets ) {
         CHECKC( nft.amount > 0, err::NOT_POSITIVE, "NFT amount must be positive" )
@@ -169,15 +170,20 @@ void rndnft_mart::on_transfer_ntoken( const name& from, const name& to, const ve
         } else {
             nftbox.nft      = nft;
         }
+
         nft_count           += nft.amount;
     }
 
+    shop.nft_box_num        += unique_nfts.size();
+    CHECKC( shop.nft_box_num < _gstate.max_shop_boxes, err::OVERSIZED, "shop box num exceeds allowed" )
+
     if( shop.random_type == nft_random_type::bynftids )
-        shop.random_base     += unique_nfts.size();
+        shop.random_base     = shop.nft_box_num;
 
     else if( shop.random_type == nft_random_type::bynftamt )
         shop.random_base     += nft_count;
         
+    
     shop.nft_current_amount  += nft_count;
     shop.updated_at          = now;
 

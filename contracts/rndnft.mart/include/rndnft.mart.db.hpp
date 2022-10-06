@@ -85,6 +85,7 @@ TBL shop_t {
     asset               price; 
     name                fund_receiver;
     asset               fund_recd;
+    uint64_t            nft_box_num                 = 0;
     uint64_t            nft_sold_amount             = 0;        
     uint64_t            nft_current_amount          = 0;                    // sum of amounts of all nfts
     uint64_t            random_base                 = 0;
