@@ -177,7 +177,8 @@ void rndnft_mart::on_transfer_mtoken( const name& from, const name& to, const as
 
     shop.fund_recd          += quantity;
     shop.updated_at         = now;
-    TRANSFER( shop.fund_contract, shop.fund_receiver, quantity, "" )
+    auto recv_memo          = shop.owner.to_string() + ":" + to_string( shop.id );
+    TRANSFER( shop.fund_contract, shop.fund_receiver, quantity, recv_memo )
     
     nasset nft;
     _one_nft( from, shop, nft );
