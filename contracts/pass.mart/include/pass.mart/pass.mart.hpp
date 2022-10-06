@@ -89,7 +89,7 @@ namespace mart{
         private:
             global_singleton    _global;
             global_t            _gstate;
-            dbc                _db;
+            dbc                 _db;
 
 
             void _tally_rewards(const product_t& product, const name& owner, const asset& quantiy, const nasset& nft_quantity, const nasset& gift_quantity);

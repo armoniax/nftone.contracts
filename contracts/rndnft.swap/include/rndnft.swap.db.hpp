@@ -64,7 +64,7 @@ struct BLINDBOX_NAME("global") global_t {
 
 typedef eosio::singleton< "global"_n, global_t > global_singleton;
 
-namespace pool_status {
+namespace shop_status {
     static constexpr eosio::name none               = "none"_n;
     static constexpr eosio::name enabled            = "enabled"_n;
     static constexpr eosio::name disabled           = "disabled"_n;
@@ -76,31 +76,31 @@ namespace transfer_type {
     static constexpr eosio::name allowance           = "allowance"_n;
 };
 
-struct price_t {
+struct price_s {
     asset               value;
     asset               received;
     name                fee_receiver;
-    EOSLIB_SERIALIZE( price_t,  (value)(received)(fee_receiver) )
+    EOSLIB_SERIALIZE( price_s,  (value)(received)(fee_receiver) )
 };
 
-struct BLINDBOX pool_t {
+struct BLINDBOX shop_t {
     uint64_t            id = 0;                                             //PK
     name                owner;                                              //pool owner
     string              title;                                              //pool title: <=64 chars
     name                asset_contract;                                     
-    price_t             price;                                        
+    price_s             price;                                        
     name                nft_contract;                                  
     uint64_t            total_nft_amount            = 0;
     uint64_t            exchange_nft_amount         = 0;         
     uint64_t            not_exchange_nft_amount     = 0;       
     uint64_t            refund_nft_amount           = 0;   
-    uint64_t            max_table_distance          = 0;                    // table advance max  
-    name                status                      = pool_status::none;    //status, see plan_status_t
+    uint64_t            nft_current_amount          = 0;                    // table advance max  
+    name                status                      = shop_status::none;    //status, see plan_status_t
     bool                allow_to_buy_again;
     uint64_t            last_nft_id                 = 0;
     time_point_sec      created_at;                                         //creation time (UTC time)
     time_point_sec      updated_at;                                         //update time: last updated at
-    time_point_sec      opended_at;                                         //opend time: opening time of blind box
+    time_point_sec      opened_at;                                         //opend time: opening time of blind box
     time_point_sec      closed_at;                                          //close time: close time of blind box
     
 
@@ -108,14 +108,14 @@ struct BLINDBOX pool_t {
 
     uint128_t by_owner() const { return (uint128_t)owner.value << 64 | (uint128_t)id; }
 
-    typedef eosio::multi_index<"pools"_n, pool_t,
-        indexed_by<"owneridx"_n,  const_mem_fun<pool_t, uint128_t, &pool_t::by_owner> >
+    typedef eosio::multi_index<"pools"_n, shop_t,
+        indexed_by<"owneridx"_n,  const_mem_fun<shop_t, uint128_t, &shop_t::by_owner> >
     > tbl_t;
 
-    EOSLIB_SERIALIZE( pool_t, (id)(owner)(title)(asset_contract)
+    EOSLIB_SERIALIZE( shop_t, (id)(owner)(title)(asset_contract)
                               (price)(nft_contract)(total_nft_amount)(exchange_nft_amount)
-                              (not_exchange_nft_amount)(refund_nft_amount)(max_table_distance)
-                              (status)(allow_to_buy_again)(last_nft_id)(created_at)(updated_at)(opended_at)(closed_at) )
+                              (not_exchange_nft_amount)(refund_nft_amount)(nft_current_amount)
+                              (status)(allow_to_buy_again)(last_nft_id)(created_at)(updated_at)(opened_at)(closed_at) )
 
 };
 
@@ -138,7 +138,7 @@ struct BLINDBOX buyer_t {
 
 
 // scope = pool_id
-struct BLINDBOX nft_boxes_t {
+struct BLINDBOX nft_box_t {
 
     uint64_t        id = 0;                       //PK, unique within the contract
     nasset          quantity;  
@@ -146,22 +146,22 @@ struct BLINDBOX nft_boxes_t {
       
     uint64_t primary_key() const { return id; }
 
-    typedef eosio::multi_index<"boxes"_n, nft_boxes_t
+    typedef eosio::multi_index<"boxes"_n, nft_box_t
     > tbl_t;
 
-    EOSLIB_SERIALIZE( nft_boxes_t,   (id)(quantity)(transfer_type)
+    EOSLIB_SERIALIZE( nft_box_t,   (id)(quantity)(transfer_type)
                                )
 };
 
-struct deal_trace_t {
+struct deal_trace_s {
 
         uint64_t            pool_id;
         uint64_t            order_id;
         name                receiver;
         asset               pay_quantity;
-        nasset              recv_quantity;
+        nasset              sold_quantity;
         time_point_sec      created_at;
-        name                pay_contract;
+        name                fund_contract;
         name                recv_contract;
 };
 

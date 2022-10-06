@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include <nftone.mart/nftone.mart_db.hpp>
+#include <nftone.mart/nftone.mart.db.hpp>
 
 namespace amax {
 

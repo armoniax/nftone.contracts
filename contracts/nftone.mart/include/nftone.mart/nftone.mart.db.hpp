@@ -6,7 +6,7 @@
 #include <eosio/system.hpp>
 #include <eosio/time.hpp>
 
-#include <amax.ntoken/amax.ntoken_db.hpp>
+#include <amax.ntoken/amax.ntoken.db.hpp>
 #include <utils.hpp>
 
 // #include <deque>
