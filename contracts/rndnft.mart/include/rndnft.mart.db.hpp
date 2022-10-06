@@ -55,10 +55,11 @@ static constexpr eosio::name active_permission{"active"_n};
 
 TBL_NAME("global") global_t {
     name        admin;
-    uint64_t    max_step            = 30;
+    uint16_t    max_shop_boxes      = 30;
+    uint16_t    max_step            = 30;
     uint64_t    last_shop_id        = 0;
 
-    EOSLIB_SERIALIZE( global_t, (admin)(max_step)(last_shop_id) )
+    EOSLIB_SERIALIZE( global_t, (admin)(max_shop_boxes)(max_step)(last_shop_id) )
 };
 
 typedef eosio::singleton< "global"_n, global_t > global_singleton;
