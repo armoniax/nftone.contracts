@@ -138,7 +138,7 @@ struct BLINDBOX buyer_t {
 
 
 // scope = pool_id
-struct BLINDBOX nft_box_t {
+struct BLINDBOX shop_nftbox_t {
 
     uint64_t        id = 0;                       //PK, unique within the contract
     nasset          quantity;  
@@ -146,10 +146,10 @@ struct BLINDBOX nft_box_t {
       
     uint64_t primary_key() const { return id; }
 
-    typedef eosio::multi_index<"boxes"_n, nft_box_t
+    typedef eosio::multi_index<"boxes"_n, shop_nftbox_t
     > tbl_t;
 
-    EOSLIB_SERIALIZE( nft_box_t,   (id)(quantity)(transfer_type)
+    EOSLIB_SERIALIZE( shop_nftbox_t,   (id)(quantity)(transfer_type)
                                )
 };
 

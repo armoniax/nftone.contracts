@@ -56,10 +56,9 @@ static constexpr eosio::name active_permission{"active"_n};
 TBL_NAME("global") global_t {
     name        admin;
     uint16_t    max_shop_boxes      = 30;
-    uint16_t    max_step            = 30;
     uint64_t    last_shop_id        = 0;
 
-    EOSLIB_SERIALIZE( global_t, (admin)(max_shop_boxes)(max_step)(last_shop_id) )
+    EOSLIB_SERIALIZE( global_t, (admin)(max_shop_boxes)(last_shop_id) )
 };
 
 typedef eosio::singleton< "global"_n, global_t > global_singleton;
@@ -72,8 +71,8 @@ namespace shop_status {
 
 namespace nft_random_type {
     static constexpr eosio::name none               = "none"_n;
-    static constexpr eosio::name bynftids           = "bynftids"_n;
-    static constexpr eosio::name bynftamt           = "bynftamt"_n;
+    static constexpr eosio::name nftids             = "nftids"_n;
+    static constexpr eosio::name nftamt             = "nftamt"_n;
 };
 
 TBL shop_t {
@@ -113,19 +112,20 @@ TBL shop_t {
 
 };
 
-// scope = shop_id
-TBL nft_box_t {
-    nasset          nft;  
+TBL shop_nftbox_t {
+    uint64_t                shop_id;
+    map<nsymbol, nasset>    nfts;
+    vector<nsymbol>         nftsymbs;
       
-    nft_box_t() {}
-    nft_box_t( const uint64_t& id ) { nft.symbol.id = id; }
+    shop_nftbox_t() {}
+    shop_nftbox_t( const uint64_t& sid ): shop_id(sid) {}
 
-    uint64_t primary_key() const { return nft.symbol.id; }
+    uint64_t primary_key() const { return shop_id; }
 
-    typedef eosio::multi_index<"boxes"_n, nft_box_t
+    typedef eosio::multi_index<"shopboxes"_n, shop_nftbox_t
     > tbl_t;
 
-    EOSLIB_SERIALIZE( nft_box_t,  (nft) )
+    EOSLIB_SERIALIZE( shop_nftbox_t,  (shop_id)(nfts)(nftsymbs) )
 };
 
 struct deal_trace_s {

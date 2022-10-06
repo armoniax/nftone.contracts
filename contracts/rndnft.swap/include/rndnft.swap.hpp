@@ -41,10 +41,10 @@ public:
     [[eosio::action]]
     void dealtrace(const deal_trace_s& trace);
 
-     [[eosio::action]]
-    void fillnftinc( const name& owner, const uint64_t& pool_id, const uint64_t& begin_id, const uint64_t& end_id);
-    [[eosio::action]]
-    void fillnftids(const name& owner, const uint64_t& pool_id, const vector<nasset>& quants);
+    //  [[eosio::action]]
+    // void fillnftinc( const name& owner, const uint64_t& pool_id, const uint64_t& begin_id, const uint64_t& end_id);
+    // [[eosio::action]]
+    // void fillnftids(const name& owner, const uint64_t& pool_id, const vector<nasset>& quants);
 
     //  void transfer( const name& to,const name& from,const asset& quantity,const string& memo);  
     [[eosio::on_notify("*::transfer")]] void on_transfer_ntoken(const name& from, const name& to, const vector<nasset>& assets, const string& memo);

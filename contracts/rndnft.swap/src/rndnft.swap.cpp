@@ -127,7 +127,7 @@ void rndnft_swap::endpool(const name& owner, const uint64_t& pool_id){
     int step = 0;
     vector<nasset> quants;
 
-    nft_box_t::tbl_t nft( get_self(), pool_id);
+    shop_nftbox_t::tbl_t nft( get_self(), pool_id);
     auto itr = nft.begin();
     CHECKC( itr != nft.end(), err::RECORD_NOT_FOUND, "Completed");
     uint64_t amount = 0;
@@ -156,69 +156,69 @@ void rndnft_swap::endpool(const name& owner, const uint64_t& pool_id){
 }
 
 
-void rndnft_swap::fillnftinc( const name& owner, const uint64_t& pool_id, const uint64_t& begin_id, const uint64_t& end_id){
+// void rndnft_swap::fillnftinc( const name& owner, const uint64_t& pool_id, const uint64_t& begin_id, const uint64_t& end_id){
     
-    CHECKC( has_auth( owner ) || has_auth( _self ) || has_auth(_gstate.admin), err::NO_AUTH, "not authorized" )
-    shop_t::tbl_t shop_tbl( get_self() ,get_self().value );
-    auto pool_itr = shop_tbl.find(pool_id);
+//     CHECKC( has_auth( owner ) || has_auth( _self ) || has_auth(_gstate.admin), err::NO_AUTH, "not authorized" )
+//     shop_t::tbl_t shop_tbl( get_self() ,get_self().value );
+//     auto pool_itr = shop_tbl.find(pool_id);
 
-    CHECKC( pool_itr != shop_tbl.end(),  err::RECORD_NOT_FOUND,"pool not found: " + to_string(pool_id) )
-    CHECKC( owner == pool_itr->owner,  err::NO_AUTH, "not authorized" )
-    CHECKC( pool_itr->status == shop_status::enabled, err::STATUS_ERROR, "pool not enabled, status:" + pool_itr->status.to_string() )
+//     CHECKC( pool_itr != shop_tbl.end(),  err::RECORD_NOT_FOUND,"pool not found: " + to_string(pool_id) )
+//     CHECKC( owner == pool_itr->owner,  err::NO_AUTH, "not authorized" )
+//     CHECKC( pool_itr->status == shop_status::enabled, err::STATUS_ERROR, "pool not enabled, status:" + pool_itr->status.to_string() )
 
-    auto p = shop_tbl.get(pool_id);
+//     auto p = shop_tbl.get(pool_id);
 
-    vector<nasset> quants;
-    account_t::idx_t account_tbl( p.nft_contract, p.owner.value );
+//     vector<nasset> quants;
+//     account_t::idx_t account_tbl( p.nft_contract, p.owner.value );
 
-    for ( auto i = begin_id; i <= end_id; i ++){
+//     for ( auto i = begin_id; i <= end_id; i ++){
         
-        auto account_itr = account_tbl.find( i );
-        CHECKC( account_itr != account_tbl.end(),  err::RECORD_NOT_FOUND,"balance not found: " + to_string(i) )
-        CHECKC( account_itr->balance.amount > 0 , err::OVERDRAWN,"overdrawn balance , id:" + to_string(i));
-        quants.push_back(nasset(1, account_itr->balance.symbol));
-    }
+//         auto account_itr = account_tbl.find( i );
+//         CHECKC( account_itr != account_tbl.end(),  err::RECORD_NOT_FOUND,"balance not found: " + to_string(i) )
+//         CHECKC( account_itr->balance.amount > 0 , err::OVERDRAWN,"overdrawn balance , id:" + to_string(i));
+//         quants.push_back(nasset(1, account_itr->balance.symbol));
+//     }
     
-    _add_nfts( p, quants );
+//     _add_nfts( p, quants );
 
-    shop_tbl.modify( pool_itr, same_payer, [&]( auto& pool ) {
-        pool.total_nft_amount            = p.total_nft_amount;
-        pool.not_exchange_nft_amount     = p.not_exchange_nft_amount;
-        pool.nft_current_amount          = p.nft_current_amount;
-        pool.last_nft_id                 = p.last_nft_id;        
-        pool.updated_at                  = current_time_point();
-    });
-}
+//     shop_tbl.modify( pool_itr, same_payer, [&]( auto& pool ) {
+//         pool.total_nft_amount            = p.total_nft_amount;
+//         pool.not_exchange_nft_amount     = p.not_exchange_nft_amount;
+//         pool.nft_current_amount          = p.nft_current_amount;
+//         pool.last_nft_id                 = p.last_nft_id;        
+//         pool.updated_at                  = current_time_point();
+//     });
+// }
 
-void rndnft_swap::fillnftids(const name& owner, const uint64_t& pool_id, const vector<nasset>& quants){
-    CHECKC( has_auth( owner ) || has_auth( _self ) || has_auth(_gstate.admin), err::NO_AUTH, "not authorized" )
-    shop_t::tbl_t shop_tbl( get_self() ,get_self().value );
-    auto pool_itr = shop_tbl.find(pool_id);
+// void rndnft_swap::fillnftids(const name& owner, const uint64_t& pool_id, const vector<nasset>& quants){
+//     CHECKC( has_auth( owner ) || has_auth( _self ) || has_auth(_gstate.admin), err::NO_AUTH, "not authorized" )
+//     shop_t::tbl_t shop_tbl( get_self() ,get_self().value );
+//     auto pool_itr = shop_tbl.find(pool_id);
 
-    CHECKC( pool_itr != shop_tbl.end(),  err::RECORD_NOT_FOUND,"pool not found: " + to_string(pool_id) )
-    CHECKC( owner == pool_itr->owner,  err::NO_AUTH, "not authorized" )
-    CHECKC( pool_itr->status == shop_status::enabled, err::STATUS_ERROR, "pool not enabled, status:" + pool_itr->status.to_string() )
+//     CHECKC( pool_itr != shop_tbl.end(),  err::RECORD_NOT_FOUND,"pool not found: " + to_string(pool_id) )
+//     CHECKC( owner == pool_itr->owner,  err::NO_AUTH, "not authorized" )
+//     CHECKC( pool_itr->status == shop_status::enabled, err::STATUS_ERROR, "pool not enabled, status:" + pool_itr->status.to_string() )
     
-    auto p = shop_tbl.get(pool_id);
+//     auto p = shop_tbl.get(pool_id);
     
-    account_t::idx_t account_tbl( p.nft_contract, p.owner.value );
+//     account_t::idx_t account_tbl( p.nft_contract, p.owner.value );
 
-    for( nasset quantity : quants){
-        auto account_itr = account_tbl.find( quantity.symbol.id );
-        CHECKC( account_itr != account_tbl.end(),  err::RECORD_NOT_FOUND,"balance not found: " + to_string(quantity.symbol.id) )
-        CHECKC( account_itr->balance.amount > 0 , err::OVERDRAWN,"overdrawn balance , id:" + to_string(quantity.symbol.id));
-    }
+//     for( nasset quantity : quants){
+//         auto account_itr = account_tbl.find( quantity.symbol.id );
+//         CHECKC( account_itr != account_tbl.end(),  err::RECORD_NOT_FOUND,"balance not found: " + to_string(quantity.symbol.id) )
+//         CHECKC( account_itr->balance.amount > 0 , err::OVERDRAWN,"overdrawn balance , id:" + to_string(quantity.symbol.id));
+//     }
 
-    _add_nfts( p, quants );
+//     _add_nfts( p, quants );
 
-    shop_tbl.modify( pool_itr, same_payer, [&]( auto& pool ) {
-        pool.total_nft_amount            = p.total_nft_amount;
-        pool.not_exchange_nft_amount     = p.not_exchange_nft_amount;
-        pool.nft_current_amount          = p.nft_current_amount;
-        pool.last_nft_id                 = p.last_nft_id;        
-        pool.updated_at                  = current_time_point();
-    });
-}
+//     shop_tbl.modify( pool_itr, same_payer, [&]( auto& pool ) {
+//         pool.total_nft_amount            = p.total_nft_amount;
+//         pool.not_exchange_nft_amount     = p.not_exchange_nft_amount;
+//         pool.nft_current_amount          = p.nft_current_amount;
+//         pool.last_nft_id                 = p.last_nft_id;        
+//         pool.updated_at                  = current_time_point();
+//     });
+// }
 
 
 void rndnft_swap::_on_open_transfer( const name& from, const name& to, const asset& quantity, const string& memo){
@@ -305,7 +305,7 @@ void rndnft_swap::_on_mint_transfer( const name& from, const name& to, const vec
         uint64_t max_distance = 0;
         uint64_t amount = quantity.amount;
 
-        nft_box_t::tbl_t nft( get_self(), pool_id);
+        shop_nftbox_t::tbl_t nft( get_self(), pool_id);
         nft.emplace( _self, [&]( auto& row ) {
             row.id                 = ++new_nft_id;
             row.quantity           = quantity;    
@@ -336,7 +336,7 @@ void rndnft_swap::dealtrace(const deal_trace_s& trace){
 
 void rndnft_swap::_buy_one_nft( shop_t& pool , const name& owner , deal_trace_s trace, const uint64_t& amount){
 
-    nft_box_t::tbl_t nft( get_self(), pool.id);
+    shop_nftbox_t::tbl_t nft( get_self(), pool.id);
     auto itr = nft.begin();
     CHECKC( itr != nft.end(), err::RECORD_NOT_FOUND, "No data available");
     CHECKC( itr->quantity.amount >= amount, err::OVERSIZED, "Insufficient remaining quantity");
@@ -379,7 +379,7 @@ void rndnft_swap::_add_nfts( shop_t& p, const vector<nasset>& quants ){
         p.total_nft_amount += quantity.amount;
         p.not_exchange_nft_amount += quantity.amount;
 
-        nft_box_t::tbl_t nft( get_self(), p.id);
+        shop_nftbox_t::tbl_t nft( get_self(), p.id);
         nft.emplace( _self, [&]( auto& row ) {
             row.id                 = ++p.last_nft_id;
             row.quantity           = quantity;  
