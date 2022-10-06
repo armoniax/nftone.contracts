@@ -267,7 +267,7 @@ void rndnft_mart::_one_nft( const name& owner, shop_t& shop, nasset& nft ) {
 
 uint64_t rndnft_mart::_rand(const uint16_t& min_unit, const uint64_t& max_uint, const name& owner, const uint64_t& shop_id) {
     auto mixid = tapos_block_prefix() * tapos_block_num() + owner.value + shop_id - current_time_point().sec_since_epoch();
-    const char *mixedChar = reinterpret_cast<const char *>(&mixid);
+    const char *mixedChar = reinterpret_cast<const char *>( &mixid );
     auto hash = sha256( (char *)mixedChar, sizeof(mixedChar));
 
     auto r1 = (uint64_t) hash.data()[0];
