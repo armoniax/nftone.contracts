@@ -190,7 +190,7 @@ void rndnft_swap::endpool(const name& owner, const uint64_t& pool_id){
 //     });
 // }
 
-// void rndnft_swap::fillnftids(const name& owner, const uint64_t& pool_id, const vector<nasset>& quants){
+// void rndnft_swap::fillnftboxnum(const name& owner, const uint64_t& pool_id, const vector<nasset>& quants){
 //     CHECKC( has_auth( owner ) || has_auth( _self ) || has_auth(_gstate.admin), err::NO_AUTH, "not authorized" )
 //     shop_t::tbl_t shop_tbl( get_self() ,get_self().value );
 //     auto pool_itr = shop_tbl.find(pool_id);

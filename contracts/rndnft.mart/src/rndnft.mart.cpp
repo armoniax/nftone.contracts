@@ -116,7 +116,7 @@ void rndnft_mart::on_transfer_mtoken( const name& from, const name& to, const as
     CHECKC( count == 1, err::PARAM_ERROR, "can only buy just about 1 NFT");
     CHECKC( shop.fund_contract == get_first_receiver(), err::DATA_MISMATCH, "pay contract mismatches with specified" );
     CHECKC( shop.price.symbol == quantity.symbol, err::SYMBOL_MISMATCH, "pay symbol mismatches with price" );
-    CHECKC( shop.nft_current_amount > 0, err::OVERSIZED, "zero nft left" )
+    CHECKC( shop.nft_num > 0, err::OVERSIZED, "zero nft left" )
 
     shop.fund_recd          += quantity;
     shop.updated_at         = now;
@@ -170,11 +170,9 @@ void rndnft_mart::on_transfer_ntoken( const name& from, const name& to, const ve
 
             } else {
                 nftbox.nfts[ nft.symbol ] = nft;
-                nftbox.nftsymbs.push_back( nft.symbol );
             }
         } else {
             nftbox.nfts[ nft.symbol ] = nft;
-            nftbox.nftsymbs.push_back( nft.symbol );
         }
 
         nft_count           += nft.amount;
@@ -182,14 +180,8 @@ void rndnft_mart::on_transfer_ntoken( const name& from, const name& to, const ve
 
     shop.nft_box_num        += unique_nfts.size();
     CHECKC( shop.nft_box_num < _gstate.max_shop_boxes, err::OVERSIZED, "shop box num exceeds allowed" )
-
-    if( shop.random_type == nft_random_type::nftids )
-        shop.random_base     = shop.nft_box_num;
-
-    else if( shop.random_type == nft_random_type::nftamt )
-        shop.random_base     += nft_count;
         
-    shop.nft_current_amount  += nft_count;
+    shop.nft_num            += nft_count;
     shop.updated_at          = now;
 
     _db.set( shop );
@@ -203,14 +195,12 @@ void rndnft_mart::closeshop(const name& owner, const uint64_t& shop_id){
     CHECKC( shop.status == shop_status::enabled, err::STATUS_ERROR, "shop not enabled, status:" + shop.status.to_string() )
     CHECKC( shop.owner == owner, err::NO_AUTH, "not authorized to end shop" );
 
-    
-
     auto shopboxes = shop_nftbox_t( shop_id );
     CHECKC( _db.get( shopboxes ), err::RECORD_NOT_FOUND, "closed" )
 
     vector<nasset> refund_nfts;
-    for( auto& symb : shopboxes.nftsymbs ) { 
-        refund_nfts.emplace_back( shopboxes.nfts[ symb ] );
+    for( auto itr = shopboxes.nfts.begin(); itr != shopboxes.nfts.end(); itr++ ) { 
+        refund_nfts.emplace_back( itr->second );
     }
 
     _db.del( shop );
@@ -229,29 +219,50 @@ void rndnft_mart::_one_nft( const name& owner, shop_t& shop, nasset& nft ) {
     auto shopboxes = shop_nftbox_t( shop.id );
     CHECKC( _db.get( shopboxes ), err::RECORD_NOT_FOUND, "no nftbox in the shop" )
 
-    if (shop.random_type == nft_random_type::nftids) {
-        uint64_t rand = _rand( 1, shop.nft_box_num, shop.owner, shop.id );
-        auto symb = shopboxes.nftsymbs[rand - 1];
-        nft = shopboxes.nfts[symb];
+    if (shop.random_type == nft_random_type::nftboxnum) {
+        uint64_t rand       = _rand( 1, shop.nft_box_num, shop.owner, shop.id );
+        auto itr            = shopboxes.nfts.begin();
+        advance( itr, rand - 1 );
+        nft                 = nasset( 1, itr->first );
 
-    } else if (shop.random_type == nft_random_type::nftamt) {
+        itr->second.amount  -= 1;
+        shop.nft_num        -= 1;
 
+        if (itr->second.amount == 0) {
+            shopboxes.nfts.erase( itr );
+
+            shop.nft_box_num--;
+
+        } else {
+            shop.nft_num--;
+        }
+
+        _db.set( shopboxes );
+
+    } else if (shop.random_type == nft_random_type::nftnum) {
+        uint64_t rand       = _rand( 1, shop.nft_num, shop.owner, shop.id );
+        uint64_t curr_num   = 0;
+        for (auto itr = shopboxes.nfts.begin(); itr != shopboxes.nfts.end(); itr++) {
+            curr_num        += itr->second.amount;
+            if ( rand <= curr_num ) {
+                nft = nasset( 1, itr->first );
+                itr->second.amount  -= 1;
+                shop.nft_num        -= 1;
+
+                if (itr->second.amount == 0) {
+                    shopboxes.nfts.erase( itr );
+                    shop.nft_box_num--;
+                }
+
+                shop.nft_num--;
+
+                _db.set( shopboxes );
+            }
+        }
     }
 
-   
-    // nft = nasset( 1, itr->nft.symbol );
- 
-    // if( itr->nft.amount <= 1 ) {
-    //     nfts.erase( itr );
-    //     shop.nft_current_amount     -= 1;
-
-    // } else {
-    //     nfts.modify( itr, same_payer , [&]( auto& row ) {
-    //         row.nfts.amount -= 1;
-    //     });
-    // }
-
     _db.set( shop );
+
 }
 
 uint64_t rndnft_mart::_rand(const uint16_t& min_unit, const uint64_t& max_uint, const name& owner, const uint64_t& shop_id) {

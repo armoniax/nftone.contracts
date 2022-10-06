@@ -71,8 +71,8 @@ namespace shop_status {
 
 namespace nft_random_type {
     static constexpr eosio::name none               = "none"_n;
-    static constexpr eosio::name nftids             = "nftids"_n;
-    static constexpr eosio::name nftamt             = "nftamt"_n;
+    static constexpr eosio::name nftboxnum             = "nftboxnum"_n;
+    static constexpr eosio::name nftnum             = "nftnum"_n;
 };
 
 TBL shop_t {
@@ -85,9 +85,7 @@ TBL shop_t {
     name                fund_receiver;
     asset               fund_recd;
     uint64_t            nft_box_num                 = 0;
-    uint64_t            nft_sold_amount             = 0;        
-    uint64_t            nft_current_amount          = 0;                    // sum of amounts of all nfts
-    uint64_t            random_base                 = 0;
+    uint64_t            nft_num                     = 0;        
     name                random_type                 = nft_random_type::none;        
     name                status                      = shop_status::none;    //status, see plan_status_t
     time_point_sec      created_at;                                         //creation time (UTC time)
@@ -107,7 +105,7 @@ TBL shop_t {
     > tbl_t;
 
     EOSLIB_SERIALIZE( shop_t, (id)(owner)(title)(nft_contract)(fund_contract)(price)(fund_receiver)(fund_recd)
-                              (nft_sold_amount)(nft_current_amount)(random_base)(random_type)(status)
+                              (nft_box_num)(nft_num)(random_type)(status)
                               (created_at)(updated_at)(opened_at)(closed_at) )
 
 };
@@ -115,7 +113,6 @@ TBL shop_t {
 TBL shop_nftbox_t {
     uint64_t                shop_id;
     map<nsymbol, nasset>    nfts;
-    vector<nsymbol>         nftsymbs;
       
     shop_nftbox_t() {}
     shop_nftbox_t( const uint64_t& sid ): shop_id(sid) {}
@@ -125,7 +122,7 @@ TBL shop_nftbox_t {
     typedef eosio::multi_index<"shopboxes"_n, shop_nftbox_t
     > tbl_t;
 
-    EOSLIB_SERIALIZE( shop_nftbox_t,  (shop_id)(nfts)(nftsymbs) )
+    EOSLIB_SERIALIZE( shop_nftbox_t,  (shop_id)(nfts) )
 };
 
 struct deal_trace_s {
