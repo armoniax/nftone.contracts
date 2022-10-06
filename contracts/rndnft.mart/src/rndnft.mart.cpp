@@ -145,7 +145,7 @@ void rndnft_mart::on_transfer_ntoken( const name& from, const name& to, const ve
     ASSERT( memo_params.size() > 0 )
 
     auto now = time_point_sec(current_time_point());
-    CHECKC( memo_params[0] == "fill" || memo_params[0] == "fill_loop", err::MEMO_FORMAT_ERROR, "must be fill or fill_loop" )
+    CHECKC( memo_params[0] == "shop", err::MEMO_FORMAT_ERROR, "memo must start with 'shop'" )
     CHECKC (memo_params.size() == 2, err::MEMO_FORMAT_ERROR, "ontransfer: params size not equal to 2" )
 
     auto shop_id            = std::stoul(string(memo_params[1]));
