@@ -36,8 +36,8 @@ void rndnft_mart::createshop( const name& owner,const string& title,const name& 
     CHECKC( has_auth(get_self()) || has_auth(_gstate.admin), err::NO_AUTH, "Missing required authority of admin or maintainer" );
     
     CHECKC( is_account(owner),          err::ACCOUNT_INVALID,   "owner does not exist" )
-    CHECKC( is_account(fund_contract), err::ACCOUNT_INVALID,   "asset contract does not exist" )
-    CHECKC( is_account(fund_receiver),   err::ACCOUNT_INVALID,   "fee receiver does not exist" )
+    CHECKC( is_account(fund_contract),  err::ACCOUNT_INVALID,   "asset contract does not exist" )
+    CHECKC( is_account(fund_receiver),  err::ACCOUNT_INVALID,   "fee receiver does not exist" )
     CHECKC( is_account(nft_contract),   err::ACCOUNT_INVALID,   "blinbox contract does not exist" )
     CHECKC( price.amount > 0,           err::PARAM_ERROR ,      "price amount not positive" )
 
@@ -46,16 +46,16 @@ void rndnft_mart::createshop( const name& owner,const string& title,const name& 
 
     shop.owner                  = owner;
     shop.title                  = title;
+    shop.nft_contract           = nft_contract;
+    shop.fund_contract          = fund_contract;
     shop.price                  = price;
     shop.fund_receiver          = fund_receiver;
-    shop.fund_contract          = fund_contract;
-    shop.nft_contract           = nft_contract;
     shop.random_type            = random_type;
+    shop.status                 = shop_status::enabled;
     shop.created_at             = now;
     shop.updated_at             = now;
     shop.opened_at              = opened_at;
     shop.closed_at              = opened_at + opened_days * DAY_SECONDS;
-    shop.status                 = shop_status::enabled;
 
     _db.set( shop );
 
@@ -125,7 +125,7 @@ void rndnft_mart::on_transfer_mtoken( const name& from, const name& to, const as
     nasset nft;
     _one_nft( from, shop, nft );
     vector<nasset> quants_to_send = { nft };
-    TRANSFER_N( shop.nft_contract, shop.owner, quants_to_send , "" )
+    TRANSFER_N( shop.nft_contract, from, quants_to_send , "" )
 
     auto trace = deal_trace_s( shop_id, from, shop.nft_contract, shop.fund_contract, quantity, nft, now );
     _on_deal_trace(trace);
