@@ -29,7 +29,6 @@ using namespace std;
       return calc_precision(digit);
    }
 
-
    void nftone_mart::init(const symbol& pay_symbol, const name& bank_contract, const name& admin,
                               const double& devfeerate, const name& feecollector,
                               const double& ipfeerate ) {

@@ -18,7 +18,8 @@ namespace mart{
 
         require_auth( get_self() );
 
-        CHECK( _gstate.started_at == time_point_sec(), "already init");
+        // CHECK( _gstate.started_at == time_point_sec(), "already init");
+
 
         // _gstate.admin = get_self();
 
@@ -162,6 +163,18 @@ namespace mart{
     //     });
 
     // }
+
+    void pass_mart::setendtime( const uint64_t& prod_id, const time_point_sec& sell_ended_at ) {
+        require_auth( _self );
+
+        product_t::tbl_t products( get_self(), get_self().value);
+        auto itr = products.find( prod_id );
+
+        products.modify( itr, get_self() , [&]( auto& row ){
+            row.sell_ended_at    = sell_ended_at;
+        });
+    }
+
     void pass_mart::addproduct( const name& owner, const string& title, const nsymbol& nft_symbol,
                                 const asset& price, const time_point_sec& started_at,
                                 const time_point_sec& ended_at, uint64_t buy_lock_plan_id){

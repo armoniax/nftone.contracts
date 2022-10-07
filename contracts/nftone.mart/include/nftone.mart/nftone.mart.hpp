@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include <nftone.mart/nftone.mart_db.hpp>
+#include <nftone.mart/nftone.mart.db.hpp>
 
 namespace amax {
 
@@ -87,6 +87,12 @@ class [[eosio::contract("nftone.mart")]] nftone_mart : public contract {
    [[eosio::on_notify("amax.mtoken::transfer")]]
    void onbuytransfermtoken(const name& from, const name& to, const asset& quant, const string& memo);
 
+   ACTION setfeecollec(const name& dev_fee_collector) {
+      require_auth( _self );
+
+      _gstate.dev_fee_collector = dev_fee_collector;
+   }
+   
    ACTION init(const symbol& pay_symbol, const name& bank_contract, const name& admin,
                               const double& devfeerate, const name& feecollector,
                               const double& ipfeerate);
@@ -96,7 +102,6 @@ class [[eosio::contract("nftone.mart")]] nftone_mart : public contract {
    ACTION cancelbid( const name& buyer, const uint64_t& buyer_bid_id );
 
    ACTION dealtrace(const deal_trace& trace);
-
 
    using deal_trace_action = eosio::action_wrapper<"dealtrace"_n, &nftone_mart::dealtrace>;
 
