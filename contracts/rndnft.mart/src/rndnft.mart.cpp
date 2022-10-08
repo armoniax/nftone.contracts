@@ -23,11 +23,11 @@ void rndnft_mart::init( const name& admin, const name& fund_distributor){
     require_auth( _self );
     _gstate.admin  = admin;
     _gstate.fund_distributor = fund_distributor;
-    // shop_t::tbl_t shop( get_self(), get_self().value);
-    // auto p_itr = shop.begin();
-    // while( p_itr != shop.end() ){
-    //     p_itr = shop.erase( p_itr );
-    // } 
+//    shop_t::tbl_t shop( get_self(), get_self().value);
+//    auto p_itr = shop.begin();
+//    while( p_itr != shop.end() ){
+//        p_itr = shop.erase( p_itr );
+//    }
 }
 
 void rndnft_mart::createshop( const name& owner,const string& title,const name& fund_contract, const name& nft_contract,
@@ -48,6 +48,7 @@ void rndnft_mart::createshop( const name& owner,const string& title,const name& 
     shop.nft_contract           = nft_contract;
     shop.fund_contract          = fund_contract;
     shop.price                  = price;
+    shop.fund_recd              = asset(0,price.symbol);
     shop.random_type            = random_type;
     shop.status                 = shop_status::enabled;
     shop.created_at             = now;
@@ -135,8 +136,10 @@ void rndnft_mart::on_transfer_ntoken( const name& from, const name& to, const ve
             nftbox.nfts[ nft.symbol ] = nft;
             new_nftbox_num++;
         }
-
+        
         new_nft_num         += nft.amount;
+
+        _db.set(nftbox);
     }
 
     shop.nft_box_num        += new_nftbox_num;
@@ -182,10 +185,18 @@ void rndnft_mart::on_transfer_mtoken( const name& from, const name& to, const as
     _one_nft( from, shop, nft );
     vector<nasset> nfts = { nft };
     TRANSFER_N( shop.nft_contract, from, nfts , "shop: " + to_string(shop.id) )
-
-    auto trace = deal_trace_s( shop_id, from, shop.nft_contract, shop.fund_contract, quantity, nft, now );
-    _on_deal_trace(trace);
    
+    //auto trace = deal_trace_s( shop_id, from, shop.nft_contract, shop.fund_contract, quantity, nft, now );
+    auto trace = deal_trace_s( );
+    trace.shop_id       = shop_id;
+    trace.buyer         = from;
+    trace.nft_contract  = shop.nft_contract;
+    trace.fund_contract = shop.fund_contract;
+    trace.paid_quant    = quantity;
+    trace.sold_quant    = nft;
+    trace.created_at    = now;
+    _on_deal_trace(trace);
+    
 }
 
 void rndnft_mart::closeshop(const name& owner, const uint64_t& shop_id){
@@ -203,7 +214,7 @@ void rndnft_mart::closeshop(const name& owner, const uint64_t& shop_id){
     for( auto itr = shopboxes.nfts.begin(); itr != shopboxes.nfts.end(); itr++ ) { 
         refund_nfts.emplace_back( itr->second );
     }
-
+    _db.del( shopboxes );
     _db.del( shop );
 
     if ( refund_nfts.size() > 0 )
@@ -221,9 +232,11 @@ void rndnft_mart::_one_nft( const name& owner, shop_t& shop, nasset& nft ) {
     CHECKC( _db.get( shopboxes ), err::RECORD_NOT_FOUND, "no nftbox in the shop" )
 
     if (shop.random_type == nft_random_type::nftboxnum) {
+   
         uint64_t rand       = _rand( 1, shop.nft_box_num, shop.owner, shop.id );
         auto itr            = shopboxes.nfts.begin();
         advance( itr, rand - 1 );
+        
         nft                 = nasset( 1, itr->first );
 
         itr->second.amount  -= 1;
@@ -234,10 +247,8 @@ void rndnft_mart::_one_nft( const name& owner, shop_t& shop, nasset& nft ) {
 
             shop.nft_box_num--;
 
-        } else {
-            shop.nft_num--;
-        }
-
+        } 
+       
         _db.set( shopboxes );
 
     } else if (shop.random_type == nft_random_type::nftnum) {
@@ -254,10 +265,8 @@ void rndnft_mart::_one_nft( const name& owner, shop_t& shop, nasset& nft ) {
                     shopboxes.nfts.erase( itr );
                     shop.nft_box_num--;
                 }
-
-                shop.nft_num--;
-
                 _db.set( shopboxes );
+                break;
             }
         }
     }

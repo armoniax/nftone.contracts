@@ -133,12 +133,6 @@ struct deal_trace_s {
     asset               paid_quant;
     nasset              sold_quant;
     time_point_sec      created_at;
-
-    deal_trace_s() {}
-    deal_trace_s(   const uint64_t& sid, const name& b, const name& nc, const name& fc,
-                    const asset& pq, const nasset& sq, const time_point_sec c):
-                shop_id(sid), buyer(b), nft_contract(nc), fund_contract(fc), paid_quant(pq), 
-                sold_quant(sq), created_at(c) {}
 };
 
 } }

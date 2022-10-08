@@ -14,7 +14,7 @@ public:
     using contract::contract;
 
     rndnft_mart(eosio::name receiver, eosio::name code, datastream<const char*> ds): contract(receiver, code, ds),
-        _global(get_self(), get_self().value) {
+        _global(get_self(), get_self().value),_db(get_self()) {
         _gstate = _global.exists() ? _global.get() : global_t{};
     }
 
@@ -36,7 +36,7 @@ public:
      * @param assets 
      * @param memo 
      */
-    [[eosio::on_notify("amax.ntoken::transfer")]] 
+    [[eosio::on_notify("*::transfer")]] 
     void on_transfer_ntoken(const name& from, const name& to, const vector<nasset>& assets, const string& memo);
 
     /**
