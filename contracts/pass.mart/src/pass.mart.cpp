@@ -27,13 +27,13 @@ namespace mart{
         // _gstate.total_rewards           = asset(0,MUSDT);
         // _gstate.total_claimed_rewards   = asset(0,MUSDT);
 
-        // _gstate.first_rate              = DEFAULT_FIRST_RATE;
-        // _gstate.second_rate             = DEFAULT_SECOND_RATE;
-        // _gstate.partner_rate            = DEFAULT_PARTNER_RATE;
+        _gstate.first_rate              = DEFAULT_FIRST_RATE;
+        _gstate.second_rate             = DEFAULT_SECOND_RATE;
+        _gstate.partner_rate            = DEFAULT_PARTNER_RATE;
         // _gstate.claimrewrads_day        = DEFAULT_OPERABLE_DAYS;
 
-        // _gstate.last_product_id         = INITIAL_ID;
-        // _gstate.last_order_id           = INITIAL_ID;
+        _gstate.last_product_id         = INITIAL_ID;
+        _gstate.last_order_id           = INITIAL_ID;
 
         // _gstate.started_at              = time_point_sec(current_time_point());
 
@@ -47,17 +47,17 @@ namespace mart{
         //     row.buy_lock_plan_id                = 0;
         // });
 
-        // product_t::tbl_t products( get_self(), get_self().value);
-        // auto p_itr = products.begin();
-        // while( p_itr != products.end() ){
-        //     p_itr = products.erase( p_itr );
-        // } 
-        // _gstate.last_product_id         = INITIAL_ID;
-        // pass_recv_t::tbl_t recv( get_self(), get_self().value);
-        // auto r_itr = recv.begin();
-        // while( r_itr != recv.end() ){
-        //     r_itr = recv.erase( r_itr );
-        // } 
+        product_t::tbl_t products( get_self(), get_self().value);
+        auto p_itr = products.begin();
+        while( p_itr != products.end() ){
+            p_itr = products.erase( p_itr );
+        } 
+        _gstate.last_product_id         = INITIAL_ID;
+        pass_recv_t::tbl_t recv( get_self(), get_self().value);
+        auto r_itr = recv.begin();
+        while( r_itr != recv.end() ){
+            r_itr = recv.erase( r_itr );
+        } 
     }
 
     void pass_mart::setclaimday( const uint64_t& days){
@@ -79,42 +79,37 @@ namespace mart{
 
     void pass_mart::setaccouts(const name& nft_contract,
                             const name& lock_contract,
-                            const name& partner_account,
-                            const name& storage_account,
-                            const name& unable_claimrewards_account){
+                            const name& storage_account){
 
         CHECKC( _gstate.started_at != time_point_sec(),err::DATA_ERROR, "initialization not complete");
         CHECKC( has_auth(get_self()) || has_auth(_gstate.admin), err::NO_AUTH, "Missing required authority of admin or maintainer" );
 
         CHECKC( is_account( nft_contract ), err::ACCOUNT_INVALID,"nft contract does not exist");
         CHECKC( is_account( lock_contract ), err::ACCOUNT_INVALID, "lock contract does not exist");
-        CHECKC( is_account( partner_account ), err::ACCOUNT_INVALID,"nft contract does not exist");
         CHECKC( is_account( storage_account ), err::ACCOUNT_INVALID,"storage contract does not exist");
-        CHECKC( is_account( unable_claimrewards_account ), err::ACCOUNT_INVALID,"rewards collector does not exist");
-
+     
         _gstate.nft_contract = nft_contract;
         _gstate.lock_contract = lock_contract;
-        _gstate.partner_account = partner_account;
         _gstate.storage_account = storage_account;
-        _gstate.unable_claimrewards_account = unable_claimrewards_account;
+
     }
 
-    void pass_mart::setrates(const uint64_t& first_rate,
-                            const uint64_t& second_rate,
-                            const uint64_t& partner_rate){
+    // void pass_mart::setrates(const uint64_t& first_rate,
+    //                         const uint64_t& second_rate,
+    //                         const uint64_t& partner_rate){
 
-        CHECKC( _gstate.started_at != time_point_sec(),err::DATA_ERROR, "initialization not complete");
-        CHECKC( has_auth(get_self()) || has_auth(_gstate.admin), err::NO_AUTH, "Missing required authority of admin or maintainer" );
+    //     CHECKC( _gstate.started_at != time_point_sec(),err::DATA_ERROR, "initialization not complete");
+    //     CHECKC( has_auth(get_self()) || has_auth(_gstate.admin), err::NO_AUTH, "Missing required authority of admin or maintainer" );
 
-        CHECKC( first_rate >= 0 && first_rate <= 10000 , err::PARAM_ERROR,"first rate range: 0-10000 ");
-        CHECKC( second_rate >= 0 && second_rate <= 10000  , err::PARAM_ERROR,"second rate range: 0-10000 ");
-        CHECKC( partner_rate >= 0 && partner_rate <= 10000  , err::PARAM_ERROR,"partner rate range: 0-10000 ");
-        CHECKC( first_rate + second_rate + partner_rate <= 10000 , err::PARAM_ERROR, "total rate range: 0-10000");
+    //     CHECKC( first_rate >= 0 && first_rate <= 10000 , err::PARAM_ERROR,"first rate range: 0-10000 ");
+    //     CHECKC( second_rate >= 0 && second_rate <= 10000  , err::PARAM_ERROR,"second rate range: 0-10000 ");
+    //     CHECKC( partner_rate >= 0 && partner_rate <= 10000  , err::PARAM_ERROR,"partner rate range: 0-10000 ");
+    //     CHECKC( first_rate + second_rate + partner_rate <= 10000 , err::PARAM_ERROR, "total rate range: 0-10000");
 
-        _gstate.first_rate = first_rate;
-        _gstate.second_rate = second_rate;
-        _gstate.partner_rate = partner_rate;
-    }
+    //     _gstate.first_rate = first_rate;
+    //     _gstate.second_rate = second_rate;
+    //     _gstate.partner_rate = partner_rate;
+    // }
 
     void pass_mart::setrule( const uint64_t& product_id,const rule_t& rule){
 
@@ -177,7 +172,8 @@ namespace mart{
 
     void pass_mart::addproduct( const name& owner, const string& title, const nsymbol& nft_symbol,
                                 const asset& price, const time_point_sec& started_at,
-                                const time_point_sec& ended_at, uint64_t buy_lock_plan_id){
+                                const time_point_sec& ended_at, uint64_t buy_lock_plan_id,
+                                const uint64_t& token_split_plan_id){
 
         CHECKC( _gstate.started_at != time_point_sec(),err::DATA_ERROR, "initialization not complete");
         CHECKC( has_auth(get_self()) || has_auth(_gstate.admin), err::NO_AUTH, "Missing required authority of admin or maintainer" );
@@ -206,6 +202,10 @@ namespace mart{
         CHECKC( lock_itr->asset_contract == _gstate.nft_contract, err::DATA_ERROR,"lock contract mismatch");
         CHECKC( lock_itr->asset_symbol.id == nft_symbol.id, err::SYMBOL_MISMATCH,"lock asset symbol mismatch");
         
+        split_plan_t::tbl_t split_t( _gstate.storage_account, _self.value );
+        auto split_itr = split_t.find( token_split_plan_id );
+        CHECKC( split_itr != split_t.end(), err::SYMBOL_MISMATCH,"token split plan not found, id:" + to_string(token_split_plan_id));
+
         auto now = time_point_sec(current_time_point());
 
         product_t::tbl_t products( get_self(), get_self().value);
@@ -231,6 +231,7 @@ namespace mart{
             row.claimrewards_started_at     = ended_at;
             row.claimrewards_ended_at       = time_point_sec(ended_at.sec_since_epoch() + _gstate.claimrewrads_day * seconds_per_day);
             row.gift_nft                    = gift;
+            row.token_split_plan_id         = token_split_plan_id;
         });
 
     }
@@ -374,52 +375,67 @@ namespace mart{
             auto nft_quantity = nasset(amount,itr->balance.symbol);
             auto gift_quantity= itr->gift_nft.balance.amount>=amount ? nasset(amount,itr->gift_nft.balance.symbol) : nasset(0,itr->gift_nft.balance.symbol);
             
-            _add_quantity( pt, from, asset( 0, MUSDT), nft_quantity);
-            _tally_rewards( pt, from, quantity, nft_quantity,gift_quantity);
-        
             product.modify( itr, get_self(), [&]( auto& row){
                 row.balance             -= nft_quantity;
                 row.gift_nft.balance    -= gift_quantity;
                 row.updated_at          = now;
             });
-
-            vector<nasset> quants = { nft_quantity };
             
+            order_t order;
+            order.id                        = ++_gstate.last_order_id;
+            order.product_id                = itr->id;
+            order.owner                     = from;
+            order.quantity                  = quantity;
+            order.nft_quantity              = nft_quantity;
+            order.gift_quantity             = gift_quantity;
+            order.created_at                = time_point_sec(current_time_point());
+
+            _on_order_deal_trace(order);
+            _add_quantity( pt, from, asset(0,quantity.symbol), nft_quantity );
+
+            if (gift_quantity.amount > 0){
+                vector<nasset> giftquants = { gift_quantity };
+                TRANSFER( pt.gift_nft.contract_name, from, giftquants, std::string("KID") );
+            }
+          
+            vector<nasset> quants = { nft_quantity };
             // lock params: `first_unlock_days` = 0
             TRANSFER( _gstate.nft_contract, _gstate.lock_contract, quants, std::string("lock:") + from.to_string() + ":" + to_string(pt.buy_lock_plan_id) + ":0" );            
+
+            TRANSFER( BANK, _gstate.storage_account, quantity , std::string("plan:") + to_string( pt.token_split_plan_id));
             _gstate.total_sells += quantity;
         }
     }
 
-    void pass_mart::claimrewards( const name& owner, const uint64_t& product_id){
+    // void pass_mart::claimrewards( const name& owner, const uint64_t& product_id){
 
-        require_auth( owner );
-        product_t::tbl_t product( get_self() , get_self().value );
-        auto p_itr = product.find( product_id );
-        CHECKC( p_itr != product.end(), err::RECORD_NOT_FOUND, "product not found, id:" + to_string(product_id) );
+    //     require_auth( owner );
+    //     product_t::tbl_t product( get_self() , get_self().value );
+    //     auto p_itr = product.find( product_id );
+    //     CHECKC( p_itr != product.end(), err::RECORD_NOT_FOUND, "product not found, id:" + to_string(product_id) );
 
-        auto now = time_point_sec(current_time_point());
-        CHECKC( p_itr->claimrewards_started_at <= now, err::STATUS_ERROR, "It's too early");
-        CHECKC( p_itr->claimrewards_ended_at >= now,err::STATUS_ERROR, "It's too late");
+    //     auto now = time_point_sec(current_time_point());
+    //     CHECKC( p_itr->claimrewards_started_at <= now, err::STATUS_ERROR, "It's too early");
+    //     CHECKC( p_itr->claimrewards_ended_at >= now,err::STATUS_ERROR, "It's too late");
 
-        account_t::tbl_t account( get_self(), owner.value );
-        auto a_itr = account.find( product_id );
-        CHECKC( a_itr != account.end(), err::RECORD_NOT_FOUND, "RECORD_NOT_FOUND" );
-        CHECKC( a_itr->status == account_status::ready, err::STATUS_ERROR, "Claim failed,status:" + a_itr->status.to_string());
-        CHECKC( a_itr->sum_balance.amount > 0, err::DATA_ERROR, "rewards empty");
+    //     account_t::tbl_t account( get_self(), owner.value );
+    //     auto a_itr = account.find( product_id );
+    //     CHECKC( a_itr != account.end(), err::RECORD_NOT_FOUND, "RECORD_NOT_FOUND" );
+    //     CHECKC( a_itr->status == account_status::ready, err::STATUS_ERROR, "Claim failed,status:" + a_itr->status.to_string());
+    //     CHECKC( a_itr->sum_balance.amount > 0, err::DATA_ERROR, "rewards empty");
 
-        auto quantity = a_itr->balance ;
-        CHECKC( quantity.amount > 0 ,err::NOT_POSITIVE, "No claim");
+    //     auto quantity = a_itr->balance ;
+    //     CHECKC( quantity.amount > 0 ,err::NOT_POSITIVE, "No claim");
 
-        account.modify( a_itr, get_self(), [&]( auto& row ){
-            row.updated_at      = now;
-            row.status          = account_status::finished;
-            row.balance         -= quantity;
-        });
+    //     account.modify( a_itr, get_self(), [&]( auto& row ){
+    //         row.updated_at      = now;
+    //         row.status          = account_status::finished;
+    //         row.balance         -= quantity;
+    //     });
 
-        TRANSFER( BANK, owner,quantity, std::string("claim"));
-        _gstate.total_claimed_rewards += quantity;
-    }
+    //     TRANSFER( BANK, owner,quantity, std::string("claim"));
+    //     _gstate.total_claimed_rewards += quantity;
+    // }
 
     void pass_mart::dealtrace(const deal_trace& trace){
 
@@ -471,69 +487,6 @@ namespace mart{
                     row.updated_at      = now;
                     row.status          = status;
                 });
-        }
-    }
-
-    void pass_mart::_tally_rewards( const product_t& product, const name& owner,const asset& quantity, const nasset& nft_quantity, const nasset& gift_quantity){
-
-        _gstate.last_order_id++;
-        auto order_id = _gstate.last_order_id;
-
-        order_t order;
-        order.id                        = order_id;
-        order.product_id                = product.id;
-        order.owner                     = owner;
-        order.quantity                  = quantity;
-        order.nft_quantity              = nft_quantity;
-        order.gift_quantity             = gift_quantity;
-        order.created_at                = time_point_sec(current_time_point());
-
-        _on_order_deal_trace(order);
-
-        asset direct_quantity           = asset( quantity.amount * _gstate.first_rate / 10000, quantity.symbol);
-        asset indirect_quantity         = asset( quantity.amount * _gstate.second_rate / 10000, quantity.symbol);
-        asset partner_quantity          = asset( quantity.amount * _gstate.partner_rate / 10000 ,quantity.symbol);
-
-        asset total_rewards = direct_quantity + indirect_quantity + partner_quantity;
-        //CHECKC( total_rewards <= quantity, err::RATE_OVERLOAD, "Reward overflow");
-        name direct_name = get_account_creator(owner);
-        _creator_reward( product, owner, direct_name , direct_quantity, reward_type::direct);
-
-        name indirect_name = get_account_creator(direct_name);
-        _creator_reward( product, owner, indirect_name , indirect_quantity, reward_type::indirect);
-
-        _on_deal_trace( product.id, owner,_gstate.partner_account, partner_quantity, reward_type::partner);
-        if ( partner_quantity.amount > 0){
-            TRANSFER( BANK, _gstate.partner_account, partner_quantity, std::string("partner reward"));
-        }
-
-        auto storage_quantity = quantity - total_rewards;
-
-        if ( storage_quantity.amount > 0){
-            TRANSFER( BANK, _gstate.storage_account, storage_quantity , std::string(""));
-        }
-
-        if (gift_quantity.amount > 0){
-
-            vector<nasset> giftquants = { gift_quantity };
-            TRANSFER( product.gift_nft.contract_name, owner, giftquants, std::string("KID") );
-        }
-
-        _gstate.total_rewards += total_rewards;
-    }
-
-
-    void pass_mart::_creator_reward( const product_t& product, const name& buyer,const name& creator, const asset& quantity, const name& status ){
-
-        if ( creator != name() && creator != TOP_ACCOUNT){
-
-            _add_quantity( product, creator, quantity, nasset( 0, product.balance.symbol ) );
-            _on_deal_trace( product.id, buyer ,creator, quantity, status );
-
-        }else {
-
-            if ( quantity.amount > 0 )
-                TRANSFER( BANK, _gstate.unable_claimrewards_account, quantity, std::string("unclaimed"));
         }
     }
 
