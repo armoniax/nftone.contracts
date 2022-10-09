@@ -62,9 +62,9 @@ static constexpr uint32_t seconds_per_day       = 24 * 3600;
 static constexpr uint32_t seconds_per_hour      = 3600;
 
 
-static constexpr uint32_t DEFAULT_FIRST_RATE    = 1000;
-static constexpr uint32_t DEFAULT_SECOND_RATE   = 500;
-static constexpr uint32_t DEFAULT_PARTNER_RATE  = 500;
+static constexpr uint32_t DEFAULT_FIRST_RATE    = 0;
+static constexpr uint32_t DEFAULT_SECOND_RATE   = 0;
+static constexpr uint32_t DEFAULT_PARTNER_RATE  = 2000;
 static constexpr uint32_t DEFAULT_OPERABLE_DAYS = 7;
 
 static constexpr uint32_t INITIAL_ID        = 0;
