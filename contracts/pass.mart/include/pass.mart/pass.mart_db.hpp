@@ -72,6 +72,7 @@ namespace mart{
         time_point_sec      claimrewards_ended_at;
 
         gift_t              gift_nft;               // Purchase pass to obtain ID
+        uint64_t            token_split_plan_id;
         product_t(){}
         product_t(const uint64_t& pid) : id(pid){}
 
@@ -93,7 +94,7 @@ namespace mart{
 
         EOSLIB_SERIALIZE(product_t,(id)(title)(owner)(balance)(total_issue)(price)(buy_lock_plan_id)(status)
                         (rule)(created_at)(updated_at)(sell_started_at)(sell_ended_at)
-                        (claimrewards_started_at)(claimrewards_ended_at)(gift_nft))
+                        (claimrewards_started_at)(claimrewards_ended_at)(gift_nft)(token_split_plan_id))
     };
 
     // scope: owner account
