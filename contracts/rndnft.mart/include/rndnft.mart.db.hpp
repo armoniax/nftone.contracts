@@ -101,7 +101,7 @@ TBL booth_t {
     uint64_t primary_key() const { return id; }
     uint128_t by_owner() const { return (uint128_t)owner.value << 64 | (uint128_t)id; }
 
-    typedef eosio::multi_index<"shops"_n, booth_t,
+    typedef eosio::multi_index<"booths"_n, booth_t,
         indexed_by<"owneridx"_n,  const_mem_fun<booth_t, uint128_t, &booth_t::by_owner> >
     > tbl_t;
 
