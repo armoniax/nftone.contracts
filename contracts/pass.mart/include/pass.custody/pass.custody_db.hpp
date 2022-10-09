@@ -53,4 +53,16 @@ struct plan_t {
 
 };
 
+struct split_plan_t {
+    uint64_t                    id;        //PK
+    symbol                      token_symbol;
+    bool                        split_by_rate   = false;  //rate boost by 10000
+
+    uint64_t primary_key()const { return id; }
+
+    typedef eosio::multi_index<"splitplans"_n, split_plan_t > tbl_t;
+
+    EOSLIB_SERIALIZE( split_plan_t, (id)(token_symbol)(split_by_rate) )
+};
+
 }
