@@ -33,7 +33,7 @@ public:
     void enableplan(const name& owner, const uint64_t& pool_id, bool enabled);
     
     [[eosio::action]]
-    void setshoptime(const name& owner, const uint64_t& pool_id, const time_point_sec& opened_at, const time_point_sec& closed_at);
+    void setboothtime(const name& owner, const uint64_t& pool_id, const time_point_sec& opened_at, const time_point_sec& closed_at);
 
     [[eosio::action]]
     void endpool(const name& owner, const uint64_t& pool_id);
@@ -54,10 +54,10 @@ public:
     using deal_trace_action = eosio::action_wrapper<"dealtrace"_n, &rndnft_swap::dealtrace>;
 private:
     uint64_t _rand(uint64_t max_uint,  uint16_t min_unit, name owner , uint64_t pool_id);
-    void _buy_one_nft( shop_t& pool , const name& owner ,deal_trace_s trace, const uint64_t& amount);
+    void _buy_one_nft( booth_t& pool , const name& owner ,deal_trace_s trace, const uint64_t& amount);
     void _on_deal_trace( const deal_trace_s& deal_trace);
     void _add_times( const uint64_t& pool_id, const name& owner);
     void _on_open_transfer( const name& from, const name& to, const asset& quantity, const string& memo);
     void _on_mint_transfer( const name& from, const name& to, const vector<nasset>& assets, const string& memo );
-    void _add_nfts( shop_t& p, const vector<nasset>& quants );
+    void _add_nfts( booth_t& p, const vector<nasset>& quants );
 }; //contract one.rndnft_swap

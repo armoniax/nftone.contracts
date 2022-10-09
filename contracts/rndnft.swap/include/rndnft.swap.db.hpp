@@ -83,7 +83,7 @@ struct price_s {
     EOSLIB_SERIALIZE( price_s,  (value)(received)(fee_receiver) )
 };
 
-struct BLINDBOX shop_t {
+struct BLINDBOX booth_t {
     uint64_t            id = 0;                                             //PK
     name                owner;                                              //pool owner
     string              title;                                              //pool title: <=64 chars
@@ -108,11 +108,11 @@ struct BLINDBOX shop_t {
 
     uint128_t by_owner() const { return (uint128_t)owner.value << 64 | (uint128_t)id; }
 
-    typedef eosio::multi_index<"pools"_n, shop_t,
-        indexed_by<"owneridx"_n,  const_mem_fun<shop_t, uint128_t, &shop_t::by_owner> >
+    typedef eosio::multi_index<"pools"_n, booth_t,
+        indexed_by<"owneridx"_n,  const_mem_fun<booth_t, uint128_t, &booth_t::by_owner> >
     > tbl_t;
 
-    EOSLIB_SERIALIZE( shop_t, (id)(owner)(title)(asset_contract)
+    EOSLIB_SERIALIZE( booth_t, (id)(owner)(title)(asset_contract)
                               (price)(nft_contract)(total_nft_amount)(exchange_nft_amount)
                               (not_exchange_nft_amount)(refund_nft_amount)(nft_current_amount)
                               (status)(allow_to_buy_again)(last_nft_id)(created_at)(updated_at)(opened_at)(closed_at) )
@@ -138,7 +138,7 @@ struct BLINDBOX buyer_t {
 
 
 // scope = pool_id
-struct BLINDBOX shop_nftbox_t {
+struct BLINDBOX booth_nftbox_t {
 
     uint64_t        id = 0;                       //PK, unique within the contract
     nasset          quantity;  
@@ -146,10 +146,10 @@ struct BLINDBOX shop_nftbox_t {
       
     uint64_t primary_key() const { return id; }
 
-    typedef eosio::multi_index<"boxes"_n, shop_nftbox_t
+    typedef eosio::multi_index<"boxes"_n, booth_nftbox_t
     > tbl_t;
 
-    EOSLIB_SERIALIZE( shop_nftbox_t,   (id)(quantity)(transfer_type)
+    EOSLIB_SERIALIZE( booth_nftbox_t,   (id)(quantity)(transfer_type)
                                )
 };
 
