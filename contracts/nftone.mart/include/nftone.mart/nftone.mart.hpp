@@ -20,7 +20,7 @@ static constexpr name      NFT_BANK    = "amax.ntoken"_n;
 static constexpr name      CNYD_BANK   = "cnyd.token"_n;
 static constexpr symbol    CNYD        = symbol(symbol_code("CNYD"), 4);
 
-struct deal_trace {
+struct deal_trace_s {
     uint64_t         seller_order_id;
     uint64_t         bid_id;
     name             maker;
@@ -101,9 +101,9 @@ class [[eosio::contract("nftone.mart")]] nftone_mart : public contract {
    // ACTION takeselorder( const name& issuer, const uint32_t& token_id, const uint64_t& sell_order_id );
    ACTION cancelbid( const name& buyer, const uint64_t& buyer_bid_id );
 
-   ACTION dealtrace(const deal_trace& trace);
+   ACTION dealtrace(const deal_trace_s& trace);
 
-   using deal_trace_action = eosio::action_wrapper<"dealtrace"_n, &nftone_mart::dealtrace>;
+   using deal_trace_s_action = eosio::action_wrapper<"dealtrace"_n, &nftone_mart::dealtrace>;
 
    private:
       global_singleton    _global;
@@ -115,9 +115,9 @@ class [[eosio::contract("nftone.mart")]] nftone_mart : public contract {
 
       void on_buy_transfer(const name& from, const name& to, const asset& quant, const string& memo);
 
-      void _emit_deal_action(const deal_trace& trace);
+      void _emit_deal_action(const deal_trace_s& trace);
 
-      void process_single_buy_order(const name& buyer, order_t& order, asset& quantity, nasset& bought, uint64_t& deal_count, asset& devfee, name& ipowner, asset& ipfee);
+      void process_single_buy_order(const name& buyer, order_s& order, asset& quantity, nasset& bought, uint64_t& deal_count, asset& devfee, name& ipowner, asset& ipfee);
 
       void _settle_maker(const name& buyer, const name& maker, asset& earned, nasset& bought, asset& devfee, const name& ipowner, asset& ipfee);
 

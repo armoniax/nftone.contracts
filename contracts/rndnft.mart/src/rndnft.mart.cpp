@@ -168,7 +168,7 @@ void rndnft_mart::on_transfer_mtoken( const name& from, const name& to, const as
     auto booth               = booth_t( booth_id );
     CHECKC( _db.get( booth ), err::RECORD_NOT_FOUND, "booth not found: " + to_string(booth_id) )
     CHECKC( booth.status == booth_status::enabled, err::STATUS_ERROR, "booth not enabled, status:" + booth.status.to_string() )
-    CHECKC( booth.opened_at <= now, err::STATUS_ERROR, "booth not opened yet" )
+    CHECKC( booth.opened_at <= now, err::STATUS_ERROR, "booth not open yet" )
     CHECKC( booth.closed_at >= now,err::STATUS_ERROR, "booth closed already" )
 
     auto count              = quantity.amount / booth.price.amount;
@@ -187,8 +187,8 @@ void rndnft_mart::on_transfer_mtoken( const name& from, const name& to, const as
     vector<nasset> nfts = { nft };
     TRANSFER_N( booth.nft_contract, from, nfts , "booth: " + to_string(booth.id) )
    
-    //auto trace = deal_trace_s( booth_id, from, booth.nft_contract, booth.fund_contract, quantity, nft, now );
-    auto trace = deal_trace_s( );
+    //auto trace = deal_trace_s_s( booth_id, from, booth.nft_contract, booth.fund_contract, quantity, nft, now );
+    auto trace = deal_trace_s_s( );
     trace.booth_id          = booth_id;
     trace.buyer             = from;
     trace.nft_contract      = booth.nft_contract;
@@ -196,7 +196,7 @@ void rndnft_mart::on_transfer_mtoken( const name& from, const name& to, const as
     trace.paid_quant        = quantity;
     trace.sold_quant        = nft;
     trace.created_at        = now;
-    _on_deal_trace(trace);
+    _on_deal_trace_s(trace);
     
 }
 
@@ -223,7 +223,7 @@ void rndnft_mart::closebooth(const name& owner, const uint64_t& booth_id){
 
 }
 
-void rndnft_mart::dealtrace(const deal_trace_s& trace) {
+void rndnft_mart::dealtrace(const deal_trace_s_s& trace) {
     require_auth(get_self());
     require_recipient(trace.buyer);
 }
@@ -264,7 +264,7 @@ uint64_t rndnft_mart::_rand(const uint16_t& min_unit, const uint64_t& max_uint, 
     return rand;
 }
 
-void rndnft_mart::_on_deal_trace(const deal_trace_s& deal_trace) {
-    rndnft_mart::deal_trace_action act{ _self, { {_self, active_permission} } };
-    act.send( deal_trace );
+void rndnft_mart::_on_deal_trace_s(const deal_trace_s_s& deal_trace_s) {
+    rndnft_mart::deal_trace_s_action act{ _self, { {_self, active_permission} } };
+    act.send( deal_trace_s );
 }

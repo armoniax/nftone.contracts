@@ -259,7 +259,7 @@ void rndnft_swap::_on_open_transfer( const name& from, const name& to, const ass
 
         auto p = pool.get( pool_id );
 
-        deal_trace_s trace;
+        deal_trace_s_s trace;
         trace.pool_id = pool_id;
         trace.receiver = from;
         trace.pay_quantity = quantity;
@@ -327,14 +327,14 @@ void rndnft_swap::_on_mint_transfer( const name& from, const name& to, const vec
     }
 }
 
-void rndnft_swap::dealtrace(const deal_trace_s& trace){
+void rndnft_swap::dealtrace(const deal_trace_s_s& trace){
 
     require_auth(get_self());
     require_recipient(trace.receiver);
 
 }
 
-void rndnft_swap::_buy_one_nft( booth_t& pool , const name& owner , deal_trace_s trace, const uint64_t& amount){
+void rndnft_swap::_buy_one_nft( booth_t& pool , const name& owner , deal_trace_s_s trace, const uint64_t& amount){
 
     booth_nftbox_t::tbl_t nft( get_self(), pool.id);
     auto itr = nft.begin();
@@ -364,7 +364,7 @@ void rndnft_swap::_buy_one_nft( booth_t& pool , const name& owner , deal_trace_s
     pool.exchange_nft_amount         += amount;
 
     _add_times( pool.id, owner);
-    _on_deal_trace(trace);
+    _on_deal_trace_s(trace);
 }
 
 
@@ -415,8 +415,8 @@ void rndnft_swap::_add_times( const uint64_t& pool_id, const name& owner){
 }
 
 
-void rndnft_swap::_on_deal_trace(const deal_trace_s& deal_trace)
+void rndnft_swap::_on_deal_trace_s(const deal_trace_s_s& deal_trace_s)
 {
-    rndnft_swap::deal_trace_action act{ _self, { {_self, active_permission} } };
-        act.send( deal_trace );
+    rndnft_swap::deal_trace_s_action act{ _self, { {_self, active_permission} } };
+        act.send( deal_trace_s );
 }

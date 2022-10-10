@@ -30,46 +30,24 @@ enum class err: uint8_t {
    MISC                 = 255
 };
 
-namespace product_status {
-    static constexpr eosio::name none            = "none"_n;
-    static constexpr eosio::name opened          = "opened"_n;
-    static constexpr eosio::name closed          = "closed"_n;
-    static constexpr eosio::name processing      = "processing"_n;
+namespace pass_status {
+    static constexpr eosio::name none           = "none"_n;
+    static constexpr eosio::name open         = "open"_n;
+    static constexpr eosio::name closed         = "closed"_n;
+    static constexpr eosio::name processing     = "processing"_n;
 };
 
-namespace account_status{
-    static constexpr eosio::name none           = "none"_n;
-    static constexpr eosio::name ready          = "ready"_n;
-    static constexpr eosio::name finished       = "finished"_n;
-}
-
-namespace reward_type {
-    static constexpr eosio::name none           = "none"_n;
-    static constexpr eosio::name direct         = "direct"_n;
-    static constexpr eosio::name indirect       = "indirect"_n;
-    static constexpr eosio::name partner        = "partner"_n;
-}
-constexpr eosio::name BANK                      = "amax.mtoken"_n;
-
-static constexpr symbol    MUSDT                = symbol(symbol_code("MUSDT"), 6);
+constexpr eosio::name MBANK                     = "amax.mtoken"_n;
+static constexpr symbol MUSDT                   = symbol(symbol_code("MUSDT"), 6);
 
 static constexpr uint32_t MAX_TITLE_SIZE        = 64;
 
-static constexpr uint32_t seconds_per_year      = 24 * 3600 * 7 * 52;
-static constexpr uint32_t seconds_per_month     = 24 * 3600 * 30;
-static constexpr uint32_t seconds_per_week      = 24 * 3600 * 7;
-static constexpr uint32_t seconds_per_day       = 24 * 3600;
-static constexpr uint32_t seconds_per_hour      = 3600;
+// static constexpr uint32_t seconds_per_year      = 24 * 3600 * 7 * 52;
+// static constexpr uint32_t seconds_per_month     = 24 * 3600 * 30;
+// static constexpr uint32_t seconds_per_week      = 24 * 3600 * 7;
+// static constexpr uint32_t seconds_per_day       = 24 * 3600;
+// static constexpr uint32_t seconds_per_hour      = 3600;
 
-
-static constexpr uint32_t DEFAULT_FIRST_RATE    = 0;
-static constexpr uint32_t DEFAULT_SECOND_RATE   = 0;
-static constexpr uint32_t DEFAULT_PARTNER_RATE  = 2000;
-static constexpr uint32_t DEFAULT_OPERABLE_DAYS = 7;
-
-static constexpr uint32_t INITIAL_ID        = 0;
-
-static constexpr eosio::name TOP_ACCOUNT = "amax"_n;
 static constexpr eosio::name active_permission{"active"_n};
 
 #define TRANSFER(bank, to, quantity, memo) \

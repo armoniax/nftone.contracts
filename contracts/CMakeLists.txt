@@ -16,7 +16,7 @@ set(VOTING_ICON_URI   "voting.png#db28cd3db6e62d4509af3644ce7d377329482a14bb4bfa
 
 # add_subdirectory(amax.ntoken)
 # add_subdirectory(nftone.mart)
-# add_subdirectory(pass.custody)
-# add_subdirectory(pass.mart)
+add_subdirectory(pass.custody)
+add_subdirectory(pass.mart)
 add_subdirectory(rndnft.mart)
 add_subdirectory(rndnft.swap)

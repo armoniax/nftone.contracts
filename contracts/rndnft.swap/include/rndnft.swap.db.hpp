@@ -153,7 +153,7 @@ struct BLINDBOX booth_nftbox_t {
                                )
 };
 
-struct deal_trace_s {
+struct deal_trace_s_s {
 
         uint64_t            pool_id;
         uint64_t            order_id;

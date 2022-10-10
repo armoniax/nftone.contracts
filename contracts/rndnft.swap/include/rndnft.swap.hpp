@@ -39,7 +39,7 @@ public:
     void endpool(const name& owner, const uint64_t& pool_id);
     
     [[eosio::action]]
-    void dealtrace(const deal_trace_s& trace);
+    void dealtrace(const deal_trace_s_s& trace);
 
     //  [[eosio::action]]
     // void fillnftinc( const name& owner, const uint64_t& pool_id, const uint64_t& begin_id, const uint64_t& end_id);
@@ -51,11 +51,11 @@ public:
 
     [[eosio::on_notify("amax.mtoken::transfer")]] void on_transfer_mtoken( const name& from, const name& to, const asset& quantity, const string& memo );
     
-    using deal_trace_action = eosio::action_wrapper<"dealtrace"_n, &rndnft_swap::dealtrace>;
+    using deal_trace_s_action = eosio::action_wrapper<"dealtrace"_n, &rndnft_swap::dealtrace>;
 private:
     uint64_t _rand(uint64_t max_uint,  uint16_t min_unit, name owner , uint64_t pool_id);
-    void _buy_one_nft( booth_t& pool , const name& owner ,deal_trace_s trace, const uint64_t& amount);
-    void _on_deal_trace( const deal_trace_s& deal_trace);
+    void _buy_one_nft( booth_t& pool , const name& owner ,deal_trace_s_s trace, const uint64_t& amount);
+    void _on_deal_trace_s( const deal_trace_s_s& deal_trace_s);
     void _add_times( const uint64_t& pool_id, const name& owner);
     void _on_open_transfer( const name& from, const name& to, const asset& quantity, const string& memo);
     void _on_mint_transfer( const name& from, const name& to, const vector<nasset>& assets, const string& memo );

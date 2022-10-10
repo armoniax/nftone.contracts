@@ -158,7 +158,7 @@ using namespace std;
             });
          }
 
-         deal_trace trace;
+         deal_trace_s trace;
          trace.seller_order_id   =  order.id;
          trace.bid_id            =  0;
          trace.maker             =  order.maker;
@@ -267,7 +267,7 @@ using namespace std;
       auto ipfee                    = asset(0, _gstate.pay_symbol);
       _settle_maker( bid_itr->buyer, seller, earned, bought, devfee, ipowner, ipfee );
 
-      deal_trace trace;
+      deal_trace_s trace;
       trace.seller_order_id         =  sell_itr->id;
       trace.bid_id                  =  bid_itr->id;
       trace.maker                   =  sell_itr->maker;
@@ -285,7 +285,7 @@ using namespace std;
 
    /////////////////////////////// private funcs below /////////////////////////////////////////////
 
-   void nftone_mart::process_single_buy_order(const name& buyer, order_t& order, asset& quantity, nasset& bought, uint64_t& deal_count, asset& devfee, name& ipowner, asset& ipfee) {
+   void nftone_mart::process_single_buy_order(const name& buyer, order_s& order, asset& quantity, nasset& bought, uint64_t& deal_count, asset& devfee, name& ipowner, asset& ipfee) {
       auto earned                = asset(0, _gstate.pay_symbol); //to seller
       auto offer_cost            = order.frozen * order.price.value.amount;
 
@@ -399,19 +399,19 @@ using namespace std;
    //                   const int64_t     count,
    //                   const time_point_sec created_at)
    //  {
-   //       amax::nftone_mart::deal_trace_action act{ _self, { {_self, active_permission} } };
+   //       amax::nftone_mart::deal_trace_s_action act{ _self, { {_self, active_permission} } };
 	// 		act.send( seller_order_id, bid_id, maker, buyer, price, fee, count, created_at );
 
    // }
 
-   void nftone_mart::dealtrace(const deal_trace& trace) {
+   void nftone_mart::dealtrace(const deal_trace_s& trace) {
       require_auth(get_self());
       require_recipient(trace.maker);
       require_recipient(trace.buyer);
    }
 
-   void nftone_mart::_emit_deal_action(const deal_trace& trace) {
-      amax::nftone_mart::deal_trace_action act{ _self, { {_self, active_permission} } };
+   void nftone_mart::_emit_deal_action(const deal_trace_s& trace) {
+      amax::nftone_mart::deal_trace_s_action act{ _self, { {_self, active_permission} } };
 		act.send( trace );
    }
 

@@ -101,7 +101,7 @@ struct price_s {
 
 
 //Scope: nasset.symbol.id
-TBL order_t {
+TBL order_s {
     uint64_t        id;                 //PK
     price_s         price;
     int64_t         frozen;             //nft amount for sellers
@@ -109,8 +109,8 @@ TBL order_t {
     time_point_sec  created_at;
     time_point_sec  updated_at;
 
-    order_t() {}
-    order_t(const uint64_t& i): id(i) {}
+    order_s() {}
+    order_s(const uint64_t& i): id(i) {}
 
     uint64_t primary_key()const { return id; }
 
@@ -120,7 +120,7 @@ TBL order_t {
     uint128_t by_maker_large_price_first()const { return (uint128_t) maker.value << 64 | (uint128_t) (std::numeric_limits<uint64_t>::max() - price.value.amount ); }
     uint128_t by_maker_created_at()const { return (uint128_t) maker.value << 64 | (uint128_t) created_at.sec_since_epoch(); }
 
-    EOSLIB_SERIALIZE( order_t, (id)(price)(frozen)(maker)(created_at)(updated_at) )
+    EOSLIB_SERIALIZE( order_s, (id)(price)(frozen)(maker)(created_at)(updated_at) )
 
 };
 
@@ -177,17 +177,17 @@ TBL buyer_bid_t {
 */
 
 typedef eosio::multi_index
-< "sellorders"_n,  order_t,
-    indexed_by<"makerordidx"_n,     const_mem_fun<order_t, uint128_t, &order_t::by_maker_small_price_first> >,
-    indexed_by<"makercreated"_n,    const_mem_fun<order_t, uint128_t, &order_t::by_maker_created_at> >,
-    indexed_by<"priceidx"_n,        const_mem_fun<order_t, uint64_t,  &order_t::by_small_price_first> >
+< "sellorders"_n,  order_s,
+    indexed_by<"makerordidx"_n,     const_mem_fun<order_s, uint128_t, &order_s::by_maker_small_price_first> >,
+    indexed_by<"makercreated"_n,    const_mem_fun<order_s, uint128_t, &order_s::by_maker_created_at> >,
+    indexed_by<"priceidx"_n,        const_mem_fun<order_s, uint64_t,  &order_s::by_small_price_first> >
 > sellorder_idx;
 
 // //buyer to bid for the token ID
 // typedef eosio::multi_index
-// < "buyorders"_n,  order_t,
-//     indexed_by<"makerordidx"_n,  const_mem_fun<order_t, uint128_t, &order_t::by_maker_large_price_first> >,
-//     indexed_by<"priceidx"_n,  const_mem_fun<order_t, uint64_t, &order_t::by_large_price_first> >
+// < "buyorders"_n,  order_s,
+//     indexed_by<"makerordidx"_n,  const_mem_fun<order_s, uint128_t, &order_s::by_maker_large_price_first> >,
+//     indexed_by<"priceidx"_n,  const_mem_fun<order_s, uint64_t, &order_s::by_large_price_first> >
 // > buyorder_idx;
 
 } //namespace amax

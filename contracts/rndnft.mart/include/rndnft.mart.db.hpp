@@ -126,7 +126,7 @@ TBL booth_nftbox_t {
     EOSLIB_SERIALIZE( booth_nftbox_t,  (booth_id)(nfts) )
 };
 
-struct deal_trace_s {
+struct deal_trace_s_s {
     uint64_t            booth_id;
     name                buyer;
     name                nft_contract;
