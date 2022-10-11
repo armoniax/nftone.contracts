@@ -213,7 +213,7 @@ void rndnft_mart::closebooth(const name& owner, const uint64_t& booth_id){
 
     vector<nasset> refund_nfts;
     for( auto itr = boothboxes.nfts.begin(); itr != boothboxes.nfts.end(); itr++ ) { 
-        refund_nfts.emplace_back( itr->second );
+        refund_nfts.emplace_back( nasset(itr->second,itr->first) );
     }
     _db.del( boothboxes );
     _db.del( booth );
