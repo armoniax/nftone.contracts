@@ -7,15 +7,13 @@ mpush pass.mart init '["armoniaadmin","pass.ntoken","verso.itoken","pass.custody
 mpush pass.mart addpass '["nftone.fund","NFTOne Pass #1",[10001,0],[1000001,0],"330.000000 MUSDT","2022-10-18T01:30:00","2022-11-18T01:30:00",1,1]' -p armoniaadmin
 
 # transfer pass into pass.mart
-//TODO
-
+mpush pass.ntoken transfer '["nftone.fund","pass.mart",[[20000,[10001,0]]],"refuel:1"]' -p nftone.fund 
 # transfer MID into pass.mart
-//TODO
+mpush verso.itoken transfer '["nftone.fund","pass.mart",[[20000,[1000001,0]]],"refuel:1"]' -p nftone.fund 
 
 
 
-
-
+#### TODO for furture passes: 2,3,4,5,6
 #unexecuted below yet
 mpush pass.mart addpass '["nftone.fund","NFTOne Pass #2",[10002,0],[1000001,0],"330.000000 MUSDT","2022-11-18T01:30:00","2022-12-18T01:30:00",2,1]' -p armoniaadmin
 mpush pass.mart addpass '["nftone.fund","NFTOne Pass #3",[10003,0],[1000001,0],"330.000000 MUSDT","2022-10-18T01:30:00","2022-11-18T01:30:00",3,1]' -p armoniaadmin

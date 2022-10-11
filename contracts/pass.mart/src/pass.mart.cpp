@@ -64,12 +64,23 @@ namespace mart{
     void pass_mart::setendtime( const uint64_t& pass_id, const time_point_sec& sell_ended_at ) {
         require_auth( _self );
 
-        auto prod = pass_t( pass_id );
-        CHECKC( _db.get( prod ), err::RECORD_NOT_FOUND, "pass not found , id:" + to_string(pass_id) ) 
-        prod.sell_ended_at    = sell_ended_at;
+        auto pass = pass_t( pass_id );
+        CHECKC( _db.get( pass ), err::RECORD_NOT_FOUND, "pass not found , id:" + to_string(pass_id) ) 
+        pass.sell_ended_at    = sell_ended_at;
 
-        _db.set( prod );
+        _db.set( pass );
     }
+
+     void pass_mart::setowner( const uint64_t& pass_id, const name& owner ) {
+         require_auth( _self );
+
+        auto pass = pass_t( pass_id );
+        CHECKC( _db.get( pass ), err::RECORD_NOT_FOUND, "pass not found , id:" + to_string(pass_id) ) 
+        pass.owner          = owner;
+
+        _db.set( pass );
+     }
+
 
     void pass_mart::addpass( const name& owner, const string& title, const nsymbol& nft_symbol, const nsymbol& gift_symbol, 
                                 const asset& price, const time_point_sec& started_at,
@@ -133,7 +144,7 @@ namespace mart{
         nasset quantity                 = assets[0];
         auto pass                       = pass_t( std::stoul(string(memo_params[1])) );
         CHECKC( _db.get( pass ), err::RECORD_NOT_FOUND, "pass does not exist");
-        CHECKC( pass.status == pass_status::open, err::STATUS_ERROR, "Non open passs" );
+        // CHECKC( pass.status == pass_status::open, err::STATUS_ERROR, "Non open passs" );
         CHECKC( pass.owner == from, err::NO_AUTH, "Unauthorized");
         CHECKC( pass.gift_nft_available.symbol == quantity.symbol, err::SYMBOL_MISMATCH, "Pass Gift NFT Symbol mismatch" )
         

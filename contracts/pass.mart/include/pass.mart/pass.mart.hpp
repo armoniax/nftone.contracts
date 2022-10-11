@@ -34,6 +34,7 @@ class [[eosio::contract("pass.mart")]] pass_mart : public contract{
                             const asset& price, const time_point_sec& started_at,
                             const time_point_sec& ended_at, uint64_t custody_plan_id, const uint64_t& token_split_plan_id);
         
+        ACTION setowner( const uint64_t& pass_id, const name& owner );
         ACTION setendtime( const uint64_t& pass_id, const time_point_sec& sell_ended_at );
         
         ACTION ordertrace(const order_s& order);
@@ -45,7 +46,7 @@ class [[eosio::contract("pass.mart")]] pass_mart : public contract{
         [[eosio::on_notify("amax.mtoken::transfer")]]
         void mtoken_transfer(const name& from, const name& to, const asset& quantity, const string& memo);
 
-        [[eosio::on_notify("verso.mid::transfer")]]
+        [[eosio::on_notify("verso.itoken::transfer")]]
         void verso_transfer(const name& from, const name& to, const vector< nasset >& assets, const string& memo);
         
     private:
