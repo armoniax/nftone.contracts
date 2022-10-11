@@ -218,6 +218,8 @@ namespace mart{
         pass.gift_nft_available         -= gift_quantity;
         pass.updated_at                 = now;
         
+	_db.set( pass );
+	
         order_s order;
         order.id                        = ++_gstate.last_order_id;
         order.pass_id                   = pass.id;
