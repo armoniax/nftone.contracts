@@ -124,7 +124,7 @@ struct CUSTODY_TBL plan_t {
 
     typedef eosio::multi_index<"plans"_n, plan_t,
         indexed_by<"owneridx"_n,  const_mem_fun<plan_t, uint128_t, &plan_t::by_owner> >
-    > tbl_t;
+    > idx_t;
 
     EOSLIB_SERIALIZE( plan_t, (id)(owner)(title)(asset_contract)(asset_symbol)(unlock_interval_days)(unlock_times)
                               (total_issued)(total_locked)(total_unlocked)(total_refunded)(status)(last_lock_id)(created_at)(updated_at) )
@@ -154,7 +154,7 @@ struct CUSTODY_TBL lock_t {
     typedef eosio::multi_index<"locks"_n, lock_t,
         indexed_by<"receiveridx"_n,     const_mem_fun<lock_t, uint128_t, &lock_t::by_receiver_issue>>,
         indexed_by<"receivers"_n,       const_mem_fun<lock_t, uint64_t,  &lock_t::by_receiver>>
-    > tbl_t;
+    > idx_t;
 
     EOSLIB_SERIALIZE( lock_t,   (id)(locker)(receiver)(issued)(locked)(unlocked)
                                 (first_unlock_days)(unlock_interval_days)(unlock_times)
@@ -169,7 +169,7 @@ struct CUSTODY_TBL account {
 
     uint64_t primary_key()const { return owner.value; }
 
-    typedef multi_index_ex< "payaccounts"_n, account > tbl_t;
+    typedef multi_index_ex< "payaccounts"_n, account > idx_t;
 
     EOSLIB_SERIALIZE( account,  (owner)(last_plan_id) )
 };

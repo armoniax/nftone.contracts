@@ -23,7 +23,7 @@ void rndnft_mart::init( const name& admin, const name& fund_distributor){
     require_auth( _self );
     _gstate.admin  = admin;
     _gstate.fund_distributor = fund_distributor;
-//    booth_t::tbl_t booth( get_self(), get_self().value);
+//    booth_t::idx_t booth( get_self(), get_self().value);
 //    auto p_itr = booth.begin();
 //    while( p_itr != booth.end() ){
 //        p_itr = booth.erase( p_itr );

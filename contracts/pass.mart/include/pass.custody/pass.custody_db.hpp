@@ -46,7 +46,7 @@ struct plan_t {
 
     typedef eosio::multi_index<"plans"_n, plan_t,
         indexed_by<"owneridx"_n,  const_mem_fun<plan_t, uint128_t, &plan_t::by_owner> >
-    > tbl_t;
+    > idx_t;
 
     EOSLIB_SERIALIZE( plan_t, (id)(owner)(title)(asset_contract)(asset_symbol)(unlock_interval_days)(unlock_times)
                               (total_issued)(total_locked)(total_unlocked)(total_refunded)(status)(last_lock_id)(created_at)(updated_at) )
@@ -60,7 +60,7 @@ struct split_plan_t {
 
     uint64_t primary_key()const { return id; }
 
-    typedef eosio::multi_index<"splitplans"_n, split_plan_t > tbl_t;
+    typedef eosio::multi_index<"splitplans"_n, split_plan_t > idx_t;
 
     EOSLIB_SERIALIZE( split_plan_t, (id)(token_symbol)(split_by_rate) )
 };

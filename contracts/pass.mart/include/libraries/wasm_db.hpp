@@ -50,7 +50,7 @@ public:
     bool get(RecordType& record) {
         auto scope = code.value;
 
-        typename RecordType::tbl_t idx(code, scope);
+        typename RecordType::idx_t idx(code, scope);
         if (idx.find(record.primary_key()) == idx.end())
             return false;
 
@@ -59,7 +59,7 @@ public:
     }
     template<typename RecordType>
     bool get(const uint64_t& scope, RecordType& record) {
-        typename RecordType::tbl_t idx(code, scope);
+        typename RecordType::idx_t idx(code, scope);
         if (idx.find(record.primary_key()) == idx.end())
             return false;
 
@@ -72,7 +72,7 @@ public:
         auto scope = record.scope();
         if (scope == 0) scope = code.value;
 
-        typename RecordType::tbl_t idx(code, scope);
+        typename RecordType::idx_t idx(code, scope);
         return idx;
     }
 
@@ -80,7 +80,7 @@ public:
     return_t set(const RecordType& record, const name& payer) {
         auto scope = code.value;
 
-        typename RecordType::tbl_t idx(code, scope);
+        typename RecordType::idx_t idx(code, scope);
         auto itr = idx.find( record.primary_key() );
         if ( itr != idx.end()) {
             idx.modify( itr, same_payer, [&]( auto& item ) {
@@ -100,7 +100,7 @@ public:
     return_t set(const RecordType& record) {
         auto scope = code.value;
 
-        typename RecordType::tbl_t idx(code, scope);
+        typename RecordType::idx_t idx(code, scope);
         auto itr = idx.find( record.primary_key() );
         check( itr != idx.end(), "record not found" );
 
@@ -112,7 +112,7 @@ public:
 
     template<typename RecordType>
     return_t set(const uint64_t& scope, const RecordType& record, const bool& isModify = true) {
-        typename RecordType::tbl_t idx(code, scope);
+        typename RecordType::idx_t idx(code, scope);
         
         if (isModify) {
             auto itr = idx.find( record.primary_key() );
@@ -133,7 +133,7 @@ public:
     void del(const RecordType& record) {
         auto scope = code.value;
 
-        typename RecordType::tbl_t idx(code, scope);
+        typename RecordType::idx_t idx(code, scope);
         auto itr = idx.find(record.primary_key());
         if ( itr != idx.end() ) {
             idx.erase(itr);
@@ -142,7 +142,7 @@ public:
 
     template<typename RecordType>
     void del_scope(const uint64_t& scope, const RecordType& record) {
-        typename RecordType::tbl_t idx(code, scope);
+        typename RecordType::idx_t idx(code, scope);
         auto itr = idx.find(record.primary_key());
         if ( itr != idx.end() ) {
             idx.erase(itr);

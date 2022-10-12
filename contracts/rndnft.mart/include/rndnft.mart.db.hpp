@@ -103,7 +103,7 @@ TBL booth_t {
 
     typedef eosio::multi_index<"booths"_n, booth_t,
         indexed_by<"owneridx"_n,  const_mem_fun<booth_t, uint128_t, &booth_t::by_owner> >
-    > tbl_t;
+    > idx_t;
 
     EOSLIB_SERIALIZE( booth_t, (id)(owner)(title)(nft_contract)(fund_contract)(split_plan_id)(price)(fund_recd)
                                (nft_box_num)(nft_num)(nft_num_sum)(status)
@@ -121,7 +121,7 @@ TBL booth_nftbox_t {
     uint64_t primary_key() const { return booth_id; }
 
     typedef eosio::multi_index<"boothboxes"_n, booth_nftbox_t
-    > tbl_t;
+    > idx_t;
 
     EOSLIB_SERIALIZE( booth_nftbox_t,  (booth_id)(nfts) )
 };

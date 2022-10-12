@@ -1,5 +1,5 @@
 #include <nftone.mart/nftone.mart.hpp>
-#include <amax.ntoken/amax.ntoken_db.hpp>
+#include <amax.ntoken/amax.ntoken.db.hpp>
 #include <amax.ntoken/amax.ntoken.hpp>
 #include <aplink.farm/aplink.farm.hpp>
 #include <cnyd.token/amax.xtoken.hpp>
@@ -29,7 +29,7 @@ using namespace std;
       return calc_precision(digit);
    }
 
-   void nftone_mart::init(const symbol& pay_symbol, const name& bank_contract, const name& admin,
+   void nftone_mart::init(const symbol& pay_symbol, const name& pay_contract, const name& admin,
                               const double& devfeerate, const name& feecollector,
                               const double& ipfeerate ) {
       require_auth( _self );
@@ -45,12 +45,20 @@ using namespace std;
       // _gstate.dev_fee_rate          = devfeerate;
       // _gstate.ipowner_fee_rate      = ipfeerate;
       // _gstate.pay_symbol            = pay_symbol;
-      // _gstate.bank_contract         = bank_contract;
+      // _gstate.pay_contract         = pay_contract;
 
       // _gstate.last_buy_order_idx    = 14000;
       _gstate.last_deal_idx         = 100;
       // _gstate.order_expiry_hours    = 72;
 
+   }
+
+   void nftone_mart::on_ntoken_transfer(const name& from, const name& to, const vector<nasset>& quants, const string& memo) {
+      _sell_transfer( from, to, quants, memo );
+   }
+
+   void nftone_mart::on_itoken_transfer(const name& from, const name& to, const vector<nasset>& quants, const string& memo) {
+      _sell_transfer( from, to, quants, memo );
    }
 
    /**
@@ -62,7 +70,7 @@ using namespace std;
     * @param memo: $ask_price       E.g.:  10288    (its currency unit is CNYD)
     *
     */
-   void nftone_mart::onselltransfer(const name& from, const name& to, const vector<nasset>& quants, const string& memo) {
+   void nftone_mart::_sell_transfer(const name& from, const name& to, const vector<nasset>& quants, const string& memo) {
       CHECKC( from != to, err::ACCOUNT_INVALID, "cannot transfer to self" );
 
       if (from == get_self() || to != get_self()) return;
@@ -76,7 +84,7 @@ using namespace std;
       CHECKC( quant.amount > 0, err::PARAM_ERROR, "non-positive quantity not allowed" )
       auto ask_price          = price_s(price, quant.symbol);
 
-      auto sellorders = sellorder_idx( _self, quant.symbol.id );
+      auto sellorders = order_t::idx_t( _self, quant.symbol.id );
       _gstate.last_buy_order_idx ++;
       sellorders.emplace(_self, [&]( auto& row ) {
          row.id         =  _gstate.last_buy_order_idx;
@@ -88,12 +96,12 @@ using namespace std;
    }
 
 
-   void nftone_mart::onbuytransfercnyd(const name& from, const name& to, const asset& quant, const string& memo) {
-      on_buy_transfer(from, to, quant, memo);
+   void nftone_mart::on_cnyd_transfer(const name& from, const name& to, const asset& quant, const string& memo) {
+      _buy_transfer(from, to, quant, memo);
    }
 
-   void nftone_mart::onbuytransfermtoken(const name& from, const name& to, const asset& quant, const string& memo) {
-      on_buy_transfer(from, to, quant, memo);
+   void nftone_mart::on_mtoken_transfer(const name& from, const name& to, const asset& quant, const string& memo) {
+      _buy_transfer(from, to, quant, memo);
    }
 
    /**
@@ -105,7 +113,7 @@ using namespace std;
     * @param memo: $token_id:$order_id:$bid_price
     *       E.g.:  123:1:10288
     */
-   void nftone_mart::on_buy_transfer(const name& from, const name& to, const asset& quant, const string& memo) {
+   void nftone_mart::_buy_transfer(const name& from, const name& to, const asset& quant, const string& memo) {
 
       CHECKC( quant.symbol == _gstate.pay_symbol, err::SYMBOL_MISMATCH, "pay symbol not matched")
       if (from == get_self() || to != get_self()) return;
@@ -126,7 +134,7 @@ using namespace std;
       CHECKC( nstats_itr         != nstats.end(), err::RECORD_NOT_FOUND, "nft token not found: " + to_string(token_id) )
       auto token_pid             = nstats_itr->supply.symbol.parent_id;
       auto nsymb                 = nsymbol( token_id, token_pid );
-      auto orders                = sellorder_idx( _self, token_id );
+      auto orders                = order_t::idx_t( _self, token_id );
       auto bought                = nasset(0, nsymb); //by buyer
       asset price                = asset( 0, _gstate.pay_symbol );
 
@@ -196,7 +204,7 @@ using namespace std;
       }
 
       if (quantity.amount > 0) {
-         TRANSFER_X( _gstate.bank_contract, from, quantity, "nft buy left" )
+         TRANSFER_X( _gstate.pay_contract, from, quantity, "nft buy left" )
       }
    }
 
@@ -221,7 +229,7 @@ using namespace std;
       CHECKC( bid_itr != bids.end(), err::RECORD_NOT_FOUND, "buyer bid not found: " + to_string( buyer_bid_id ))
       auto sell_order_id = bid_itr->sell_order_id;
 
-      auto sellorders               = sellorder_idx( _self, token_id );
+      auto sellorders               = order_t::idx_t( _self, token_id );
       auto sell_itr                 = sellorders.find( sell_order_id );
       CHECKC( sell_itr != sellorders.end(), err::RECORD_NOT_FOUND, "sell order not found: " + to_string( sell_order_id ))
       CHECKC( seller == sell_itr->maker, err::NO_AUTH, "NO_AUTH")
@@ -250,7 +258,7 @@ using namespace std;
          if (bid_count > sell_frozen) {
             auto left = asset( 0, _gstate.pay_symbol );
             left.amount = (bid_count - sell_frozen) * bid_price.value.amount ;
-            TRANSFER_X( _gstate.bank_contract, bid_itr->buyer,left , "take nft left" )
+            TRANSFER_X( _gstate.pay_contract, bid_itr->buyer,left , "take nft left" )
          }
          bought.amount = sell_frozen;
          sellorders.erase( sell_itr );
@@ -285,7 +293,7 @@ using namespace std;
 
    /////////////////////////////// private funcs below /////////////////////////////////////////////
 
-   void nftone_mart::process_single_buy_order(const name& buyer, order_s& order, asset& quantity, nasset& bought, uint64_t& deal_count, asset& devfee, name& ipowner, asset& ipfee) {
+   void nftone_mart::process_single_buy_order(const name& buyer, order_t& order, asset& quantity, nasset& bought, uint64_t& deal_count, asset& devfee, name& ipowner, asset& ipfee) {
       auto earned                = asset(0, _gstate.pay_symbol); //to seller
       auto offer_cost            = order.frozen * order.price.value.amount;
 
@@ -316,19 +324,19 @@ using namespace std;
       ipfee.amount                  = earned.amount * _gstate.ipowner_fee_rate;
 
       if (devfee.amount > 0) {
-         TRANSFER_X( _gstate.bank_contract, _gstate.dev_fee_collector, devfee, "nftone dev fee" )
+         TRANSFER_X( _gstate.pay_contract, _gstate.dev_fee_collector, devfee, "nftone dev fee" )
 
          _reward_farmer( devfee, buyer );
       }
 
       if (ipfee.amount > 0 && ipowner.length() != 0 && is_account(ipowner))
-         TRANSFER_X( _gstate.bank_contract, ipowner, ipfee, "nftone ip fee" )
+         TRANSFER_X( _gstate.pay_contract, ipowner, ipfee, "nftone ip fee" )
       else
          ipfee.amount = 0;
 
       earned -= devfee + ipfee;
       if (earned.amount > 0)
-         TRANSFER_X( _gstate.bank_contract, maker, earned, "sell nft: " + to_string(bought.symbol.id) )
+         TRANSFER_X( _gstate.pay_contract, maker, earned, "sell nft: " + to_string(bought.symbol.id) )
 
    }
 
@@ -342,14 +350,14 @@ using namespace std;
       CHECKC( buyer == bid_itr->buyer, err::NO_AUTH, "NO_AUTH")
 
       auto left = asset( 0, _gstate.pay_symbol );
-      TRANSFER_X( _gstate.bank_contract, bid_itr->buyer, bid_frozen, "cancel" )
+      TRANSFER_X( _gstate.pay_contract, bid_itr->buyer, bid_frozen, "cancel" )
       bids.erase( bid_itr );
    }
 
    void nftone_mart::cancelorder(const name& maker, const uint32_t& token_id, const uint64_t& order_id) {
       require_auth( maker );
 
-      auto orders = sellorder_idx(_self, token_id);
+      auto orders = order_t::idx_t(_self, token_id);
       if (order_id != 0) {
          auto itr = orders.find( order_id );
          CHECKC( itr != orders.end(), err::RECORD_NOT_FOUND, "order not exit: " + to_string(order_id) + "@" + to_string(token_id) )

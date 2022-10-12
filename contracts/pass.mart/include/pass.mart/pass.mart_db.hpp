@@ -56,7 +56,7 @@ namespace mart{
         uint64_t primary_key()const { return id; }
 
         typedef eosio::multi_index<"passes"_n, pass_t
-        > tbl_t;
+        > idx_t;
 
         EOSLIB_SERIALIZE(pass_t, (id)(title)(owner)(nft_total)(nft_available)(price)(custody_plan_id)(status)
                                     (gift_nft_total)(gift_nft_available)(token_split_plan_id)

@@ -78,14 +78,17 @@ class [[eosio::contract("nftone.mart")]] nftone_mart : public contract {
 
     ~nftone_mart() { _global.set( _gstate, get_self() ); }
 
+   //Sell
    [[eosio::on_notify("amax.ntoken::transfer")]]
-   void onselltransfer(const name& from, const name& to, const vector<nasset>& quants, const string& memo);
+   void on_ntoken_transfer(const name& from, const name& to, const vector<nasset>& quants, const string& memo);
+   [[eosio::on_notify("verso.itoken::transfer")]]
+   void on_itoken_transfer(const name& from, const name& to, const vector<nasset>& quants, const string& memo);
 
+   //Buy
    [[eosio::on_notify("cnyd.token::transfer")]]
-   void onbuytransfercnyd(const name& from, const name& to, const asset& quant, const string& memo);
-
+   void on_cnyd_transfer(const name& from, const name& to, const asset& quant, const string& memo);
    [[eosio::on_notify("amax.mtoken::transfer")]]
-   void onbuytransfermtoken(const name& from, const name& to, const asset& quant, const string& memo);
+   void on_mtoken_transfer(const name& from, const name& to, const asset& quant, const string& memo);
 
    ACTION setfeecollec(const name& dev_fee_collector) {
       require_auth( _self );
@@ -93,14 +96,13 @@ class [[eosio::contract("nftone.mart")]] nftone_mart : public contract {
       _gstate.dev_fee_collector = dev_fee_collector;
    }
    
-   ACTION init(const symbol& pay_symbol, const name& bank_contract, const name& admin,
+   ACTION init(const symbol& pay_symbol, const name& pay_contract, const name& admin,
                               const double& devfeerate, const name& feecollector,
                               const double& ipfeerate);
    ACTION cancelorder(const name& maker, const uint32_t& token_id, const uint64_t& order_id);
    ACTION takebuybid( const name& issuer, const uint32_t& token_id, const uint64_t& buyer_bid_id );
    // ACTION takeselorder( const name& issuer, const uint32_t& token_id, const uint64_t& sell_order_id );
    ACTION cancelbid( const name& buyer, const uint64_t& buyer_bid_id );
-
    ACTION dealtrace(const deal_trace_s& trace);
 
    using deal_trace_s_action = eosio::action_wrapper<"dealtrace"_n, &nftone_mart::dealtrace>;
@@ -112,15 +114,12 @@ class [[eosio::contract("nftone.mart")]] nftone_mart : public contract {
    private:
 
       void compute_memo_price( const string& memo, asset& price );
-
-      void on_buy_transfer(const name& from, const name& to, const asset& quant, const string& memo);
-
       void _emit_deal_action(const deal_trace_s& trace);
-
-      void process_single_buy_order(const name& buyer, order_s& order, asset& quantity, nasset& bought, uint64_t& deal_count, asset& devfee, name& ipowner, asset& ipfee);
-
+      void process_single_buy_order(const name& buyer, order_t& order, asset& quantity, nasset& bought, uint64_t& deal_count, asset& devfee, name& ipowner, asset& ipfee);
       void _settle_maker(const name& buyer, const name& maker, asset& earned, nasset& bought, asset& devfee, const name& ipowner, asset& ipfee);
-
       void _reward_farmer( const asset& fee, const name& farmer );
+      void _sell_transfer(const name& from, const name& to, const vector<nasset>& quants, const string& memo);
+      void _buy_transfer(const name& from, const name& to, const asset& quant, const string& memo);
+
 };
 } //namespace amax

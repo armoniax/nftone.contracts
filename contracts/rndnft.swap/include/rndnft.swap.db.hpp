@@ -110,7 +110,7 @@ struct BLINDBOX booth_t {
 
     typedef eosio::multi_index<"pools"_n, booth_t,
         indexed_by<"owneridx"_n,  const_mem_fun<booth_t, uint128_t, &booth_t::by_owner> >
-    > tbl_t;
+    > idx_t;
 
     EOSLIB_SERIALIZE( booth_t, (id)(owner)(title)(asset_contract)
                               (price)(nft_contract)(total_nft_amount)(exchange_nft_amount)
@@ -130,7 +130,7 @@ struct BLINDBOX buyer_t {
     uint64_t primary_key() const { return owner.value; }
 
      typedef eosio::multi_index<"buyers"_n, buyer_t
-    > tbl_t;
+    > idx_t;
 
     EOSLIB_SERIALIZE( buyer_t,   (owner)(buy_times)(created_at)(updated_at)
                                )
@@ -147,7 +147,7 @@ struct BLINDBOX booth_nftbox_t {
     uint64_t primary_key() const { return id; }
 
     typedef eosio::multi_index<"boxes"_n, booth_nftbox_t
-    > tbl_t;
+    > idx_t;
 
     EOSLIB_SERIALIZE( booth_nftbox_t,   (id)(quantity)(transfer_type)
                                )

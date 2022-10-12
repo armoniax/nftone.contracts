@@ -22,13 +22,13 @@ namespace mart{
     }
 
     inline void _check_split_plan( const name& token_split_contract, const uint64_t& token_split_plan_id, const name& scope ) {
-        split_plan_t::tbl_t split_t( token_split_contract, scope.value );
+        split_plan_t::idx_t split_t( token_split_contract, scope.value );
         auto split_itr = split_t.find( token_split_plan_id );
         CHECKC( split_itr != split_t.end(), err::SYMBOL_MISMATCH,"token split plan not found, id:" + to_string(token_split_plan_id));
     }
 
     inline void _check_custody_plan( const name& custody_contract, const name& nft_contract, const nsymbol& nft_symbol, const uint64_t& custody_plan_id ) {
-        plan_t::tbl_t custody_plan( custody_contract, custody_contract.value );
+        plan_t::idx_t custody_plan( custody_contract, custody_contract.value );
         auto itr = custody_plan.find( custody_plan_id );
         CHECKC( itr != custody_plan.end(), err::SYMBOL_MISMATCH, "custody not found, id:" + to_string(custody_plan_id));
         CHECKC( itr->asset_contract == nft_contract, err::DATA_ERROR,"custody contract mismatch");
@@ -105,7 +105,7 @@ namespace mart{
 
         auto now = current_time_point();
 
-        pass_t::tbl_t passs( get_self(), get_self().value);
+        pass_t::idx_t passs( get_self(), get_self().value);
         passs.emplace( get_self(), [&]( auto& row ){
             row.id                          = ++_gstate.last_pass_id;
             row.title                       = title;
@@ -208,7 +208,7 @@ namespace mart{
         ASSERT(memo_params.size() > 0);
 
         CHECKC( memo_params[0] == "buy", err::MEMO_FORMAT_ERROR, "memo format prefix not: buy" )
-        CHECKC(memo_params.size() == 3 , err::MEMO_FORMAT_ERROR, "ontransfer:pass params size of must be 3" )
+        CHECKC( memo_params.size() == 3 , err::MEMO_FORMAT_ERROR, "ontransfer:pass params size of must be 3" )
 
         uint64_t pass_id = std::stoul(string(memo_params[1]));
         uint64_t amount = std::stoul(string(memo_params[2]));
@@ -247,7 +247,7 @@ namespace mart{
         vector<nasset> quants = { nft_quantity };
         TRANSFER( _gstate.nft_contract, _gstate.custody_contract, quants, std::string("lock:") + from.to_string() + ":" + to_string(pass.custody_plan_id) + ":0" )           
 
-        TRANSFER( MBANK, _gstate.token_split_contract, quantity, std::string("plan:") + to_string( pass.token_split_plan_id) )
+        TRANSFER( MBANK, _gstate.token_split_contract, quantity, std::string("plan:") + to_string( pass.token_split_plan_id) + ":" + to_string(amount) )
     }
 
     void pass_mart::ordertrace( const order_s& order){

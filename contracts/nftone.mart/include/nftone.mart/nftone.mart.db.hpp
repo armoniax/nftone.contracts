@@ -42,14 +42,14 @@ NTBL("global") global_t {
     double ipowner_fee_rate         = 0.0;
     double notary_fee_rate          = 0.0;
     uint32_t order_expiry_hours     = 72;
-    eosio::symbol           pay_symbol;
-    name                    bank_contract;
-    aplink_farm             apl_farm;
+    eosio::symbol pay_symbol;
+    name pay_contract               = "amax.mtoken"_n;
+    aplink_farm apl_farm;
     uint64_t last_buy_order_idx     = 0;
     uint64_t last_deal_idx          = 0;
 
     EOSLIB_SERIALIZE( global_t, (admin)(dev_fee_collector)(dev_fee_rate)(creator_fee_rate)(ipowner_fee_rate)
-                                (notary_fee_rate)(order_expiry_hours)(pay_symbol)(bank_contract)
+                                (notary_fee_rate)(order_expiry_hours)(pay_symbol)(pay_contract)
                                 (apl_farm)(last_buy_order_idx)(last_deal_idx) )
 
     // template<typename DataStream>
@@ -62,7 +62,8 @@ NTBL("global") global_t {
     //                 << t.notary_fee_rate
     //                 << t.order_expiry_hours 
     //                 << t.pay_symbol
-    //                 << t.bank_contract
+    //                 << t.pay_contract
+    //                 << t.nft_contract
     //                 << t.apl_farm
     //                 << t.last_buy_order_idx
     //                 << t.last_deal_idx;
@@ -101,7 +102,7 @@ struct price_s {
 
 
 //Scope: nasset.symbol.id
-TBL order_s {
+TBL order_t {
     uint64_t        id;                 //PK
     price_s         price;
     int64_t         frozen;             //nft amount for sellers
@@ -109,8 +110,8 @@ TBL order_s {
     time_point_sec  created_at;
     time_point_sec  updated_at;
 
-    order_s() {}
-    order_s(const uint64_t& i): id(i) {}
+    order_t() {}
+    order_t(const uint64_t& i): id(i) {}
 
     uint64_t primary_key()const { return id; }
 
@@ -120,7 +121,14 @@ TBL order_s {
     uint128_t by_maker_large_price_first()const { return (uint128_t) maker.value << 64 | (uint128_t) (std::numeric_limits<uint64_t>::max() - price.value.amount ); }
     uint128_t by_maker_created_at()const { return (uint128_t) maker.value << 64 | (uint128_t) created_at.sec_since_epoch(); }
 
-    EOSLIB_SERIALIZE( order_s, (id)(price)(frozen)(maker)(created_at)(updated_at) )
+    typedef eosio::multi_index
+    < "sellorders"_n,  order_t,
+        indexed_by<"makerordidx"_n,     const_mem_fun<order_t, uint128_t, &order_t::by_maker_small_price_first> >,
+        indexed_by<"makercreated"_n,    const_mem_fun<order_t, uint128_t, &order_t::by_maker_created_at> >,
+        indexed_by<"priceidx"_n,        const_mem_fun<order_t, uint64_t,  &order_t::by_small_price_first> >
+    > idx_t;
+
+    EOSLIB_SERIALIZE( order_t, (id)(price)(frozen)(maker)(created_at)(updated_at) )
 
 };
 
@@ -155,39 +163,5 @@ TBL buyer_bid_t {
     > idx_t;
 };
 
-/**
-//Scope: owner
-//if not set, a default rate of 1% will be charged to sellers
-//dev fee rate is determined by contract dev only
-// TBL fee_rate_t {
-//     nsymbol     symbol;
-//     float       creator_fee_rate;
-//     float       ipowner_fee_rate;
-//     float       notary_fee_rate;
-
-//     fee_rate_t() {}
-//     fee_rate_t(const nsymbol& symb): symbol(symb) {}
-//     fee_rate_t(const nsymbol& symb, const float& cfr, const float& ifr, const float& nfr): symbol(symb),
-//             creator_fee_rate(cfr), ipowner_fee_rate(ifr), notary_fee_rate(nfr) {}
-
-//     uint64_t primary_key()const { return symbol.id; }
-
-//     EOSLIB_SERIALIZE( fee_rate_t, (symbol)(creator_fee_rate)(ipowner_fee_rate)(notary_fee_rate) )
-// };
-*/
-
-typedef eosio::multi_index
-< "sellorders"_n,  order_s,
-    indexed_by<"makerordidx"_n,     const_mem_fun<order_s, uint128_t, &order_s::by_maker_small_price_first> >,
-    indexed_by<"makercreated"_n,    const_mem_fun<order_s, uint128_t, &order_s::by_maker_created_at> >,
-    indexed_by<"priceidx"_n,        const_mem_fun<order_s, uint64_t,  &order_s::by_small_price_first> >
-> sellorder_idx;
-
-// //buyer to bid for the token ID
-// typedef eosio::multi_index
-// < "buyorders"_n,  order_s,
-//     indexed_by<"makerordidx"_n,  const_mem_fun<order_s, uint128_t, &order_s::by_maker_large_price_first> >,
-//     indexed_by<"priceidx"_n,  const_mem_fun<order_s, uint64_t, &order_s::by_large_price_first> >
-// > buyorder_idx;
 
 } //namespace amax
