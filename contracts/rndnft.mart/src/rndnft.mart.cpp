@@ -179,7 +179,7 @@ void rndnft_mart::on_transfer_mtoken( const name& from, const name& to, const as
 
     booth.fund_recd          += quantity;
     booth.updated_at         = now;
-    auto recv_memo           = "plan:" + to_string( booth.split_plan_id );
+    auto recv_memo           = "plan:" + to_string( booth.split_plan_id ) + ":1";
     TRANSFER( booth.fund_contract, _gstate.fund_distributor, quantity, recv_memo )
     
     nasset nft;
