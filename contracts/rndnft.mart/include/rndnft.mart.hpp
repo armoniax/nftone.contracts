@@ -29,7 +29,7 @@ public:
     ACTION dealtrace( const deal_trace_s_s& trace);
 
     /**
-     * @brief show owner to send nft into one's own booth
+     * @brief booth owner to send nft into one's own booth
      * 
      * @param from 
      * @param to 
