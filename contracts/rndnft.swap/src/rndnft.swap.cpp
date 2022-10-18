@@ -50,7 +50,7 @@ void rndnft_swap::enablebooth(const name& owner, const uint64_t& booth_id, bool 
 
     auto booth = booth_t( booth_id );
     CHECKC( _db.get( booth ),  err::RECORD_NOT_FOUND, "booth not found: " + to_string(booth_id) )
-    CHECKC( owner == booth.owner,  err::NO_AUTH, "non-booth-owner unauthorized" )
+    CHECKC( owner == booth.conf.owner,  err::NO_AUTH, "non-booth-owner unauthorized" )
 
     auto new_status = enabled ? booth_status::enabled : booth_status::disabled;
     CHECKC( booth.status != new_status, err::STATUS_ERROR, "booth status not changed" )
@@ -67,8 +67,8 @@ void rndnft_swap::setboothtime( const name& owner, const uint64_t& booth_id, con
     CHECKC( has_auth( owner ) || has_auth( _self ) || has_auth(_gstate.admin), err::NO_AUTH, "not authorized" )
 
     auto booth = booth_t( booth_id );
-    CHECKC( _db.get( booth ),  err::RECORD_NOT_FOUND, "booth not found: " + to_string(booth_id) )
-    CHECKC( owner == booth.owner,  err::NO_AUTH, "non-booth-owner unauthorized" )
+    CHECKC( _db.get( booth ), err::RECORD_NOT_FOUND, "booth not found: " + to_string(booth_id) )
+    CHECKC( owner == booth.conf.owner, err::NO_AUTH, "non-booth-owner unauthorized" )
 
     booth.conf.opened_at         = opened_at;
     booth.conf.closed_at         = closed_at;
@@ -132,12 +132,10 @@ void rndnft_swap::_refule_nft( booth_t& booth, const vector<nasset>& assets ) {
             _db.get( nftbox );
 
             nftbox.nfts += nft;
+            _db.set( booth.id, nftbox );
         }
 
-      
         new_nft_num             += nft.amount;
-
-        _db.set(nftbox);
     }
 
     booth.base_nft_sum          += new_nft_num;
@@ -196,7 +194,7 @@ void rndnft_swap::_one_nft( const time_point_sec& now, const name& owner, booth_
     auto boothboxes = booth_nftbox_t( booth.id );
     CHECKC( _db.get( booth.id, boothboxes ), err::RECORD_NOT_FOUND, "no nftbox in the booth" )
 
-    uint64_t rand                       = _rand( 1, booth.base_nft_available, booth.owner, booth.id );
+    uint64_t rand                       = _rand( 1, booth.base_nft_available, booth.conf.owner, booth.id );
     uint64_t curr_num                   = 0;
 
     auto boxes_idx = booth_nftbox_t::idx_t(_self, booth.id);
