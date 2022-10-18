@@ -74,6 +74,7 @@ struct nasset {
 };
 
 TBL nstats_t {
+    name            nft_type;
     nasset          supply;
     nasset          max_supply;     // 1 means NFT-721 type
     string          token_uri;      // globally unique uri for token metadata { image, desc,..etc }
@@ -105,7 +106,7 @@ TBL nstats_t {
         indexed_by<"tokenuriidx"_n,     const_mem_fun<nstats_t, checksum256, &nstats_t::by_token_uri> >
     > idx_t;
 
-    EOSLIB_SERIALIZE(nstats_t,  (supply)(max_supply)(token_uri)
+    EOSLIB_SERIALIZE(nstats_t,  (nft_type)(supply)(max_supply)(token_uri)
                                 (ipowner)(notary)(issuer)(issued_at)(notarized_at)(paused) )
 };
 
@@ -122,6 +123,20 @@ TBL account_t {
     EOSLIB_SERIALIZE(account_t, (balance)(paused) )
 
     typedef eosio::multi_index< "accounts"_n, account_t > idx_t;
+};
+
+
+///Scope: owner's account
+TBL allowance_t{
+    name                   spender;                 // PK
+    map<name, uint64_t>    allowances;              // KV : nft_type -> amount
+
+    allowance_t() {}
+    uint64_t primary_key()const { return spender.value; }
+
+    EOSLIB_SERIALIZE(allowance_t, (spender)(allowances) )
+
+    typedef eosio::multi_index< "allowances"_n, allowance_t > idx_t;
 };
 
 } //namespace amax

@@ -18,7 +18,7 @@ constexpr name active_perm = "active"_n;
 #define TRANSFER_N(bank, to, quants, memo) \
     {	ntoken::transfer_action act{ bank, { {_self, active_perm} } };\
 			act.send( _self, to, quants , memo );}
-#define TRANSFERFROM_N(bank,from, to, quants, memo) \
+#define TRANSFERFROM_N(bank, from, to, quants, memo) \
     {	ntoken::transferfrom_action act{ bank, { {_self, active_perm} } };\
 			act.send( _self, from, to, quants , memo );}
 

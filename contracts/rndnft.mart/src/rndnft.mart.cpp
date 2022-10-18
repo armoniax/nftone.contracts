@@ -31,7 +31,7 @@ void rndnft_mart::init( const name& admin, const name& fund_distributor){
 }
 
 void rndnft_mart::createbooth( const name& owner,const string& title, const name& nft_contract, const name& fund_contract,
-                           const uint64_t& split_plan_id, const asset& price, const time_point_sec& opened_at, const uint64_t& opened_days){
+                           const uint64_t& split_plan_id, const asset& price, const time_point_sec& opened_at, const uint64_t& duration_days){
  
     CHECKC( has_auth(get_self()) || has_auth(_gstate.admin), err::NO_AUTH, "Missing required authority of admin or maintainer" );
     
@@ -54,7 +54,7 @@ void rndnft_mart::createbooth( const name& owner,const string& title, const name
     booth.created_at            = now;
     booth.updated_at            = now;
     booth.opened_at             = opened_at;
-    booth.closed_at             = opened_at + opened_days * DAY_SECONDS;
+    booth.closed_at             = opened_at + duration_days * DAY_SECONDS;
 
     _db.set( booth );
 
@@ -92,7 +92,6 @@ void rndnft_mart::setboothtime( const name& owner, const uint64_t& booth_id, con
     _db.set( booth );
 }
 
-
 /// @brief admin/owner to add nft tokens into the booth
 /// @param from 
 /// @param to 
@@ -125,7 +124,7 @@ void rndnft_mart::on_transfer_ntoken( const name& from, const name& to, const ve
         if( _db.get( nftbox )) {
             if( nftbox.nfts.find( nft.symbol ) != nftbox.nfts.end() ) {
                 auto nfts = nftbox.nfts[ nft.symbol ];
-                nfts = nft.amount;
+                nfts += nft.amount;
                 nftbox.nfts[ nft.symbol ] = nfts;
 
             } else {
@@ -229,7 +228,7 @@ void rndnft_mart::dealtrace(const deal_trace_s_s& trace) {
 }
 
 void rndnft_mart::_one_nft( const name& owner, booth_t& booth, nasset& nft ) {
-    auto boothboxes = booth_nftbox_t( booth.id );
+   auto boothboxes = booth_nftbox_t( booth.id );
     CHECKC( _db.get( boothboxes ), err::RECORD_NOT_FOUND, "no nftbox in the booth" )
 
     uint64_t rand       = _rand( 1, booth.nft_num, booth.owner, booth.id );

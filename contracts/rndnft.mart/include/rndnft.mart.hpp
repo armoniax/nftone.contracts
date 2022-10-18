@@ -22,11 +22,32 @@ public:
 
     ACTION init( const name& admin, const name& fund_distributor);
     ACTION createbooth( const name& owner,const string& title, const name& nft_contract, const name& fund_contract,
-                        const uint64_t& split_plan_id, const asset& price, const time_point_sec& opened_at, const uint64_t& opened_days);
+                        const uint64_t& split_plan_id, const asset& price, const time_point_sec& opened_at, const uint64_t& duration_days);
     ACTION enablebooth( const name& owner, const uint64_t& booth_id, bool enabled);
     ACTION setboothtime( const name& owner, const uint64_t& booth_id, const time_point_sec& opened_at, const time_point_sec& closed_at);
     ACTION closebooth( const name& owner, const uint64_t& booth_id);
     ACTION dealtrace( const deal_trace_s_s& trace);
+
+    ACTION delboothbox( const uint64_t& booth_id, const nsymbol& nsymb) {
+        require_auth( _self );
+
+        booth_nftbox_t boothboxes( booth_id );
+        check( _db.get( boothboxes ), "err: booth box not found" );
+
+        boothboxes.nfts.erase( nsymb );
+
+        _db.set( boothboxes );
+    }
+
+    ACTION fixboothbox( const uint64_t& booth_id, const nasset& nfts) {
+        require_auth( _self );
+
+        booth_nftbox_t boothboxes( booth_id );
+        check( _db.get( boothboxes ), "err: booth box not found" );
+
+        boothboxes.nfts[nfts.symbol] = nfts.amount;
+        _db.set( boothboxes );
+    }
 
     /**
      * @brief booth owner to send nft into one's own booth

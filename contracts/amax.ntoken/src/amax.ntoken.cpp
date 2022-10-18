@@ -138,6 +138,43 @@ void ntoken::transfer( const name& from, const name& to, const vector<nasset>& a
 
 }
 
+
+void ntoken::transferfrom( const name& owner, const name& from, const name& to, const vector<nasset>& assets, const string& memo  )
+{
+   check( from != to, "cannot transfer to self" );
+   require_auth( owner );
+   check( is_account( to ), "to account does not exist");
+   check( memo.size() <= 256, "memo has more than 256 bytes" );
+   auto payer = owner;
+
+   allowance_t::idx_t allowances( _self, owner.value);
+   auto itr = allowances.find(from.value);
+   check( itr != allowances.end(), "Unauthorized");
+
+   require_recipient( owner );
+   require_recipient( from );
+   require_recipient( to );
+
+   for( auto& nft : assets) {
+      auto nstats = nstats_t::idx_t( _self, _self.value );
+      const auto& st = nstats.get( nft.symbol.id );
+      
+      check( nft.is_valid(), "invalid nft" );
+      check( nft.amount > 0, "must transfer positive nft amount" );
+      check( nft.symbol == st.supply.symbol, "NFT symbol mismatch" );
+      check( itr->allowances.count(st.nft_type), "Unauthorized NFT:" + st.nft_type.to_string() );
+      check( itr->allowances.at(st.nft_type) >= nft.amount, "Overdrawn nfts" );
+
+      allowances.modify( itr,same_payer, [&](auto& row){
+         row.allowances[st.nft_type] -= nft.amount;
+      });
+
+      sub_balance( from, nft );
+      add_balance( to, nft, payer );
+    }
+
+}
+
 void ntoken::sub_balance( const name& owner, const nasset& value ) {
    auto from_acnts = account_t::idx_t( get_self(), owner.value );
 

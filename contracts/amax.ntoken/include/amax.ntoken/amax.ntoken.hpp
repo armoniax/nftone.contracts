@@ -71,6 +71,8 @@ class [[eosio::contract("amax.ntoken")]] ntoken : public contract {
    ACTION transfer( const name& from, const name& to, const vector<nasset>& assets, const string& memo );
    using transfer_action = action_wrapper< "transfer"_n, &ntoken::transfer >;
 
+   ACTION transferfrom( const name& owner, const name& from, const name& to, const vector<nasset>& assets, const string& memo );
+   using transfer_from_action = action_wrapper< "transferfrom"_n, &ntoken::transferfrom >;
    /**
     * @brief fragment a NFT into multiple common or unique NFT pieces
     *
