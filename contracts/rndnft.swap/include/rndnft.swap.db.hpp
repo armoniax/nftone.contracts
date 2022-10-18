@@ -69,12 +69,6 @@ namespace booth_status {
     static constexpr eosio::name disabled           = "disabled"_n;
 };
 
-// namespace nft_random_type {
-//     static constexpr eosio::name none               = "none"_n;
-//     static constexpr eosio::name nftboxnum          = "nftboxnum"_n;
-//     static constexpr eosio::name nftnum             = "nftnum"_n;
-// };
-
 struct booth_conf_s {
     name                owner;                                  //shop owner
     string              title;                                  //shop title: <=64 chars      
@@ -89,10 +83,10 @@ TBL booth_t {
     uint64_t            id = 0;                                 //PK
     booth_conf_s        conf;
     uint64_t            base_nft_sum;
-    uint64_t            base_nft_available;
-    uint64_t            base_nftbox_available;
+    uint64_t            base_nft_num;
+    uint64_t            base_nftbox_num;
     nasset              quote_nft_recd = nasset(0, conf.quote_nft_price.symbol);
-    name                status = booth_status::enabled;          //status, see plan_status_t
+    name                status = booth_status::enabled;         //status, see plan_status_t
     time_point_sec      created_at;                             //creation time (UTC time)
     time_point_sec      updated_at;                             //update time: last updated at
 
@@ -106,7 +100,7 @@ TBL booth_t {
         indexed_by<"owneridx"_n,  const_mem_fun<booth_t, uint128_t, &booth_t::by_owner> >
     > idx_t;
 
-    EOSLIB_SERIALIZE( booth_t,  (id)(conf)(base_nft_sum)(base_nft_available)(base_nftbox_available)
+    EOSLIB_SERIALIZE( booth_t,  (id)(conf)(base_nft_sum)(base_nft_num)(base_nftbox_num)
                                 (quote_nft_recd)(status)(created_at)(updated_at) )
 
 };

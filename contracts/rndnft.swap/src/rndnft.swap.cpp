@@ -100,17 +100,18 @@ void rndnft_swap::on_transfer_ntoken( const name& from, const name& to, const ve
     CHECKC( booth.status == booth_status::enabled, err::STATUS_ERROR, "booth not enabled, status:" + booth.status.to_string() )
 
     if( memo_params[0] == "refuel" ) {
-        _refule_nft( booth, assets );
+        _refuel_nft( assets, booth );
 
     } else { //swap
         CHECKC( assets.size() == 1, err::OVERSIZED, "must be 1 asset only to swap in" )
-        _swap_nft( from, booth, assets[0] );
+        _swap_nft( from, assets[0], booth );
     }
 }
 
-void rndnft_swap::_refule_nft( booth_t& booth, const vector<nasset>& assets ) {
+void rndnft_swap::_refuel_nft( const vector<nasset>& assets, booth_t& booth ) {
     uint64_t new_nft_num        = 0;
     uint64_t new_nftbox_num     = 0;
+
     for( nasset nft : assets ) {
         CHECKC( nft.amount > 0, err::NOT_POSITIVE, "NFT amount must be positive" )
 
@@ -129,7 +130,7 @@ void rndnft_swap::_refule_nft( booth_t& booth, const vector<nasset>& assets ) {
         } else {
             auto id = itr->id;
             auto nftbox = booth_nftbox_t(id);
-            _db.get( nftbox );
+            _db.get( booth.id, nftbox );
 
             nftbox.nfts += nft;
             _db.set( booth.id, nftbox );
@@ -139,38 +140,39 @@ void rndnft_swap::_refule_nft( booth_t& booth, const vector<nasset>& assets ) {
     }
 
     booth.base_nft_sum          += new_nft_num;
-    booth.base_nft_available    += new_nft_num;
-    booth.base_nftbox_available += new_nftbox_num;
+    booth.base_nft_num    += new_nft_num;
+    booth.base_nftbox_num += new_nftbox_num;
     booth.updated_at            = current_time_point();
 
     _db.set( booth.id, booth );
 }
 
-void rndnft_swap::_swap_nft( const name& user, const booth_t& booth, const nasset& paid_nft ) {
+void rndnft_swap::_swap_nft( const name& user, const nasset& paid_nft, booth_t& booth ) {
     CHECKC( booth.conf.quote_nft_contract == get_first_receiver(), err::DATA_MISMATCH, "sent NFT mismatches with booth's quote nft" );
-    CHECKC( booth.base_nft_available > 0, err::OVERSIZED, "zero nft left" )
+    CHECKC( booth.base_nft_num > 0, err::OVERSIZED, "zero nft left" )
     
-    // auto swap_amount = asset.amount / booth.quote_nft_price.amount;
-    // CHECKC( swap_amount <= _gstate.batch_swap_max_nfts, err::OVERSIZED, "oversized swap_amount: " + to_string(swap_amount) )
+    auto swap_amount = paid_nft.amount / booth.conf.quote_nft_price.amount;
+    CHECKC( swap_amount <= _gstate.batch_swap_max_nfts, err::OVERSIZED, "oversized swap_amount: " + to_string(swap_amount) )
 
-    // booth.quote_nft_recd        += paid_nft;
-    // auto now                    = time_point_sec( current_time_point() );
-    // for( size_t i; i < swap_amount; i++ ) {
-    //     nasset nft;
-    //     _one_nft( now, user, booth, nft );
-    //     vector<nasset> nfts = { nft };
-    //     TRANSFER_N( booth.conf.base_nft_contract, user, nfts, "swap@" + to_string(booth.id) )
+    booth.quote_nft_recd        += paid_nft;
+    auto now                    = time_point_sec( current_time_point() );
 
-    //     auto trace = deal_trace_s_s( );
-    //     trace.booth_id          = booth_id;
-    //     trace.user              = user;
-    //     trace.base_nft_contract = booth.conf.base_nft_contract;
-    //     trace.quote_nft_contract= booth.conf.quote_nft_contract;
-    //     trace.paid_quant        = paid_nft;
-    //     trace.sold_quant        = nft;
-    //     trace.created_at        = now;
-    //     _on_deal_trace_s(trace);
-    // }
+    for( size_t i = 0; i < swap_amount; i++ ) {
+        nasset nft;
+        _one_nft( now, user, booth, nft );
+        vector<nasset> nfts = { nft };
+        TRANSFER_N( booth.conf.base_nft_contract, user, nfts, "swap@" + to_string(booth.id) )
+
+        auto trace = deal_trace_s_s( );
+        trace.booth_id          = booth.id;
+        trace.user              = user;
+        trace.base_nft_contract = booth.conf.base_nft_contract;
+        trace.quote_nft_contract= booth.conf.quote_nft_contract;
+        trace.paid_quant        = paid_nft;
+        trace.sold_quant        = nft;
+        trace.created_at        = now;
+        _on_deal_trace_s(trace);
+    }
 }
 
 void rndnft_swap::closebooth(const name& owner, const uint64_t& booth_id){
@@ -194,27 +196,26 @@ void rndnft_swap::_one_nft( const time_point_sec& now, const name& owner, booth_
     auto boothboxes = booth_nftbox_t( booth.id );
     CHECKC( _db.get( booth.id, boothboxes ), err::RECORD_NOT_FOUND, "no nftbox in the booth" )
 
-    uint64_t rand                       = _rand( 1, booth.base_nft_available, booth.conf.owner, booth.id );
-    uint64_t curr_num                   = 0;
+    uint64_t rand                       = _rand( 0, booth.base_nftbox_num, booth.conf.owner, booth.id );
+    auto nftboxes                       = booth_nftbox_t::idx_t( _self, booth.id );
+    auto nftidx                         = nftboxes.get_index<"nftidx"_n>();
+    auto itr                            = nftidx.lower_bound( rand );
 
-    auto boxes_idx = booth_nftbox_t::idx_t(_self, booth.id);
-    auto itr = boxes_idx.begin();
-    advance( itr, rand - 1 );
+    if( itr == nftidx.end() ) 
+        itr = nftidx.begin();
 
-    if( itr != boxes_idx.end() ) {
-        booth.base_nft_available--;
-        nft = itr->nfts;
-        nft.amount = 1;
+    booth.base_nft_num--;
+    nft = itr->nfts;
+    nft.amount = 1;
 
-        // itr->nfts -= nft;
-        boxes_idx.modify(*itr, same_payer, [&]( auto& row ) {
-            row.nfts -= nft;
-        });
-        
-        if( itr->nfts.amount == 0) {
-            booth.base_nftbox_available--;
-            boxes_idx.erase( itr );
-        }
+    // itr->nfts -= nft;
+    nftboxes.modify(*itr, same_payer, [&]( auto& row ) {
+        row.nfts -= nft;
+    });
+    
+    if( itr->nfts.amount == 0) {
+        booth.base_nftbox_num--;
+        nftidx.erase( itr );
     }
 
     booth.updated_at  = now;

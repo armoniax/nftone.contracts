@@ -44,7 +44,7 @@ private:
     uint64_t _rand(const uint16_t& min_unit, const uint64_t& max_uint, const name& owner, const uint64_t& booth_id);
     void _one_nft( const time_point_sec& now, const name& owner, booth_t& booth, nasset& nft );
     void _on_deal_trace_s( const deal_trace_s_s& deal_trace_s);
-    void _refule_nft( booth_t& booth, const vector<nasset>& assets );
-    void _swap_nft( const name& user, const booth_t& booth, const nasset& paid_nft );
+    void _refuel_nft( const vector<nasset>& assets, booth_t& booth );
+    void _swap_nft( const name& user, const nasset& paid_nft, booth_t& booth );
 
 };
