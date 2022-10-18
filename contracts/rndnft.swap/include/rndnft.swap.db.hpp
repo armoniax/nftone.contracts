@@ -113,15 +113,17 @@ TBL booth_t {
 
 //scope: booth_id
 TBL booth_nftbox_t {
-    uint64_t id;
+    uin64_t id;         //PK
     nasset  nfts;
       
     booth_nftbox_t() {}
-    booth_nftbox_t( const uint64_t& sid ): nfts.symbol.id(sid) {}
+    booth_nftbox_t( const uint64_t& i ): id(i) {}
 
-    uint64_t primary_key() const { return nfts.symbol.id; }
+    uint64_t primary_key() const { return id; }
+    uint64_t by_nft_id()const { return nfts.symbol.id; }
 
-    typedef eosio::multi_index<"boothboxes"_n, booth_nftbox_t
+    typedef eosio::multi_index<"boothboxes"_n, booth_nftbox_t,
+        indexed_by<"nftidx"_n,       const_mem_fun<booth_nftbox_t, uint64_t, &booth_nftbox_t::by_nft_id> >,
     > idx_t;
 
     EOSLIB_SERIALIZE( booth_nftbox_t, (nfts) )

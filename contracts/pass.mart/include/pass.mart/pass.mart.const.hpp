@@ -32,13 +32,15 @@ enum class err: uint8_t {
 
 namespace pass_status {
     static constexpr eosio::name none           = "none"_n;
-    static constexpr eosio::name open         = "open"_n;
+    static constexpr eosio::name open           = "open"_n;
     static constexpr eosio::name closed         = "closed"_n;
     static constexpr eosio::name processing     = "processing"_n;
 };
 
 constexpr eosio::name MBANK                     = "amax.mtoken"_n;
 static constexpr symbol MUSDT                   = symbol(symbol_code("MUSDT"), 6);
+constexpr eosio::name SYS_BANK                  = "amax.token"_n;
+static constexpr symbol AMAX                    = symbol(symbol_code("AMAX"), 8);
 
 static constexpr uint32_t MAX_TITLE_SIZE        = 64;
 

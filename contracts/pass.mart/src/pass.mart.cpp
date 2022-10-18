@@ -1,8 +1,8 @@
 #include <pass.mart/pass.mart.hpp>
-#include <pass.mart/pass.mart_db.hpp>
-#include <pass.mart/pass.mart_const.hpp>
-#include <pass.custody/pass.custody_db.hpp>
-#include <amax.ntoken/amax.ntoken_db.hpp>
+#include <pass.mart/pass.mart.db.hpp>
+#include <pass.mart/pass.mart.const.hpp>
+#include <pass.custody/pass.custody.db.hpp>
+#include <amax.ntoken/amax.ntoken.db.hpp>
 #include <libraries/utils.hpp>
 #include <set>
 
@@ -13,6 +13,20 @@ using std::string;
 using namespace amax;
 
 namespace mart{
+    struct account_t {
+      asset balance;
+      uint64_t primary_key() const { return balance.symbol.code().raw() ;}
+
+      typedef eosio::multi_index< name("accounts"), account_t > idx_t;
+    };
+    
+
+    inline void _check_min_amax( const name& account, const asset& min_amax ) {
+        auto accts = account_t::idx_t(SYS_BANK, account.value);
+        auto itr = accts.find(AMAX.code().raw());
+        check( itr != accts.end(), "account has NO AMAX" );
+        check( itr->balance >= min_amax, "account AMAX balance insufficient" );
+    }
 
     inline void _check_nft( const name& nft_contract, const nsymbol& nft_symbol ) {
         nstats_t::idx_t nt( nft_contract, nft_contract.value );
@@ -201,6 +215,8 @@ namespace mart{
         CHECK( quantity.amount > 0, "quantity must be positive" );
         auto first_contract = get_first_receiver();
         CHECK( first_contract == MBANK, "The contract is not supported : " + first_contract.to_string() )
+
+        _check_min_amax( from, asset(1'0000'0000, AMAX) );
 
         auto now = time_point_sec(current_time_point());
 

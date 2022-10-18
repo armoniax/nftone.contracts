@@ -108,20 +108,33 @@ void rndnft_swap::on_transfer_ntoken( const name& from, const name& to, const ve
     }
 }
 
-void rndnft_swap::_refule_nft( booth_t& booth, const vector<nasset>& assets,  ) {
+void rndnft_swap::_refule_nft( booth_t& booth, const vector<nasset>& assets ) {
     uint64_t new_nft_num        = 0;
     uint64_t new_nftbox_num     = 0;
     for( nasset nft : assets ) {
         CHECKC( nft.amount > 0, err::NOT_POSITIVE, "NFT amount must be positive" )
 
-        auto nftbox = booth_nftbox_t( nft.symbol.id );
-        if( _db.get( booth.id, nftbox )) {
-            nftbox.nfts += assets;
-        } else {
-            nftbox.nfts = assets;
+        auto nftboxes = booth_nftbox_t::idx_t( _self, booth.id );
+        auto nftidx = nftboxes.get_index<"nftidx"_n>();
+        auto itr = nftidx.lower_bound( nft.symbol.id );
+
+        if( itr == nftidx.end() ) {
+            auto id = nftboxes.available_primary_key();
+            auto nftbox = booth_nftbox_t(id);
+            nftbox.nfts = nft;
+
+            _db.set( booth.id, nftbox );
             new_nftbox_num++;
+
+        } else {
+            auto id = itr->id;
+            auto nftbox = booth_nftbox_t(id);
+            _db.get( nftbox );
+
+            nftbox.nfts += nft;
         }
-        
+
+      
         new_nft_num             += nft.amount;
 
         _db.set(nftbox);
@@ -130,7 +143,7 @@ void rndnft_swap::_refule_nft( booth_t& booth, const vector<nasset>& assets,  ) 
     booth.base_nft_sum          += new_nft_num;
     booth.base_nft_available    += new_nft_num;
     booth.base_nftbox_available += new_nftbox_num;
-    booth.updated_at            = now;
+    booth.updated_at            = current_time_point();
 
     _db.set( booth.id, booth );
 }

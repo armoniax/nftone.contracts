@@ -5,8 +5,8 @@
 #include <eosio/permission.hpp>
 #include <eosio/action.hpp>
 #include <eosio/name.hpp>
-#include <amax.ntoken/amax.ntoken_db.hpp>
-#include "pass.mart_const.hpp"
+#include <amax.ntoken/amax.ntoken.db.hpp>
+#include "pass.mart.const.hpp"
 #include <string>
 
 #define TBL struct [[eosio::table, eosio::contract("pass.mart")]]

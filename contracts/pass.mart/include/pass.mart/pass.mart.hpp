@@ -4,7 +4,7 @@
 #include <eosio/eosio.hpp>
 #include <eosio/singleton.hpp>
 #include <eosio/time.hpp>
-#include "pass.mart_db.hpp"
+#include "pass.mart.db.hpp"
 #include <libraries/wasm_db.hpp>
 
 using namespace eosio;
