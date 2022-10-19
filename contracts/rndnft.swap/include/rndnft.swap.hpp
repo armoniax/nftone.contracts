@@ -20,8 +20,8 @@ public:
 
     ~rndnft_swap() { _global.set( _gstate, get_self() ); }
 
-    ACTION init( const name& admin, const name& fund_distributor);
-    ACTION createbooth( const name& owner, const booth_conf_s& conf );
+    ACTION init( const name& admin);
+    ACTION createbooth( const booth_conf_s& conf );
     ACTION enablebooth( const name& owner, const uint64_t& booth_id, bool enabled);
     ACTION setboothtime( const name& owner, const uint64_t& booth_id, const time_point_sec& opened_at, const time_point_sec& closed_at);
     ACTION closebooth( const name& owner, const uint64_t& booth_id);

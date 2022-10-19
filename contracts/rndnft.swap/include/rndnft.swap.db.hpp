@@ -84,6 +84,7 @@ TBL booth_t {
     booth_conf_s        conf;
     uint64_t            base_nft_sum;
     uint64_t            base_nft_num;
+    uint64_t            base_nftbox_sum;
     uint64_t            base_nftbox_num;
     nasset              quote_nft_recd = nasset(0, conf.quote_nft_price.symbol);
     name                status = booth_status::enabled;         //status, see plan_status_t
@@ -100,7 +101,7 @@ TBL booth_t {
         indexed_by<"owneridx"_n,  const_mem_fun<booth_t, uint128_t, &booth_t::by_owner> >
     > idx_t;
 
-    EOSLIB_SERIALIZE( booth_t,  (id)(conf)(base_nft_sum)(base_nft_num)(base_nftbox_num)
+    EOSLIB_SERIALIZE( booth_t,  (id)(conf)(base_nft_sum)(base_nft_num)(base_nftbox_sum)(base_nftbox_num)
                                 (quote_nft_recd)(status)(created_at)(updated_at) )
 
 };
@@ -120,7 +121,7 @@ TBL booth_nftbox_t {
         indexed_by<"nftidx"_n,       const_mem_fun<booth_nftbox_t, uint64_t, &booth_nftbox_t::by_nft_id> >
     > idx_t;
 
-    EOSLIB_SERIALIZE( booth_nftbox_t, (nfts) )
+    EOSLIB_SERIALIZE( booth_nftbox_t, (id)(nfts) )
 };
 
 struct deal_trace_s_s {

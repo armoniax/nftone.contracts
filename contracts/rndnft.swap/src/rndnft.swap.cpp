@@ -17,7 +17,7 @@ using namespace std;
 { action(permission_level{get_self(), "active"_n }, bank, "transfer"_n, std::make_tuple( _self, to, quantity, memo )).send(); }
 
 
-void rndnft_swap::init( const name& admin, const name& fund_distributor){
+void rndnft_swap::init( const name& admin){
 
     //CHECKC( false, err::MISC ,"error");
     require_auth( _self );
@@ -29,10 +29,10 @@ void rndnft_swap::init( const name& admin, const name& fund_distributor){
 //    }
 }
 
-void rndnft_swap::createbooth( const name& owner, const booth_conf_s& conf ) {
+void rndnft_swap::createbooth( const booth_conf_s& conf ) {
     CHECKC( has_auth(get_self()) || has_auth(_gstate.admin), err::NO_AUTH, "Missing required authority of admin or maintainer" );
     
-    CHECKC( is_account(owner), err::ACCOUNT_INVALID,                    "owner doesnot exist" )
+    CHECKC( is_account(conf.owner), err::ACCOUNT_INVALID,                    "owner doesnot exist" )
     CHECKC( is_account(conf.base_nft_contract), err::ACCOUNT_INVALID,   "base_nft_contract doesnot exist" )
     CHECKC( is_account(conf.quote_nft_contract), err::ACCOUNT_INVALID,  "quote_nft_contract doesnot exist" )
     CHECKC( conf.quote_nft_price.amount > 0, err::PARAM_ERROR ,         "price amount not positive" )
@@ -40,6 +40,7 @@ void rndnft_swap::createbooth( const name& owner, const booth_conf_s& conf ) {
     auto booth                   = booth_t( ++_gstate.last_booth_id );
     booth.conf                   = conf;
     booth.created_at             = current_time_point();
+    booth.quote_nft_recd         = nasset(0,conf.quote_nft_price.symbol);
 
     _db.set( booth );
 
@@ -118,13 +119,12 @@ void rndnft_swap::_refuel_nft( const vector<nasset>& assets, booth_t& booth ) {
         auto nftboxes = booth_nftbox_t::idx_t( _self, booth.id );
         auto nftidx = nftboxes.get_index<"nftidx"_n>();
         auto itr = nftidx.lower_bound( nft.symbol.id );
-
-        if( itr == nftidx.end() ) {
+        // || itr->nfts.symbol.id != nft.symbol.id
+        if( itr == nftidx.end() || itr->nfts.symbol.id != nft.symbol.id) {
             auto id = nftboxes.available_primary_key();
             auto nftbox = booth_nftbox_t(id);
             nftbox.nfts = nft;
-
-            _db.set( booth.id, nftbox );
+            _db.set( booth.id, nftbox,false);
             new_nftbox_num++;
 
         } else {
@@ -140,11 +140,12 @@ void rndnft_swap::_refuel_nft( const vector<nasset>& assets, booth_t& booth ) {
     }
 
     booth.base_nft_sum          += new_nft_num;
-    booth.base_nft_num    += new_nft_num;
-    booth.base_nftbox_num += new_nftbox_num;
+    booth.base_nft_num          += new_nft_num;
+    booth.base_nftbox_sum       += new_nftbox_num;
+    booth.base_nftbox_num       += new_nftbox_num;
     booth.updated_at            = current_time_point();
 
-    _db.set( booth.id, booth );
+    _db.set( booth );
 }
 
 void rndnft_swap::_swap_nft( const name& user, const nasset& paid_nft, booth_t& booth ) {
@@ -193,16 +194,16 @@ void rndnft_swap::dealtrace(const deal_trace_s_s& trace) {
 }
 
 void rndnft_swap::_one_nft( const time_point_sec& now, const name& owner, booth_t& booth, nasset& nft ) {
-    auto boothboxes = booth_nftbox_t( booth.id );
-    CHECKC( _db.get( booth.id, boothboxes ), err::RECORD_NOT_FOUND, "no nftbox in the booth" )
+    // auto boothboxes = booth_nftbox_t( booth.id );
+    CHECKC( booth.base_nftbox_num != 0 , err::RECORD_NOT_FOUND, "no nftbox in the booth" )
 
-    uint64_t rand                       = _rand( 0, booth.base_nftbox_num, booth.conf.owner, booth.id );
+    uint64_t rand                       = _rand( 0, booth.base_nftbox_sum, booth.conf.owner, booth.id );
     auto nftboxes                       = booth_nftbox_t::idx_t( _self, booth.id );
-    auto nftidx                         = nftboxes.get_index<"nftidx"_n>();
-    auto itr                            = nftidx.lower_bound( rand );
-
-    if( itr == nftidx.end() ) 
-        itr = nftidx.begin();
+    //auto nftidx                         = nftboxes.get_index<"nftidx"_n>();
+    auto itr                            = nftboxes.lower_bound( rand );
+    
+    if( itr == nftboxes.end() ) 
+        itr = nftboxes.begin();
 
     booth.base_nft_num--;
     nft = itr->nfts;
@@ -215,7 +216,7 @@ void rndnft_swap::_one_nft( const time_point_sec& now, const name& owner, booth_
     
     if( itr->nfts.amount == 0) {
         booth.base_nftbox_num--;
-        nftidx.erase( itr );
+        nftboxes.erase( itr );
     }
 
     booth.updated_at  = now;
