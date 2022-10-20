@@ -6,7 +6,7 @@
 
 #include <string>
 
-#include <amax.ntoken/amax.ntoken_db.hpp>
+#include <amax.ntoken/amax.ntoken.db.hpp>
 
 namespace amax {
 
@@ -14,6 +14,8 @@ using std::string;
 using std::vector;
 
 using namespace eosio;
+
+static constexpr uint8_t MAX_BALANCE_COUNT = 30;
 
 /**
  * The `amax.ntoken` sample system contract defines the structures and actions that allow users to create, issue, and manage tokens for AMAX based blockchains. It demonstrates one way to implement a smart contract which allows for creation and management of tokens. It is possible for one to create a similar contract which suits different needs. However, it is recommended that if one only needs a token with the below listed actions, that one uses the `amax.ntoken` contract instead of developing their own.
@@ -89,6 +91,30 @@ class [[eosio::contract("amax.ntoken")]] ntoken : public contract {
     * @return ACTION
     */
    ACTION notarize(const name& notary, const uint32_t& token_id);
+   ACTION approve( const name& spender, const name& sender, const uint32_t& token_pid, const uint64_t& amount );
+
+   nasset get_balance(const name& contract, const name& owner, const nsymbol& sym) { 
+      auto acnts = amax::account_t::idx_t( contract, owner.value ); 
+      const auto& acnt = acnts.get( sym.raw(), "no balance object found" ); 
+      return acnt.paused? 0 : acnt.balance; 
+   } 
+ 
+   uint64_t get_balance_by_parent( const name& contract, const name& owner, const uint32_t& parent_id ) { 
+      auto ntable = amax::nstats_t::idx_t( contract, owner.value ); 
+      auto idx = ntable.get_index<"parentidx"_n>(); 
+      uint64_t id_lowest = (uint64_t)parent_id << 32; 
+      auto itr = ntable.lower_bound( id_lowest ); 
+      uint64_t amount = 0; 
+      for (uint8_t i = 0; itr != ntable.end() && itr->supply.symbol.parent_id == parent_id; itr++, i++) { 
+         if(i == MAX_BALANCE_COUNT) break; 
+         auto acnts = amax::account_t::idx_t( contract, owner.value ); 
+         auto sym = itr->supply.symbol; 
+         auto acnt = acnts.find( sym.raw() ); 
+         if(acnt == acnts.cend()) amount += 0; 
+         else amount += acnt->paused? 0:acnt->balance.amount; 
+      } 
+      return amount; 
+   }
 
    private:
       void add_balance( const name& owner, const nasset& value, const name& ram_payer );

@@ -60,6 +60,25 @@ void ntoken::notarize(const name& notary, const uint32_t& token_id) {
     });
 }
 
+void ntoken::approve( const name& owner, const name& spender, const uint32_t& token_pid, const uint64_t& amount ){
+   require_auth( owner );
+
+   allowance_t::idx_t allow( _self, owner.value);
+   auto itr = allow.find( owner.value );
+
+   if( itr == allow.end() ) {
+      allow.emplace( owner, [&](auto& row) {
+          row.spender = spender;
+          row.allowances[ token_pid ] = amount;
+      });
+
+   } else {
+       allow.modify( itr, same_payer, [&](auto& row){
+          row.allowances[ token_pid ] = amount;
+      });
+   }
+}
+
 void ntoken::issue( const name& to, const nasset& quantity, const string& memo )
 {
     auto sym = quantity.symbol;
@@ -162,11 +181,11 @@ void ntoken::transferfrom( const name& owner, const name& from, const name& to, 
       check( nft.is_valid(), "invalid nft" );
       check( nft.amount > 0, "must transfer positive nft amount" );
       check( nft.symbol == st.supply.symbol, "NFT symbol mismatch" );
-      check( itr->allowances.count(st.nft_type), "Unauthorized NFT:" + st.nft_type.to_string() );
-      check( itr->allowances.at(st.nft_type) >= nft.amount, "Overdrawn nfts" );
+      check( itr->allowances.count(nft.symbol.parent_id), "Unauthorized NFT PID:" + to_string(nft.symbol.parent_id) );
+      check( itr->allowances.at(nft.symbol.parent_id) >= nft.amount, "Overdrawn nfts" );
 
       allowances.modify( itr,same_payer, [&](auto& row){
-         row.allowances[st.nft_type] -= nft.amount;
+         row.allowances[nft.symbol.parent_id] -= nft.amount;
       });
 
       sub_balance( from, nft );

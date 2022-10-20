@@ -36,6 +36,7 @@ struct nsymbol {
     nsymbol() {}
     nsymbol(const uint32_t& i): id(i),parent_id(0) {}
     nsymbol(const uint32_t& i, const uint32_t& pid): id(i),parent_id(pid) {}
+    nsymbol(const uint64_t& raw): parent_id(raw >> 32), id(raw) {}
 
     friend bool operator==(const nsymbol&, const nsymbol&);
     bool is_valid()const { return( id > parent_id ); }
@@ -74,7 +75,6 @@ struct nasset {
 };
 
 TBL nstats_t {
-    name            nft_type;
     nasset          supply;
     nasset          max_supply;     // 1 means NFT-721 type
     string          token_uri;      // globally unique uri for token metadata { image, desc,..etc }
@@ -106,8 +106,7 @@ TBL nstats_t {
         indexed_by<"tokenuriidx"_n,     const_mem_fun<nstats_t, checksum256, &nstats_t::by_token_uri> >
     > idx_t;
 
-    EOSLIB_SERIALIZE(nstats_t,  (nft_type)(supply)(max_supply)(token_uri)
-                                (ipowner)(notary)(issuer)(issued_at)(notarized_at)(paused) )
+    EOSLIB_SERIALIZE(nstats_t,  (supply)(max_supply)(token_uri)(ipowner)(notary)(issuer)(issued_at)(notarized_at)(paused) )
 };
 
 ///Scope: owner's account
@@ -128,8 +127,8 @@ TBL account_t {
 
 ///Scope: owner's account
 TBL allowance_t{
-    name                   spender;                 // PK
-    map<name, uint64_t>    allowances;              // KV : nft_type -> amount
+    name                        spender;                     // PK
+    map<uint32_t, uint64_t>     allowances;                 // KV : NFT PID -> amount
 
     allowance_t() {}
     uint64_t primary_key()const { return spender.value; }
