@@ -22,11 +22,12 @@ public:
 
     ACTION init( const name& admin);
     ACTION createbooth( const booth_conf_s& conf );
-    ACTION enablebooth( const name& owner, const uint64_t& booth_id, bool enabled);
-    ACTION setboothtime( const name& owner, const uint64_t& booth_id, const time_point_sec& opened_at, const time_point_sec& closed_at);
-    ACTION closebooth( const name& owner, const uint64_t& booth_id);
+    ACTION enablebooth( const name& owner, const name& quote_nft_contract, const uint64_t& symbol_id, bool enabled);
+    ACTION setboothtime(const name& owner, const name& quote_nft_contract, const uint64_t& symbol_id, const time_point_sec& opened_at, 
+                            const time_point_sec& closed_at);
+    ACTION closebooth( const name& owner, const name& quote_nft_contract, const uint64_t& symbol_id);
     ACTION dealtrace( const deal_trace_s_s& trace);
-
+    
     /**
      * @brief booth owner to send nft into one's own booth
      * 
@@ -41,8 +42,8 @@ public:
     using deal_trace_s_action = eosio::action_wrapper<"dealtrace"_n, &rndnft_swap::dealtrace>;
 
 private:
-    uint64_t _rand(const uint16_t& min_unit, const uint64_t& max_uint, const name& owner, const uint64_t& booth_id);
-    void _one_nft( const time_point_sec& now, const name& owner, booth_t& booth, nasset& nft );
+    uint64_t _rand(const uint16_t& min_unit, const uint64_t& max_uint, const name& owner, const uint64_t& nonce);
+    void _one_nft( const time_point_sec& now, const name& owner, booth_t& booth, nasset& nft , const uint64_t& nonce);
     void _on_deal_trace_s( const deal_trace_s_s& deal_trace_s);
     void _refuel_nft( const vector<nasset>& assets, booth_t& booth );
     void _swap_nft( const name& user, const nasset& paid_nft, booth_t& booth );

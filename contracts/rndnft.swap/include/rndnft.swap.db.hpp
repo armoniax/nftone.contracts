@@ -74,14 +74,25 @@ struct booth_conf_s {
     string              title;                                  //shop title: <=64 chars      
     name                base_nft_contract;
     name                quote_nft_contract;
-    nasset              quote_nft_price;                        //swap price in quote nft for 1 base nft (usually blindbox nft)
+    nasset              quote_nft_price;                        //PK  swap price in quote nft for 1 base nft (usually blindbox nft)
     time_point_sec      opened_at;                              //opend time: opening time of blind box
     time_point_sec      closed_at;                              //close time: close time of blind box
+
+    booth_conf_s(){}
+    booth_conf_s(const uint32_t& id) : quote_nft_price(id) {}
+    booth_conf_s(const name& o, const string& t, const name& b, const name& qc,
+                 const nasset& qn,const time_point_sec& ot,const time_point_sec& ct ) :
+                 owner(o), title(t),base_nft_contract(b),quote_nft_contract(qc),
+                 quote_nft_price(qn.amount,qn.symbol), opened_at(ot), closed_at(ct) {}
+
+    EOSLIB_SERIALIZE( booth_conf_s, (owner)(title)(base_nft_contract)(quote_nft_contract)(quote_nft_price)
+                                (opened_at)(closed_at) )
 };
 
+//scope: nft_contract
 TBL booth_t {
-    uint64_t            id = 0;                                 //PK
     booth_conf_s        conf;
+    uint64_t            id = 0;                               
     uint64_t            base_nft_sum;
     uint64_t            base_nft_num;
     uint64_t            base_nftbox_sum;
@@ -92,16 +103,16 @@ TBL booth_t {
     time_point_sec      updated_at;                             //update time: last updated at
 
     booth_t() {}
-    booth_t( const uint64_t& i): id(i) {}
+    booth_t( const uint64_t& i): conf(i) {}
 
-    uint64_t primary_key() const { return id; }
+    uint64_t primary_key() const { return conf.quote_nft_price.symbol.id; }
     uint128_t by_owner() const { return (uint128_t)conf.owner.value << 64 | (uint128_t)id; }
 
     typedef eosio::multi_index<"booths"_n, booth_t,
         indexed_by<"owneridx"_n,  const_mem_fun<booth_t, uint128_t, &booth_t::by_owner> >
     > idx_t;
 
-    EOSLIB_SERIALIZE( booth_t,  (id)(conf)(base_nft_sum)(base_nft_num)(base_nftbox_sum)(base_nftbox_num)
+    EOSLIB_SERIALIZE( booth_t,  (conf)(id)(base_nft_sum)(base_nft_num)(base_nftbox_sum)(base_nftbox_num)
                                 (quote_nft_recd)(status)(created_at)(updated_at) )
 
 };
