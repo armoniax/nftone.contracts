@@ -110,7 +110,8 @@ void rndnft_swap::on_transfer_ntoken( const name& from, const name& to, const ve
         
         CHECKC( _db.get(contract_name.value, booth ), err::RECORD_NOT_FOUND, "booth not found: " + contract_name.to_string() + ":" + to_string(symbol_id) )
         CHECKC( booth.status == booth_status::enabled, err::STATUS_ERROR, "booth not enabled, status:" + booth.status.to_string() )
-       
+        CHECKC( booth.conf.base_nft_contract == get_first_receiver(), err::DATA_MISMATCH, "sent NFT mismatches with booth's base nft")
+        
         _refuel_nft( assets, booth );
         
     } else { //swap
@@ -118,10 +119,11 @@ void rndnft_swap::on_transfer_ntoken( const name& from, const name& to, const ve
         CHECKC( assets.size() == 1, err::OVERSIZED, "must be 1 asset only to swap in" )
 
         auto booth                    = booth_t( assets[0].symbol.id );
-
+        auto now                = time_point_sec(current_time_point());
         CHECKC( _db.get( get_first_receiver().value, booth ), err::RECORD_NOT_FOUND, "booth not found: " + to_string(assets[0].symbol.id) )
         CHECKC( booth.status == booth_status::enabled, err::STATUS_ERROR, "booth not enabled, status:" + booth.status.to_string() )
-
+        CHECKC( booth.conf.opened_at <= now, err::STATUS_ERROR, "booth not open yet" )
+        CHECKC( booth.conf.closed_at >= now,err::STATUS_ERROR, "booth closed already" )
         _swap_nft( from, assets[0], booth );
     }
 }
