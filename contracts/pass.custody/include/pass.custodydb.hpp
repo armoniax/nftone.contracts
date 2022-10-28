@@ -74,10 +74,10 @@ namespace wasm { namespace db {
 
 using namespace amax;
 
-#define CUSTODY_TBL [[eosio::table, eosio::contract("pass.custody")]]
-#define CUSTODY_TBL_NAME(name) [[eosio::table(name), eosio::contract("pass.custody")]]
+#define CUSTODY_TBL struct [[eosio::table, eosio::contract("pass.custody")]]
+#define CUSTODY_TBL_NAME(name) struct [[eosio::table(name), eosio::contract("pass.custody")]]
 
-struct CUSTODY_TBL_NAME("global") global_t {
+CUSTODY_TBL_NAME("global") global_t {
     asset plan_fee          = asset(0, SYS_SYMBOL);
     name fee_receiver       = "amax.daodev"_n;
     uint64_t last_plan_id   = 0;
@@ -100,7 +100,7 @@ struct CUSTODY_TBL_NAME("global") global_t {
 typedef eosio::singleton< "global"_n, global_t > global_singleton;
 
 
-struct CUSTODY_TBL plan_t {
+CUSTODY_TBL plan_t {
     uint64_t            id = 0;                     //PK
     name                owner;                      //plan owner
     string              title;                      //plan title: <=64 chars
@@ -131,8 +131,22 @@ struct CUSTODY_TBL plan_t {
 
 };
 
+CUSTODY_TBL move_window_t {
+    uint64_t        plan_id;
+    time_point_sec  started_at;
+    time_point_sec  finished_at;
+
+    uint64_t primary_key() const { return plan_id; }
+
+    typedef eosio::multi_index<"movewindows"_n, move_window_t
+    > idx_t;
+
+    EOSLIB_SERIALIZE( move_window_t, (plan_id)(started_at)(finished_at) )
+
+};
+
 // scope = plan_id
-struct CUSTODY_TBL lock_t {
+CUSTODY_TBL lock_t {
     uint64_t        id = 0;                       //PK, unique within the contract
     name            locker;                       //locker
     name            receiver;                     //receiver of issue who can unlock
@@ -163,7 +177,7 @@ struct CUSTODY_TBL lock_t {
 
 // scope = contract self
 // table for plan creator accounts
-struct CUSTODY_TBL account {
+CUSTODY_TBL account {
     name    owner;
     uint64_t last_plan_id;
 

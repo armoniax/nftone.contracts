@@ -274,20 +274,55 @@ void custody::onnfttrans(const name& from, const name& to, const vector<nasset>&
     // else { ignore }
 }
 
+void custody::setmovwindow( const uint64_t& plan_id, const time_point_sec& started_at, const time_point_sec& finished_at ) {
+    plan_t::idx_t plan_tbl(get_self(), get_self().value);
+    auto plan_itr           = plan_tbl.find(plan_id);
+    CHECKC( plan_itr != plan_tbl.end(), err::RECORD_NOT_FOUND, "plan not found: " + to_string(plan_id) )
+    require_auth( plan_itr->owner );
+
+    auto windows = move_window_t::idx_t( _self, _self.value );
+    auto win_itr = windows.find( plan_id );
+    auto found  = win_itr != windows.end();
+
+    if (found) {
+        windows.modify( win_itr, same_payer, [&]( auto& row ) {
+            row.started_at = started_at;
+            row.finished_at = finished_at;
+        });
+
+    } else {
+        windows.emplace( _self, [&]( auto& row ) {
+            row.started_at = started_at;
+            row.finished_at = finished_at;
+        });
+    }
+}
+
 // memo: move:$from_lock_id:$to_account
 void custody::onmidtrans(const name& from, const name& to, const vector<nasset>& assets, const string& memo) {
     if (from == get_self() || to != get_self()) return;
 
     CHECKC( assets.size() == 1, err::OVERSIZED, "only 1 MID asset allowed at a time" )
-
     vector<string_view> memo_params = split(memo, ":");
     ASSERT( memo_params.size() == 3 )
     CHECKC( memo_params[0] == "move", err::MEMO_FORMAT_ERROR, "memo not prefixed with move" )
 
+    auto plan_id                = 1;   //N1P lock plan 1 only
+    auto windows                = move_window_t::idx_t( _self, _self.value );
+    auto win_itr                = windows.find( plan_id );
+    auto found                  = win_itr != windows.end();
+    auto now                    = time_point_sec( current_time_point() );
+    auto started_at             = win_itr->started_at;
+    auto finished_at            = win_itr->finished_at;
+    auto null_timepoint         = time_point_sec();
+
+    CHECKC( finished_at != null_timepoint, err::DATA_MISMATCH, "finished_at shall not be null" )
+    CHECKC( found, err::NOT_STARTED, "none move window" )
+    CHECKC( now >= started_at && now <= finished_at, err::DATA_MISMATCH, "not in move window" )
+
     auto quant                  = assets[0];
     auto from_lock_id           = to_uint64(memo_params[1], "from_lock_id");
     auto to_acct                = name( memo_params[2] );
-    auto plan_id                = 1;   //N1P lock plan 1 only
     
     lock_t::idx_t lock_idx(get_self(), plan_id);
     auto itr = lock_idx.find(from_lock_id);
@@ -297,7 +332,7 @@ void custody::onmidtrans(const name& from, const name& to, const vector<nasset>&
     auto first_unlock_days      = itr->first_unlock_days;
     auto to_lock_quant          = nasset( quant.amount, lock_symbol);
     auto new_lock_quant         = to_lock_quant;
-    auto now                    = current_time_point();
+    
 
     if (itr->locked <= to_lock_quant) {
         lock_idx.erase( itr );
