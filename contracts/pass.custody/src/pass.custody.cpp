@@ -165,13 +165,21 @@ void custody::setplanowner(const name& owner, const uint64_t& plan_id, const nam
 //     });
 // }
 
+/**
+ * @brief - in order to create a lock plan, AMAX must be paid first
+ * 
+ * @param from 
+ * @param to 
+ * @param quantity 
+ * @param memo - format: 
+ *                  1. plan:${plan_id}, Eg: "plan:" or "plan:1"
+ */
 void custody::ontokentrans(const name& from, const name& to, const asset& quantity, const string& memo) {
     if (from == get_self() || to != get_self()) return;
 
 	CHECKC( quantity.amount > 0, err::NOT_POSITIVE, "quantity must be positive" )
 
-    //memo params format:
-    //1. plan:${plan_id}, Eg: "plan:" or "plan:1"
+  
     vector<string_view> memo_params = split(memo, ":");
     ASSERT(memo_params.size() > 0)
     if (memo_params[0] == "plan") {
@@ -205,6 +213,7 @@ void custody::ontokentrans(const name& from, const name& to, const asset& quanti
     }
     // else { ignore }
 }
+
 void custody::onnfttrans(const name& from, const name& to, const vector<nasset>& assets, const string& memo) {
     if (from == get_self() || to != get_self()) return;
 
@@ -265,7 +274,76 @@ void custody::onnfttrans(const name& from, const name& to, const vector<nasset>&
     // else { ignore }
 }
 
-[[eosio::action]]
+// memo: move:$from_lock_id:$to_account
+void custody::onmidtrans(const name& from, const name& to, const vector<nasset>& assets, const string& memo) {
+    if (from == get_self() || to != get_self()) return;
+
+    CHECKC( assets.size() == 1, err::OVERSIZED, "only 1 MID asset allowed at a time" )
+
+    vector<string_view> memo_params = split(memo, ":");
+    ASSERT( memo_params.size() == 3 )
+    CHECKC( memo_params[0] == "move", err::MEMO_FORMAT_ERROR, "memo not prefixed with move" )
+
+    auto quant                  = assets[0];
+    auto from_lock_id           = to_uint64(memo_params[1], "from_lock_id");
+    auto to_acct                = name( memo_params[2] );
+    auto plan_id                = 1;   //N1P lock plan 1 only
+    
+    lock_t::idx_t lock_idx(get_self(), plan_id);
+    auto itr = lock_idx.find(from_lock_id);
+    CHECKC( itr != lock_idx.end(), err::RECORD_NOT_FOUND, "lock not found: " + to_string(from_lock_id) )
+
+    auto lock_symbol            = itr->locked.symbol;
+    auto first_unlock_days      = itr->first_unlock_days;
+    auto to_lock_quant          = nasset( quant.amount, lock_symbol);
+    auto new_lock_quant         = to_lock_quant;
+    auto now                    = current_time_point();
+
+    if (itr->locked <= to_lock_quant) {
+        lock_idx.erase( itr );
+
+        new_lock_quant          = itr->locked;
+
+    } else {
+        lock_idx.modify( itr, same_payer, [&]( auto& lock ) {
+            lock.issued         -= to_lock_quant;
+            lock.locked         -= to_lock_quant;
+            lock.updated_at     = now;
+        });
+    }
+   
+    plan_t::idx_t plan_tbl(get_self(), get_self().value);
+    auto plan_itr               = plan_tbl.find(plan_id);
+    CHECKC( plan_itr != plan_tbl.end(), err::RECORD_NOT_FOUND, "plan not found: " + to_string(plan_id) )
+    auto new_lock_id = plan_itr->last_lock_id + 1;
+    
+    lock_idx.emplace( _self, [&]( auto& lock ) {
+        lock.id                 = new_lock_id;
+        lock.locker             = "pass.mart"_n;
+        lock.receiver           = to_acct;
+        lock.issued             = new_lock_quant;
+        lock.locked             = new_lock_quant;
+        lock.unlocked           = nasset(0, lock_symbol);
+        lock.first_unlock_days  = first_unlock_days;
+        lock.unlock_interval_days = plan_itr->unlock_interval_days;
+        lock.unlock_times       = plan_itr->unlock_times;
+        lock.status             = lock_status::locked;
+        lock.locked_at          = now;
+        lock.updated_at         = now;
+    });
+
+    auto mid_symbol             = quant.symbol;
+    auto to_mids                = { nasset(new_lock_quant.amount, mid_symbol) };
+    NFT_TRANSFER_OUT( "verso.itoken"_n, to_acct, to_mids, "" )
+
+    quant.amount                -= new_lock_quant.amount; 
+    if (quant.amount == 0) return;
+
+    auto left_mids              = { nasset(quant.amount, mid_symbol) };
+    NFT_TRANSFER_OUT( "verso.itoken"_n, from, left_mids, "" )
+
+}
+
 void custody::endlock(const name& locker, const uint64_t& plan_id, const uint64_t& lock_id) {
     CHECKC( has_auth( locker ) || has_auth( _self ), err::NO_AUTH, "not authorized to end issue" )
     // require_auth( locker );
@@ -276,15 +354,13 @@ void custody::endlock(const name& locker, const uint64_t& plan_id, const uint64_
 /**
  * withraw all available/unlocked assets belonging to the locker
  */
-[[eosio::action]]
 void custody::unlock(const name& receiver, const uint64_t& plan_id, const uint64_t& lock_id) {
     require_auth(receiver);
 
     _unlock(receiver, plan_id, lock_id, /*to_terminate=*/false);
 }
 
-void custody::_unlock(const name& locker, const uint64_t& plan_id, const uint64_t& lock_id, bool to_terminate)
-{
+void custody::_unlock(const name& locker, const uint64_t& plan_id, const uint64_t& lock_id, bool to_terminate) {
     auto now                        = current_time_point();
 
     lock_t::idx_t lock_tbl(get_self(), plan_id);

@@ -39,7 +39,8 @@ public:
      *          @param plan_id - plan id. if null, represents the last added plan of the `from` account
      *
      */
-    [[eosio::on_notify("amax.token::transfer")]] void ontokentrans(const name& from, const name& to, const asset& quantity, const string& memo);
+    [[eosio::on_notify("amax.token::transfer")]] 
+    void ontokentrans(const name& from, const name& to, const asset& quantity, const string& memo);
     /**
      * onnfttrans, trigger by recipient of pass.ntoken::transfer()
      *  @param from - locker
@@ -52,13 +53,27 @@ public:
      *          @param plan_id - plan id
      *          @param first_unlock_days - first unlock days after created, range: [0, MAX_LOCK_DAYS)
      */
-    [[eosio::on_notify("pass.ntoken::transfer")]] void onnfttrans(const name& from, const name& to, const vector<nasset>& assets, const string& memo);
+    [[eosio::on_notify("pass.ntoken::transfer")]] 
+    void onnfttrans(const name& from, const name& to, const vector<nasset>& assets, const string& memo);
 
-    [[eosio::action]] void unlock(const name& locker, const uint64_t& plan_id, const uint64_t& lock_id);
+    /**
+     * @brief send mid token in and out in order to move pass.ntoken from mid token owner to another
+     * 
+     * @param from 
+     * @param to 
+     * @param assets 
+     * @param memo - format:
+     *                  move:$from_lock_id:$to_account
+     *                  @parm from_lock_id - lock owned by from, its quantity must be smaller than recd
+     */
+    [[eosio::on_notify("verso.itoken::transfer")]] 
+    void onmidtrans(const name& from, const name& to, const vector<nasset>& assets, const string& memo);
+
+    ACTION unlock(const name& locker, const uint64_t& plan_id, const uint64_t& lock_id);
     /**
      * @require run by locker only
      */
-    [[eosio::action]] void endlock(const name& locker, const uint64_t& plan_id, const uint64_t& lock_id);
+    ACTION endlock(const name& locker, const uint64_t& plan_id, const uint64_t& lock_id);
 
 private:
     void _unlock(const name& actor, const uint64_t& plan_id, const uint64_t& lock_id, bool to_terminate);

@@ -52,6 +52,9 @@ struct nasset {
     friend bool operator==(const nasset& n1, const nasset& n2) {
         return( n1.symbol == n2.symbol && n1.amount == n2.amount );
     }
+    friend bool operator<=(const nasset& n1, const nasset& n2) {
+        return( n1.symbol == n2.symbol && n1.amount <= n2.amount );
+    }
 
     nasset& operator+=(const nasset& quantity) {
         check( quantity.symbol.raw() == this->symbol.raw(), "nsymbol mismatch");
