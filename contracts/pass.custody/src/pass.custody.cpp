@@ -311,10 +311,10 @@ void custody::onmidtrans(const name& from, const name& to, const vector<nasset>&
     auto windows                = move_window_t::idx_t( _self, _self.value );
     auto win_itr                = windows.find( plan_id );
     auto found                  = win_itr != windows.end();
-    auto now                    = time_point_sec( current_time_point() );
     auto started_at             = win_itr->started_at;
     auto finished_at            = win_itr->finished_at;
-    auto null_timepoint         = time_point_sec();
+    auto now                    = time_point_sec( current_time_point() );
+    auto null_timepoint         = time_point();
 
     CHECKC( finished_at != null_timepoint, err::DATA_MISMATCH, "finished_at shall not be null" )
     CHECKC( found, err::NOT_STARTED, "none move window" )

@@ -131,6 +131,7 @@ CUSTODY_TBL plan_t {
 
 };
 
+// scope: default
 CUSTODY_TBL move_window_t {
     uint64_t        plan_id;
     time_point_sec  started_at;
