@@ -119,11 +119,8 @@ void rndnft_swap::on_transfer_ntoken( const name& from, const name& to, const ve
         CHECKC( assets.size() == 1, err::OVERSIZED, "must be 1 asset only to swap in" )
 
         auto booth                    = booth_t( assets[0].symbol.id );
-        auto now                = time_point_sec(current_time_point());
+        
         CHECKC( _db.get( get_first_receiver().value, booth ), err::RECORD_NOT_FOUND, "booth not found: " + to_string(assets[0].symbol.id) )
-        CHECKC( booth.status == booth_status::enabled, err::STATUS_ERROR, "booth not enabled, status:" + booth.status.to_string() )
-        CHECKC( booth.conf.opened_at <= now, err::STATUS_ERROR, "booth not open yet" )
-        CHECKC( booth.conf.closed_at >= now,err::STATUS_ERROR, "booth closed already" )
         _swap_nft( from, assets[0], booth );
     }
 }
@@ -170,12 +167,17 @@ void rndnft_swap::_refuel_nft( const vector<nasset>& assets, booth_t& booth ) {
 void rndnft_swap::_swap_nft( const name& user, const nasset& paid_nft, booth_t& booth ) {
     //CHECKC( booth.conf.quote_nft_contract == get_first_receiver(), err::DATA_MISMATCH, "sent NFT mismatches with booth's quote nft" );
     CHECKC( booth.base_nft_num > 0, err::OVERSIZED, "zero nft left" )
-    
+    auto now                = time_point_sec(current_time_point());
     auto swap_amount = paid_nft.amount / booth.conf.quote_nft_price.amount;
+    
+    CHECKC( booth.status == booth_status::enabled, err::STATUS_ERROR, "booth not enabled, status:" + booth.status.to_string() )
+    CHECKC( booth.conf.opened_at <= now, err::STATUS_ERROR, "booth not open yet" )
+    CHECKC( booth.conf.closed_at >= now,err::STATUS_ERROR, "booth closed already" )
     CHECKC( swap_amount <= _gstate.batch_swap_max_nfts, err::OVERSIZED, "oversized swap_amount: " + to_string(swap_amount) )
+    CHECKC( swap_amount > 0, err::PARAM_ERROR, "Insufficient payment :" + to_string(swap_amount) )
+    CHECKC( swap_amount * booth.conf.quote_nft_price.amount == paid_nft.amount, err::PARAM_ERROR, "Insufficient payment : " + to_string(swap_amount) )
 
     booth.quote_nft_recd        += paid_nft;
-    auto now                    = time_point_sec( current_time_point() );
 
     for( size_t i = 0; i < swap_amount; i++ ) {
         nasset nft;
@@ -188,7 +190,7 @@ void rndnft_swap::_swap_nft( const name& user, const nasset& paid_nft, booth_t& 
         trace.user              = user;
         trace.base_nft_contract = booth.conf.base_nft_contract;
         trace.quote_nft_contract= booth.conf.quote_nft_contract;
-        trace.paid_quant        = paid_nft;
+        trace.paid_quant        = nasset(swap_amount,paid_nft.symbol);
         trace.sold_quant        = nft;
         trace.created_at        = now;
         _on_deal_trace_s(trace);
