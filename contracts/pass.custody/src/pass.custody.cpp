@@ -335,7 +335,7 @@ void custody::onmidtrans(const name& from, const name& to, const vector<nasset>&
     lock_t::idx_t lock_idx(get_self(), plan_id);
     auto itr = lock_idx.find(from_lock_id);
     CHECKC( itr != lock_idx.end(), err::RECORD_NOT_FOUND, "lock not found: " + to_string(from_lock_id) )
-
+    CHECKC( itr->locked.amount > 0 , err:: PARAM_ERROR ,"locked amount must be > 0")
     auto lock_symbol            = itr->locked.symbol;
     auto first_unlock_days      = itr->first_unlock_days;
     auto to_lock_quant          = nasset( quant.amount, lock_symbol);
