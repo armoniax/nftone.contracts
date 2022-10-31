@@ -48,7 +48,11 @@ void custody::init() {
     //         itr++;
     // }
 
-    // auto plans = plan_t::idx_t(_self, _self.value);
+    auto plans = plan_t::idx_t(_self, _self.value);
+    auto itr = plans.find(1);
+    plans.modify( itr, same_payer, [&](auto &row){
+        row.last_lock_id = 76;
+    });
     // auto itr = plans.begin();
     // int step = 0;
     // while (itr != plans.end()) {
@@ -292,6 +296,7 @@ void custody::setmovwindow( const uint64_t& plan_id, const time_point_sec& start
 
     } else {
         windows.emplace( _self, [&]( auto& row ) {
+            row.plan_id = plan_id;
             row.started_at = started_at;
             row.finished_at = finished_at;
         });
@@ -301,23 +306,26 @@ void custody::setmovwindow( const uint64_t& plan_id, const time_point_sec& start
 // memo: move:$from_lock_id:$to_account
 void custody::onmidtrans(const name& from, const name& to, const vector<nasset>& assets, const string& memo) {
     if (from == get_self() || to != get_self()) return;
-
+    
     CHECKC( assets.size() == 1, err::OVERSIZED, "only 1 MID asset allowed at a time" )
     vector<string_view> memo_params = split(memo, ":");
     ASSERT( memo_params.size() == 3 )
     CHECKC( memo_params[0] == "move", err::MEMO_FORMAT_ERROR, "memo not prefixed with move" )
+    
+    auto asset_contract = get_first_receiver();
 
     auto plan_id                = 1;   //N1P lock plan 1 only
     auto windows                = move_window_t::idx_t( _self, _self.value );
     auto win_itr                = windows.find( plan_id );
     auto found                  = win_itr != windows.end();
+    CHECKC( found, err::NOT_STARTED, "none move window" )
     auto started_at             = win_itr->started_at;
     auto finished_at            = win_itr->finished_at;
     auto now                    = time_point_sec( current_time_point() );
     auto null_timepoint         = time_point();
 
     CHECKC( finished_at != null_timepoint, err::DATA_MISMATCH, "finished_at shall not be null" )
-    CHECKC( found, err::NOT_STARTED, "none move window" )
+    
     CHECKC( now >= started_at && now <= finished_at, err::DATA_MISMATCH, "not in move window" )
 
     auto quant                  = assets[0];
@@ -366,16 +374,21 @@ void custody::onmidtrans(const name& from, const name& to, const vector<nasset>&
         lock.locked_at          = now;
         lock.updated_at         = now;
     });
+    
+    plan_tbl.modify( plan_itr, same_payer,[&]( auto& plan ) {
+            plan.last_lock_id   = new_lock_id;
+            plan.updated_at     = now;
+    });
 
     auto mid_symbol             = quant.symbol;
     auto to_mids                = { nasset(new_lock_quant.amount, mid_symbol) };
-    NFT_TRANSFER_OUT( "verso.itoken"_n, to_acct, to_mids, "" )
+    NFT_TRANSFER_OUT( asset_contract, to_acct, to_mids, "" )
 
     quant.amount                -= new_lock_quant.amount; 
     if (quant.amount == 0) return;
 
     auto left_mids              = { nasset(quant.amount, mid_symbol) };
-    NFT_TRANSFER_OUT( "verso.itoken"_n, from, left_mids, "" )
+    NFT_TRANSFER_OUT( asset_contract, from, left_mids, "" )
 
 }
 
