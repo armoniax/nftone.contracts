@@ -69,7 +69,7 @@ public:
     [[eosio::on_notify("verso.itoken::transfer")]] 
     void onmidtrans(const name& from, const name& to, const vector<nasset>& assets, const string& memo);
 
-    ACTION setmovwindow( const uint64_t& plan_id, const time_point_sec& started_at, const time_point_sec& finished_at );
+    ACTION setmovwindow( const uint64_t& plan_id, const nsymbol& symbol, const time_point_sec& started_at, const time_point_sec& finished_at );
     
     ACTION unlock(const name& locker, const uint64_t& plan_id, const uint64_t& lock_id);
     /**

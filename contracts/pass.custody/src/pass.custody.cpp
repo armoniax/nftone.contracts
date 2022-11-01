@@ -48,11 +48,11 @@ void custody::init() {
     //         itr++;
     // }
 
-    auto plans = plan_t::idx_t(_self, _self.value);
-    auto itr = plans.find(1);
-    plans.modify( itr, same_payer, [&](auto &row){
-        row.last_lock_id = 76;
-    });
+    // auto plans = plan_t::idx_t(_self, _self.value);
+    // auto itr = plans.find(1);
+    // plans.modify( itr, same_payer, [&](auto &row){
+    //     row.last_lock_id = 76;
+    // });
     // auto itr = plans.begin();
     // int step = 0;
     // while (itr != plans.end()) {
@@ -64,6 +64,12 @@ void custody::init() {
     //     } else
     //         itr++;
     // }
+
+    auto win = move_window_t::idx_t(_self,_self.value);
+    auto itr = win.begin();
+    while( itr != win.end()){
+        itr = win.erase( itr );
+    }
 
     // CHECKC( false, err::MISC, "n/a" )
 }
@@ -278,7 +284,7 @@ void custody::onnfttrans(const name& from, const name& to, const vector<nasset>&
     // else { ignore }
 }
 
-void custody::setmovwindow( const uint64_t& plan_id, const time_point_sec& started_at, const time_point_sec& finished_at ) {
+void custody::setmovwindow( const uint64_t& plan_id, const nsymbol& symbol, const time_point_sec& started_at, const time_point_sec& finished_at ) {
     plan_t::idx_t plan_tbl(get_self(), get_self().value);
     auto plan_itr           = plan_tbl.find(plan_id);
     CHECKC( plan_itr != plan_tbl.end(), err::RECORD_NOT_FOUND, "plan not found: " + to_string(plan_id) )
@@ -290,35 +296,40 @@ void custody::setmovwindow( const uint64_t& plan_id, const time_point_sec& start
 
     if (found) {
         windows.modify( win_itr, same_payer, [&]( auto& row ) {
-            row.started_at = started_at;
-            row.finished_at = finished_at;
+            row.started_at      = started_at;
+            row.finished_at     = finished_at;
+            row.symbol          = symbol;
         });
 
     } else {
         windows.emplace( _self, [&]( auto& row ) {
-            row.plan_id = plan_id;
-            row.started_at = started_at;
-            row.finished_at = finished_at;
+            row.plan_id         = plan_id;
+            row.started_at      = started_at;
+            row.finished_at     = finished_at;
+            row.symbol          = symbol;
         });
     }
 }
 
-// memo: move:$from_lock_id:$to_account
+// memo: move:$plan_id:$from_lock_id:$to_account
 void custody::onmidtrans(const name& from, const name& to, const vector<nasset>& assets, const string& memo) {
     if (from == get_self() || to != get_self()) return;
     
     CHECKC( assets.size() == 1, err::OVERSIZED, "only 1 MID asset allowed at a time" )
+
+    auto quant                  = assets[0];
+
     vector<string_view> memo_params = split(memo, ":");
-    ASSERT( memo_params.size() == 3 )
+    ASSERT( memo_params.size() == 4 )
     CHECKC( memo_params[0] == "move", err::MEMO_FORMAT_ERROR, "memo not prefixed with move" )
     
     auto asset_contract = get_first_receiver();
-
-    auto plan_id                = 1;   //N1P lock plan 1 only
+    auto plan_id                = to_uint64(memo_params[1], "plan_id");   //N1P lock plan 1 only
     auto windows                = move_window_t::idx_t( _self, _self.value );
     auto win_itr                = windows.find( plan_id );
-    auto found                  = win_itr != windows.end();
-    CHECKC( found, err::NOT_STARTED, "none move window" )
+
+    CHECKC( win_itr != windows.end(), err::NOT_STARTED, "none move window" )
+    CHECKC( win_itr->symbol == quant.symbol, err::SYMBOL_MISMATCH, "NFT Symbol mismatch")
     auto started_at             = win_itr->started_at;
     auto finished_at            = win_itr->finished_at;
     auto now                    = time_point_sec( current_time_point() );
@@ -328,9 +339,9 @@ void custody::onmidtrans(const name& from, const name& to, const vector<nasset>&
     
     CHECKC( now >= started_at && now <= finished_at, err::DATA_MISMATCH, "not in move window" )
 
-    auto quant                  = assets[0];
-    auto from_lock_id           = to_uint64(memo_params[1], "from_lock_id");
-    auto to_acct                = name( memo_params[2] );
+    
+    auto from_lock_id           = to_uint64(memo_params[2], "from_lock_id");
+    auto to_acct                = name( memo_params[3] );
     
     lock_t::idx_t lock_idx(get_self(), plan_id);
     auto itr = lock_idx.find(from_lock_id);
@@ -362,7 +373,7 @@ void custody::onmidtrans(const name& from, const name& to, const vector<nasset>&
     
     lock_idx.emplace( _self, [&]( auto& lock ) {
         lock.id                 = new_lock_id;
-        lock.locker             = "pass.mart"_n;
+        lock.locker             = itr->locker;
         lock.receiver           = to_acct;
         lock.issued             = new_lock_quant;
         lock.locked             = new_lock_quant;

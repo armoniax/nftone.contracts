@@ -134,6 +134,7 @@ CUSTODY_TBL plan_t {
 // scope: default
 CUSTODY_TBL move_window_t {
     uint64_t        plan_id;
+    nsymbol         symbol;
     time_point_sec  started_at;
     time_point_sec  finished_at;
 
@@ -142,7 +143,7 @@ CUSTODY_TBL move_window_t {
     typedef eosio::multi_index<"movewindows"_n, move_window_t
     > idx_t;
 
-    EOSLIB_SERIALIZE( move_window_t, (plan_id)(started_at)(finished_at) )
+    EOSLIB_SERIALIZE( move_window_t, (plan_id)(symbol)(started_at)(finished_at) )
 
 };
 
