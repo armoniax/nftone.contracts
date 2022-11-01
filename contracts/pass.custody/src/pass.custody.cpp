@@ -355,7 +355,6 @@ void custody::onmidtrans(const name& from, const name& to, const vector<nasset>&
 
     if (itr->locked <= to_lock_quant) {
         lock_idx.erase( itr );
-
         new_lock_quant          = itr->locked;
 
     } else {
@@ -382,7 +381,7 @@ void custody::onmidtrans(const name& from, const name& to, const vector<nasset>&
         lock.unlock_interval_days = plan_itr->unlock_interval_days;
         lock.unlock_times       = plan_itr->unlock_times;
         lock.status             = lock_status::locked;
-        lock.locked_at          = now;
+        lock.locked_at          = itr->locked_at;
         lock.updated_at         = now;
     });
     
