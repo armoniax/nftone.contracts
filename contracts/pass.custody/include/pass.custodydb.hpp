@@ -190,4 +190,15 @@ CUSTODY_TBL account {
     EOSLIB_SERIALIZE( account,  (owner)(last_plan_id) )
 };
 
+
+struct move_log_s{
+    uint64_t        plan_id;
+    uint64_t        from_lock_id;
+    nasset          asset;
+    name            owner;
+    name            receiver;
+    time_point      created_at;
+};
+
+
 } }

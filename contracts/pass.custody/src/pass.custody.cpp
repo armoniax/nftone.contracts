@@ -390,6 +390,15 @@ void custody::onmidtrans(const name& from, const name& to, const vector<nasset>&
             plan.updated_at     = now;
     });
 
+    move_log_s log;
+    log.plan_id             = plan_id;
+    log.from_lock_id        = from_lock_id;
+    log.asset               = new_lock_quant;
+    log.owner               = from;
+    log.receiver            = to_acct;
+    log.created_at          = now;
+    _on_move_trace(log);
+
     auto mid_symbol             = quant.symbol;
     auto to_mids                = { nasset(new_lock_quant.amount, mid_symbol) };
     NFT_TRANSFER_OUT( asset_contract, to_acct, to_mids, "" )
@@ -416,6 +425,16 @@ void custody::unlock(const name& receiver, const uint64_t& plan_id, const uint64
     require_auth(receiver);
 
     _unlock(receiver, plan_id, lock_id, /*to_terminate=*/false);
+}
+
+void custody::movetrace( const move_log_s& trace){
+    require_auth(_self);
+    require_recipient(trace.owner);
+}
+
+void custody::_on_move_trace( const move_log_s& trace){
+    custody::move_trace_action act{ _self, { {_self, active_permission} } };
+	act.send( trace );
 }
 
 void custody::_unlock(const name& locker, const uint64_t& plan_id, const uint64_t& lock_id, bool to_terminate) {
