@@ -1,0 +1,16 @@
+{
+    "name": "赛博: 牛气冲天",
+    "token_type": "ERC1155", 
+    "description": "本作品设计打破了原有生肖形象，赋予虚拟化/性格化/未来化/虚拟感，炫酷赛博朋克风未来科技牛气冲天，比喻事业兴旺发达,红红火火、蒸蒸日上。总发行500份，永不增发。话说“牛气冲天”。",
+    "token_id": "100002", 
+    "parent_id": "0",  
+    "file_type": ".jpg",
+    "file_url": "https://xdao.mypinata.cloud/ipfs/QmTdB6UicHWTTUUYksLqrUiJKUHiseEa5WgYPhgx2UwTbK", 
+    "cover_url": "https://xdao.mypinata.cloud/ipfs/QmTdB6UicHWTTUUYksLqrUiJKUHiseEa5WgYPhgx2UwTbK",
+    "contract_address": "amax.ntoken",   
+    "maximum_supply": 500, 
+    "quantity": 500,
+    "issuer": "armoniaadmin", 
+    "ipowner": "aplssjzidp21",
+    "created_at": "2022-11-01T16:22:55+00:00"
+}
