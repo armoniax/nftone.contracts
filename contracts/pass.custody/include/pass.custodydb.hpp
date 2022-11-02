@@ -20,7 +20,7 @@ using std::string;
 static constexpr eosio::name active_perm        {"active"_n};
 static constexpr symbol SYS_SYMBOL              = SYMBOL("AMAX", 8);
 static constexpr name SYS_BANK                  { "amax.token"_n };
-
+static constexpr name ITOKEN_BANK               { "verso.itoken"_n };
 static constexpr uint64_t MAX_LOCK_DAYS         = 365 * 10;
 
 #ifndef DAY_SECONDS_FOR_TEST

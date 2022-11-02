@@ -288,12 +288,16 @@ void custody::setmovwindow( const uint64_t& plan_id, const nsymbol& symbol, cons
     plan_t::idx_t plan_tbl(get_self(), get_self().value);
     auto plan_itr           = plan_tbl.find(plan_id);
     CHECKC( plan_itr != plan_tbl.end(), err::RECORD_NOT_FOUND, "plan not found: " + to_string(plan_id) )
+    CHECKC( started_at < finished_at, err::PARAM_ERROR , "finished_at must be > started_at")
     require_auth( plan_itr->owner );
-
+    nstats_t::idx_t sta( ITOKEN_BANK, ITOKEN_BANK.value );
+    CHECKC( sta.find(symbol.id) != sta.end(), err::RECORD_NOT_FOUND, "symbol not found: " + to_string(symbol.id))
+    
     auto windows = move_window_t::idx_t( _self, _self.value );
     auto win_itr = windows.find( plan_id );
-    auto found  = win_itr != windows.end();
 
+    auto found  = win_itr != windows.end();
+    
     if (found) {
         windows.modify( win_itr, same_payer, [&]( auto& row ) {
             row.started_at      = started_at;
@@ -347,6 +351,7 @@ void custody::onmidtrans(const name& from, const name& to, const vector<nasset>&
     auto itr = lock_idx.find(from_lock_id);
     CHECKC( itr != lock_idx.end(), err::RECORD_NOT_FOUND, "lock not found: " + to_string(from_lock_id) )
     CHECKC( itr->locked.amount > 0 , err:: PARAM_ERROR ,"locked amount must be > 0")
+    CHECKC( itr->receiver == from, err::NO_AUTH, "no auth")
     auto lock_symbol            = itr->locked.symbol;
     auto first_unlock_days      = itr->first_unlock_days;
     auto to_lock_quant          = nasset( quant.amount, lock_symbol);
