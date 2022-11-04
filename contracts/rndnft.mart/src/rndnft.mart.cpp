@@ -228,7 +228,7 @@ void rndnft_mart::dealtrace(const deal_trace_s_s& trace) {
 }
 
 void rndnft_mart::_one_nft( const name& owner, booth_t& booth, nasset& nft ) {
-   auto boothboxes = booth_nftbox_t( booth.id );
+    auto boothboxes = booth_nftbox_t( booth.id );
     CHECKC( _db.get( boothboxes ), err::RECORD_NOT_FOUND, "no nftbox in the booth" )
 
     uint64_t rand       = _rand( 1, booth.nft_num, booth.owner, booth.id );
