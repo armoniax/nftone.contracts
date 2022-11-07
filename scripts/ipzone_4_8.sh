@@ -14,6 +14,7 @@
 # mpush amax.split setplan '["rndnft.mart",4,[["apla2f3r4adt", 7000], ["nftone.fund", 3000]]]' -p armoniaadmin
 
 # mpush rndnft.mart createbooth '["armoniaadmin","SkyEyes MetaVerse #02","amax.ntoken","amax.mtoken",4,"10.000000 MUSDT","2022-11-17T12:00:00",24]' -p rndnft.mart
+# mpush rndnft.mart setboothtime '["armoniaadmin",3,"2022-11-07T12:00:00","2022-11-30T12:00:00"]' -parmoniaadmin
 mtbl rndnft.mart rndnft.mart booths
 
 mtbl amax.ntoken amax.ntoken tokenstats -L100001
