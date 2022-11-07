@@ -1,0 +1,16 @@
+{
+    "name": "饕餮盛宴：仁寅",
+    "token_type": "ERC1155", 
+    "description": "饕餮是史悠青铜器物上的主要纹饰图案，寓意代表着智慧与精神意志，避邪纳财、包容量大，象征着深厚文化内涵与特征，体现出古代人民的文化生活。饕餮纹威猛庄严、结构严谨，是青铜器装饰图案中最优秀的作品之一，代表了青铜器装饰图案的最高水平，将人们引到了一个神秘的艺术世界。本NFT的饕餮纹，不是随意点缀，都有其深意。纹饰图案寓意代表着智慧与精神意志，避邪纳财、包容量大，象征着深厚文化内涵与特征，体现出古代人民的文化生活。中间图案是世界杯奖杯图腾，传达的是一种拼搏不止、奋斗不息的精神，对于球迷来讲，是一场场巅峰对决的视觉盛宴，一次次激情而澎湃的华丽演出。",
+    "token_id": "100005", 
+    "parent_id": "0",  
+    "file_type": ".jpg",
+    "file_url": "https://xdao.mypinata.cloud/ipfs/QmRCZFSpp8fDpwhx42AaXnZoFYr25MGFpH4wZ6mvi9Ec57", 
+    "cover_url": "https://xdao.mypinata.cloud/ipfs/QmRCZFSpp8fDpwhx42AaXnZoFYr25MGFpH4wZ6mvi9Ec57",
+    "contract_address": "amax.ntoken",   
+    "maximum_supply": 1700, 
+    "quantity": 1700,
+    "issuer": "armoniaadmin", 
+    "ipowner": "aplssjzidp21",
+    "created_at": "2022-11-01T16:22:55+00:00"
+}
