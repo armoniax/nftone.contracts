@@ -22,6 +22,7 @@ void rndnft_swap::init( const name& admin){
     //CHECKC( false, err::MISC ,"error");
     require_auth( _self );
     _gstate.admin  = admin;
+    CHECKC( is_account(admin), err::ACCOUNT_INVALID,                    "admin doesnot exist" )
 //    booth_t::idx_t booth( get_self(), get_self().value);
 //    auto p_itr = booth.begin();
 //    while( p_itr != booth.end() ){
@@ -36,7 +37,8 @@ void rndnft_swap::createbooth( const booth_conf_s& conf ) {
     CHECKC( is_account(conf.base_nft_contract), err::ACCOUNT_INVALID,   "base_nft_contract doesnot exist" )
     CHECKC( is_account(conf.quote_nft_contract), err::ACCOUNT_INVALID,  "quote_nft_contract doesnot exist" )
     CHECKC( conf.quote_nft_price.amount > 0, err::PARAM_ERROR ,         "price amount not positive" )
-    
+    CHECKC( conf.opened_at < conf.closed_at, err::PARAM_ERROR,          "closed_at must be > opened_at")
+
     //auto booth                   = booth_t( ++_gstate.last_booth_id );
     auto booth                   = booth_t( conf.quote_nft_price.symbol.id );
 
@@ -78,6 +80,7 @@ void rndnft_swap::setboothtime( const name& owner, const name& quote_nft_contrac
     CHECKC( _db.get( quote_nft_contract.value, booth ),  err::RECORD_NOT_FOUND, "booth not found: " 
             + quote_nft_contract.to_string() + ":" + to_string(symbol_id))
     CHECKC( owner == booth.conf.owner, err::NO_AUTH, "non-booth-owner unauthorized" )
+    CHECKC( opened_at < closed_at, err::PARAM_ERROR, "closed_at must be > opened_at")
 
     booth.conf.opened_at         = opened_at;
     booth.conf.closed_at         = closed_at;
@@ -111,6 +114,7 @@ void rndnft_swap::on_transfer_ntoken( const name& from, const name& to, const ve
         CHECKC( _db.get(contract_name.value, booth ), err::RECORD_NOT_FOUND, "booth not found: " + contract_name.to_string() + ":" + to_string(symbol_id) )
         CHECKC( booth.status == booth_status::enabled, err::STATUS_ERROR, "booth not enabled, status:" + booth.status.to_string() )
         CHECKC( booth.conf.base_nft_contract == get_first_receiver(), err::DATA_MISMATCH, "sent NFT mismatches with booth's base nft")
+        CHECKC( booth.conf.owner == from, err::NO_AUTH, "require owner auth")
         
         _refuel_nft( assets, booth );
         
