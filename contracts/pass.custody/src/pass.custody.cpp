@@ -319,15 +319,12 @@ void custody::setmovwindow( const uint64_t& plan_id, const nsymbol& symbol, cons
 void custody::onmidtrans(const name& from, const name& to, const vector<nasset>& assets, const string& memo) {
     if (from == get_self() || to != get_self()) return;
     
+    vector<string_view> memo_params = split(memo, ":");
+    CHECKC( memo_params.size() == 4 && memo_params[0] == "move", err::MEMO_FORMAT_ERROR, "memo not prefixed with move" )
     CHECKC( assets.size() == 1, err::OVERSIZED, "only 1 MID asset allowed at a time" )
 
     auto quant                  = assets[0];
-
-    vector<string_view> memo_params = split(memo, ":");
-    ASSERT( memo_params.size() == 4 )
-    CHECKC( memo_params[0] == "move", err::MEMO_FORMAT_ERROR, "memo not prefixed with move" )
-    
-    auto asset_contract = get_first_receiver();
+    auto asset_contract         = get_first_receiver();
     auto plan_id                = to_uint64(memo_params[1], "plan_id");   //N1P lock plan 1 only
     auto windows                = move_window_t::idx_t( _self, _self.value );
     auto win_itr                = windows.find( plan_id );
@@ -338,25 +335,20 @@ void custody::onmidtrans(const name& from, const name& to, const vector<nasset>&
     auto finished_at            = win_itr->finished_at;
     auto now                    = time_point_sec( current_time_point() );
     auto null_timepoint         = time_point();
-
-    CHECKC( finished_at != null_timepoint, err::DATA_MISMATCH, "finished_at shall not be null" )
-    
-    CHECKC( now >= started_at && now <= finished_at, err::DATA_MISMATCH, "not in move window" )
-
-    
+    CHECKC( finished_at         != null_timepoint, err::DATA_MISMATCH, "finished_at shall not be null" )
+    CHECKC( now                 >= started_at && now <= finished_at, err::DATA_MISMATCH, "not in move window" )
     auto from_lock_id           = to_uint64(memo_params[2], "from_lock_id");
     auto to_acct                = name( memo_params[3] );
     
     lock_t::idx_t lock_idx(get_self(), plan_id);
-    auto itr = lock_idx.find(from_lock_id);
-    CHECKC( itr != lock_idx.end(), err::RECORD_NOT_FOUND, "lock not found: " + to_string(from_lock_id) )
-    CHECKC( itr->locked.amount > 0 , err:: PARAM_ERROR ,"locked amount must be > 0")
-    CHECKC( itr->receiver == from, err::NO_AUTH, "no auth")
+    auto itr                    = lock_idx.find(from_lock_id);
+    CHECKC( itr                 != lock_idx.end(), err::RECORD_NOT_FOUND, "lock not found: " + to_string(from_lock_id) )
+    CHECKC( itr->locked.amount  > 0 , err:: PARAM_ERROR ,"locked amount must be > 0")
+    CHECKC( itr->receiver       == from, err::NO_AUTH, "no auth")
     auto lock_symbol            = itr->locked.symbol;
     auto first_unlock_days      = itr->first_unlock_days;
     auto to_lock_quant          = nasset( quant.amount, lock_symbol);
     auto new_lock_quant         = to_lock_quant;
-    
 
     if (itr->locked <= to_lock_quant) {
         lock_idx.erase( itr );
@@ -372,8 +364,8 @@ void custody::onmidtrans(const name& from, const name& to, const vector<nasset>&
    
     plan_t::idx_t plan_tbl(get_self(), get_self().value);
     auto plan_itr               = plan_tbl.find(plan_id);
-    CHECKC( plan_itr != plan_tbl.end(), err::RECORD_NOT_FOUND, "plan not found: " + to_string(plan_id) )
-    auto new_lock_id = plan_itr->last_lock_id + 1;
+    CHECKC( plan_itr            != plan_tbl.end(), err::RECORD_NOT_FOUND, "plan not found: " + to_string(plan_id) )
+    auto new_lock_id            = plan_itr->last_lock_id + 1;
     
     lock_idx.emplace( _self, [&]( auto& lock ) {
         lock.id                 = new_lock_id;
@@ -391,26 +383,24 @@ void custody::onmidtrans(const name& from, const name& to, const vector<nasset>&
     });
     
     plan_tbl.modify( plan_itr, same_payer,[&]( auto& plan ) {
-            plan.last_lock_id   = new_lock_id;
-            plan.updated_at     = now;
+        plan.last_lock_id       = new_lock_id;
+        plan.updated_at         = now;
     });
 
     move_log_s log;
-    log.plan_id             = plan_id;
-    log.from_lock_id        = from_lock_id;
-    log.asset               = new_lock_quant;
-    log.owner               = from;
-    log.receiver            = to_acct;
-    log.created_at          = now;
+    log.plan_id                 = plan_id;
+    log.from_lock_id            = from_lock_id;
+    log.asset                   = new_lock_quant;
+    log.owner                   = from;
+    log.receiver                = to_acct;
+    log.created_at              = now;
     _on_move_trace(log);
 
     auto mid_symbol             = quant.symbol;
     auto to_mids                = { nasset(new_lock_quant.amount, mid_symbol) };
     NFT_TRANSFER_OUT( asset_contract, to_acct, to_mids, "" )
 
-    quant.amount                -= new_lock_quant.amount; 
-    if (quant.amount == 0) return;
-
+    quant.amount                -= new_lock_quant.amount;  if (quant.amount == 0) return;
     auto left_mids              = { nasset(quant.amount, mid_symbol) };
     NFT_TRANSFER_OUT( asset_contract, from, left_mids, "" )
 
