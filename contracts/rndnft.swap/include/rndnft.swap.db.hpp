@@ -48,122 +48,101 @@ namespace wasm { namespace db {
 
 using namespace amax;
 
-#define BLINDBOX [[eosio::table, eosio::contract("ntoken.mart")]]
-#define BLINDBOX_NAME(name) [[eosio::table(name), eosio::contract("ntoken.mart")]]
+#define TBL struct [[eosio::table, eosio::contract("rndnft.swap")]]
+#define TBL_NAME(name) struct [[eosio::table(name), eosio::contract("rndnft.swap")]]
 
 static constexpr eosio::name active_permission{"active"_n};
 
-struct BLINDBOX_NAME("global") global_t {
+TBL_NAME("global") global_t {
+    name        admin;
+    uint64_t    batch_swap_max_nfts                 = 30;
+    uint64_t    last_booth_id                       = 0;
 
-    name      admin;
-    uint64_t  last_pool_id          = 0;
-    uint64_t  last_order_id         = 0;
-
-    EOSLIB_SERIALIZE( global_t, (admin)(last_pool_id)(last_order_id) )
+    EOSLIB_SERIALIZE( global_t, (admin)(batch_swap_max_nfts)(last_booth_id) )
 };
 
 typedef eosio::singleton< "global"_n, global_t > global_singleton;
 
-namespace shop_status {
+namespace booth_status {
     static constexpr eosio::name none               = "none"_n;
     static constexpr eosio::name enabled            = "enabled"_n;
     static constexpr eosio::name disabled           = "disabled"_n;
 };
 
-namespace transfer_type {
-    static constexpr eosio::name none               = "none"_n;
-    static constexpr eosio::name transfer            = "transfer"_n;
-    static constexpr eosio::name allowance           = "allowance"_n;
+struct booth_conf_s {
+    name                owner;                                  //shop owner
+    string              title;                                  //shop title: <=64 chars      
+    name                base_nft_contract;
+    name                quote_nft_contract;
+    nasset              quote_nft_price;                        //PK  swap price in quote nft for 1 base nft (usually blindbox nft)
+    time_point_sec      opened_at;                              //opend time: opening time of blind box
+    time_point_sec      closed_at;                              //close time: close time of blind box
+
+    booth_conf_s(){}
+    booth_conf_s(const uint32_t& id) : quote_nft_price(id) {}
+    booth_conf_s(const name& o, const string& t, const name& b, const name& qc,
+                 const nasset& qn,const time_point_sec& ot,const time_point_sec& ct ) :
+                 owner(o), title(t),base_nft_contract(b),quote_nft_contract(qc),
+                 quote_nft_price(qn.amount,qn.symbol), opened_at(ot), closed_at(ct) {}
+
+    EOSLIB_SERIALIZE( booth_conf_s, (owner)(title)(base_nft_contract)(quote_nft_contract)(quote_nft_price)
+                                (opened_at)(closed_at) )
 };
 
-struct price_s {
-    asset               value;
-    asset               received;
-    name                fee_receiver;
-    EOSLIB_SERIALIZE( price_s,  (value)(received)(fee_receiver) )
-};
+//scope: nft_contract
+TBL booth_t {
+    booth_conf_s        conf;
+    uint64_t            id = 0;                               
+    uint64_t            base_nft_sum;
+    uint64_t            base_nft_num;
+    uint64_t            base_nftbox_sum;
+    uint64_t            base_nftbox_num;
+    nasset              quote_nft_recd = nasset(0, conf.quote_nft_price.symbol);
+    name                status = booth_status::enabled;         //status, see plan_status_t
+    time_point_sec      created_at;                             //creation time (UTC time)
+    time_point_sec      updated_at;                             //update time: last updated at
 
-struct BLINDBOX shop_t {
-    uint64_t            id = 0;                                             //PK
-    name                owner;                                              //pool owner
-    string              title;                                              //pool title: <=64 chars
-    name                asset_contract;                                     
-    price_s             price;                                        
-    name                nft_contract;                                  
-    uint64_t            total_nft_amount            = 0;
-    uint64_t            exchange_nft_amount         = 0;         
-    uint64_t            not_exchange_nft_amount     = 0;       
-    uint64_t            refund_nft_amount           = 0;   
-    uint64_t            nft_current_amount          = 0;                    // table advance max  
-    name                status                      = shop_status::none;    //status, see plan_status_t
-    bool                allow_to_buy_again;
-    uint64_t            last_nft_id                 = 0;
-    time_point_sec      created_at;                                         //creation time (UTC time)
-    time_point_sec      updated_at;                                         //update time: last updated at
-    time_point_sec      opened_at;                                         //opend time: opening time of blind box
-    time_point_sec      closed_at;                                          //close time: close time of blind box
-    
+    booth_t() {}
+    booth_t( const uint64_t& i): conf(i) {}
 
-    uint64_t primary_key() const { return id; }
+    uint64_t primary_key() const { return conf.quote_nft_price.symbol.id; }
+    uint128_t by_owner() const { return (uint128_t)conf.owner.value << 64 | (uint128_t)id; }
 
-    uint128_t by_owner() const { return (uint128_t)owner.value << 64 | (uint128_t)id; }
+    typedef eosio::multi_index<"booths"_n, booth_t,
+        indexed_by<"owneridx"_n,  const_mem_fun<booth_t, uint128_t, &booth_t::by_owner> >
+    > idx_t;
 
-    typedef eosio::multi_index<"pools"_n, shop_t,
-        indexed_by<"owneridx"_n,  const_mem_fun<shop_t, uint128_t, &shop_t::by_owner> >
-    > tbl_t;
-
-    EOSLIB_SERIALIZE( shop_t, (id)(owner)(title)(asset_contract)
-                              (price)(nft_contract)(total_nft_amount)(exchange_nft_amount)
-                              (not_exchange_nft_amount)(refund_nft_amount)(nft_current_amount)
-                              (status)(allow_to_buy_again)(last_nft_id)(created_at)(updated_at)(opened_at)(closed_at) )
+    EOSLIB_SERIALIZE( booth_t,  (conf)(id)(base_nft_sum)(base_nft_num)(base_nftbox_sum)(base_nftbox_num)
+                                (quote_nft_recd)(status)(created_at)(updated_at) )
 
 };
 
-// scope = pool_id
-struct BLINDBOX buyer_t {
-
-    name                owner;
-    uint64_t            buy_times     = 0;
-    time_point_sec      created_at;                                         //creation time (UTC time)
-    time_point_sec      updated_at;                                         //update time: last updated at
-
-    uint64_t primary_key() const { return owner.value; }
-
-     typedef eosio::multi_index<"buyers"_n, buyer_t
-    > tbl_t;
-
-    EOSLIB_SERIALIZE( buyer_t,   (owner)(buy_times)(created_at)(updated_at)
-                               )
-};
-
-
-// scope = pool_id
-struct BLINDBOX shop_nftbox_t {
-
-    uint64_t        id = 0;                       //PK, unique within the contract
-    nasset          quantity;  
-    name            transfer_type = transfer_type::none;               
+//scope: booth_id
+TBL booth_nftbox_t {
+    uint64_t id;         //PK
+    nasset  nfts;
       
+    booth_nftbox_t() {}
+    booth_nftbox_t( const uint64_t& i ): id(i) {}
+
     uint64_t primary_key() const { return id; }
+    uint64_t by_nft_id()const { return nfts.symbol.id; }
 
-    typedef eosio::multi_index<"boxes"_n, shop_nftbox_t
-    > tbl_t;
+    typedef eosio::multi_index<"boothboxes"_n, booth_nftbox_t,
+        indexed_by<"nftidx"_n,       const_mem_fun<booth_nftbox_t, uint64_t, &booth_nftbox_t::by_nft_id> >
+    > idx_t;
 
-    EOSLIB_SERIALIZE( shop_nftbox_t,   (id)(quantity)(transfer_type)
-                               )
+    EOSLIB_SERIALIZE( booth_nftbox_t, (id)(nfts) )
 };
 
-struct deal_trace_s {
-
-        uint64_t            pool_id;
-        uint64_t            order_id;
-        name                receiver;
-        asset               pay_quantity;
-        nasset              sold_quantity;
-        time_point_sec      created_at;
-        name                fund_contract;
-        name                recv_contract;
+struct deal_trace_s_s {
+    uint64_t            booth_id;
+    name                user;   //who swaps
+    name                base_nft_contract;
+    name                quote_nft_contract;
+    nasset              paid_quant;
+    nasset              sold_quant;
+    time_point_sec      created_at;
 };
-
 
 } }

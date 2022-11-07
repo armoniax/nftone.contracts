@@ -1,6 +1,7 @@
 #include <amax.ntoken/amax.ntoken.hpp>
 #include "rndnft.swap.hpp"
 #include "commons/utils.hpp"
+#include "commons/wasm_db.hpp"
 
 #include <cstdlib>
 #include <ctime>
@@ -16,407 +17,245 @@ using namespace std;
 { action(permission_level{get_self(), "active"_n }, bank, "transfer"_n, std::make_tuple( _self, to, quantity, memo )).send(); }
 
 
-void rndnft_swap::init( const name& owner){
+void rndnft_swap::init( const name& admin){
+
     //CHECKC( false, err::MISC ,"error");
     require_auth( _self );
-
-    _gstate.admin  = owner;
-    // shop_t::tbl_t pool( get_self(), get_self().value);
-    // auto p_itr = pool.begin();
-    // while( p_itr != pool.end() ){
-    //     p_itr = pool.erase( p_itr );
-    // } 
+    _gstate.admin  = admin;
+//    booth_t::idx_t booth( get_self(), get_self().value);
+//    auto p_itr = booth.begin();
+//    while( p_itr != booth.end() ){
+//        p_itr = booth.erase( p_itr );
+//    }
 }
 
-void rndnft_swap::createpool( const name& owner,const string& title,const name& asset_contract, const name& nft_contract,
-                           const asset& price, const name& fee_receiver,
-                           const bool& allow_to_buy_again,
-                           const time_point_sec& opened_at, const uint64_t& opened_days){
- 
+void rndnft_swap::createbooth( const booth_conf_s& conf ) {
     CHECKC( has_auth(get_self()) || has_auth(_gstate.admin), err::NO_AUTH, "Missing required authority of admin or maintainer" );
     
-    CHECKC( is_account(owner),err::ACCOUNT_INVALID,"owner does not exist");
-    CHECKC( is_account(asset_contract),err::ACCOUNT_INVALID,"asset contract does not exist");
-    CHECKC( is_account(fee_receiver),err::ACCOUNT_INVALID,"fee receiver does not exist");
-    CHECKC( is_account(nft_contract),err::ACCOUNT_INVALID,"blinbox contract does not exist");
+    CHECKC( is_account(conf.owner), err::ACCOUNT_INVALID,                    "owner doesnot exist" )
+    CHECKC( is_account(conf.base_nft_contract), err::ACCOUNT_INVALID,   "base_nft_contract doesnot exist" )
+    CHECKC( is_account(conf.quote_nft_contract), err::ACCOUNT_INVALID,  "quote_nft_contract doesnot exist" )
+    CHECKC( conf.quote_nft_price.amount > 0, err::PARAM_ERROR ,         "price amount not positive" )
     
-    CHECKC( price.amount > 0 , err::PARAM_ERROR ,"price must > 0");
+    //auto booth                   = booth_t( ++_gstate.last_booth_id );
+    auto booth                   = booth_t( conf.quote_nft_price.symbol.id );
 
-    price_s pt;
+    CHECKC( !_db.get( conf.quote_nft_contract.value, booth),err::RECORD_EXISTING, "booth already exising : " 
+            + conf.quote_nft_contract.to_string() + ":" + to_string(conf.quote_nft_price.symbol.id))
 
-    pt.value               = price;
-    pt.received            = asset( 0 ,price.symbol);
-    pt.fee_receiver        = fee_receiver;
+    booth.conf                   = conf;
+    booth.id                     = ++_gstate.last_booth_id;
+    booth.created_at             = current_time_point();
+    booth.quote_nft_recd         = nasset(0,conf.quote_nft_price.symbol);
+    
+    _db.set( conf.quote_nft_contract.value, booth, false );
 
-    shop_t::tbl_t pool( get_self() ,get_self().value );
-    pool.emplace( _self, [&](auto& row){
-        row.id                  = ++_gstate.last_pool_id;
-        row.owner               = owner;
-        row.title               = title;
-        row.price               = pt;
-        row.asset_contract      = asset_contract;
-        row.nft_contract   = nft_contract;
-        row.allow_to_buy_again  = allow_to_buy_again;
-        row.created_at          = current_time_point();
-        row.updated_at          = current_time_point();
-        row.opened_at          = opened_at;
-        row.closed_at           = time_point_sec(opened_at.sec_since_epoch() + opened_days * DAY_SECONDS);
-        row.status              = shop_status::enabled;
-    });
-
-    _global.set( _gstate, get_self() );
 }
 
-void rndnft_swap::enableplan(const name& owner, const uint64_t& pool_id, bool enabled) {
+void rndnft_swap::enablebooth(const name& owner, const name& quote_nft_contract, const uint64_t& symbol_id, bool enabled) {
+    CHECKC( has_auth( owner ) || has_auth( _self ) || has_auth(_gstate.admin), err::NO_AUTH, "not authorized" )
 
+    auto booth = booth_t( symbol_id );
+    CHECKC( _db.get( quote_nft_contract.value, booth ),  err::RECORD_NOT_FOUND, "booth not found: " 
+            + quote_nft_contract.to_string() + ":" + to_string(symbol_id))
+    CHECKC( owner == booth.conf.owner,  err::NO_AUTH, "non-booth-owner unauthorized" )
+    
+    auto new_status = enabled ? booth_status::enabled : booth_status::disabled;
+    CHECKC( booth.status != new_status, err::STATUS_ERROR, "booth status not changed" )
 
-    shop_t::tbl_t shop_tbl( get_self() ,get_self().value );
-    auto pool_itr = shop_tbl.find(pool_id);
-    CHECKC( pool_itr != shop_tbl.end(),  err::RECORD_NOT_FOUND,"pool not found: " + to_string(pool_id) )
+    booth.status         = new_status;
+    booth.updated_at     = current_time_point();
 
-    CHECKC( has_auth( owner ) || has_auth( _self ), err::NO_AUTH, "not authorized" )
-
-    CHECKC( owner == pool_itr->owner,  err::NO_AUTH, "not authorized" )
-    name new_status = enabled ? shop_status::enabled : shop_status::disabled ;
-    CHECKC( pool_itr->status != new_status,err::STATUS_ERROR, "pool status is no changed" )
-
-    shop_tbl.modify( pool_itr, same_payer, [&]( auto& pool ) {
-        pool.status         = new_status;
-        pool.updated_at     = current_time_point();
-    });
+    _db.set( quote_nft_contract.value, booth );
 }
 
 
-void rndnft_swap::setshoptime(const name& owner, const uint64_t& pool_id, const time_point_sec& opened_at, const time_point_sec& closed_at){
-    shop_t::tbl_t shop_tbl( get_self() ,get_self().value );
-    auto pool_itr = shop_tbl.find(pool_id);
-    CHECKC( pool_itr != shop_tbl.end(),  err::RECORD_NOT_FOUND,"pool not found: " + to_string(pool_id) )
+void rndnft_swap::setboothtime( const name& owner, const name& quote_nft_contract, const uint64_t& symbol_id, const time_point_sec& opened_at, 
+                            const time_point_sec& closed_at ) {
+    CHECKC( has_auth( owner ) || has_auth( _self ) || has_auth(_gstate.admin), err::NO_AUTH, "not authorized" )
 
-    CHECKC( has_auth( owner ) || has_auth( _self ), err::NO_AUTH, "not authorized" )
+    auto booth = booth_t( symbol_id );
+    CHECKC( _db.get( quote_nft_contract.value, booth ),  err::RECORD_NOT_FOUND, "booth not found: " 
+            + quote_nft_contract.to_string() + ":" + to_string(symbol_id))
+    CHECKC( owner == booth.conf.owner, err::NO_AUTH, "non-booth-owner unauthorized" )
 
-    CHECKC( owner == pool_itr->owner,  err::NO_AUTH, "not authorized" )
+    booth.conf.opened_at         = opened_at;
+    booth.conf.closed_at         = closed_at;
+    booth.updated_at             = current_time_point();
 
-    shop_tbl.modify( pool_itr, same_payer, [&]( auto& pool ) {
-        pool.opened_at     = opened_at;
-        pool.closed_at      = closed_at;
-        pool.updated_at     = current_time_point();
-    });
+     _db.set( quote_nft_contract.value, booth );
 }
 
 
-void rndnft_swap::on_transfer_mtoken( const name& from, const name& to, const asset& quantity, const string& memo ){
-    _on_open_transfer( from, to, quantity,memo);
-}
-
-void rndnft_swap::on_transfer_ntoken( const name& from, const name& to, const vector<nasset>& assets, const string& memo){
-
-    _on_mint_transfer( from, to, assets, memo);
-}
-
-void rndnft_swap::endpool(const name& owner, const uint64_t& pool_id){
-
-    CHECKC( has_auth( owner ) || has_auth( _self ), err::NO_AUTH, "not authorized to end pool" )
-    
-    shop_t::tbl_t pool( get_self() ,get_self().value );
-    auto pool_itr = pool.find( pool_id );
-
-    CHECKC( pool_itr != pool.end(), err::RECORD_NOT_FOUND, "pool not found: " + to_string(pool_id) )
-    CHECKC( pool_itr->status == shop_status::enabled, err::STATUS_ERROR, "pool not enabled, status:" + pool_itr->status.to_string() )
-    CHECKC( pool_itr->owner == owner , err::NO_AUTH, "not authorized to end pool" );
-
-    int step = 0;
-    vector<nasset> quants;
-
-    shop_nftbox_t::tbl_t nft( get_self(), pool_id);
-    auto itr = nft.begin();
-    CHECKC( itr != nft.end(), err::RECORD_NOT_FOUND, "Completed");
-    uint64_t amount = 0;
-    while (itr != nft.end()) {
-
-        if (step > 30) return;
-        amount += itr->quantity.amount;
-
-        if ( itr->transfer_type == transfer_type::transfer)
-            quants.emplace_back( itr-> quantity);
-
-        itr = nft.erase( itr );
-        step++;
-    }
-    
-    auto now = current_time_point();
-    pool.modify( pool_itr, same_payer, [&]( auto& row ) {
-        row.refund_nft_amount       += amount;
-        row.updated_at              = now;
-        row.nft_current_amount      -= step;
-    });
-
-    if ( quants.size() > 0 ){
-        TRANSFER( pool_itr->nft_contract, owner, quants , std::string("end pool"));
-    }
-}
-
-
-// void rndnft_swap::fillnftinc( const name& owner, const uint64_t& pool_id, const uint64_t& begin_id, const uint64_t& end_id){
-    
-//     CHECKC( has_auth( owner ) || has_auth( _self ) || has_auth(_gstate.admin), err::NO_AUTH, "not authorized" )
-//     shop_t::tbl_t shop_tbl( get_self() ,get_self().value );
-//     auto pool_itr = shop_tbl.find(pool_id);
-
-//     CHECKC( pool_itr != shop_tbl.end(),  err::RECORD_NOT_FOUND,"pool not found: " + to_string(pool_id) )
-//     CHECKC( owner == pool_itr->owner,  err::NO_AUTH, "not authorized" )
-//     CHECKC( pool_itr->status == shop_status::enabled, err::STATUS_ERROR, "pool not enabled, status:" + pool_itr->status.to_string() )
-
-//     auto p = shop_tbl.get(pool_id);
-
-//     vector<nasset> quants;
-//     account_t::idx_t account_tbl( p.nft_contract, p.owner.value );
-
-//     for ( auto i = begin_id; i <= end_id; i ++){
-        
-//         auto account_itr = account_tbl.find( i );
-//         CHECKC( account_itr != account_tbl.end(),  err::RECORD_NOT_FOUND,"balance not found: " + to_string(i) )
-//         CHECKC( account_itr->balance.amount > 0 , err::OVERDRAWN,"overdrawn balance , id:" + to_string(i));
-//         quants.push_back(nasset(1, account_itr->balance.symbol));
-//     }
-    
-//     _add_nfts( p, quants );
-
-//     shop_tbl.modify( pool_itr, same_payer, [&]( auto& pool ) {
-//         pool.total_nft_amount            = p.total_nft_amount;
-//         pool.not_exchange_nft_amount     = p.not_exchange_nft_amount;
-//         pool.nft_current_amount          = p.nft_current_amount;
-//         pool.last_nft_id                 = p.last_nft_id;        
-//         pool.updated_at                  = current_time_point();
-//     });
-// }
-
-// void rndnft_swap::fillnftboxnum(const name& owner, const uint64_t& pool_id, const vector<nasset>& quants){
-//     CHECKC( has_auth( owner ) || has_auth( _self ) || has_auth(_gstate.admin), err::NO_AUTH, "not authorized" )
-//     shop_t::tbl_t shop_tbl( get_self() ,get_self().value );
-//     auto pool_itr = shop_tbl.find(pool_id);
-
-//     CHECKC( pool_itr != shop_tbl.end(),  err::RECORD_NOT_FOUND,"pool not found: " + to_string(pool_id) )
-//     CHECKC( owner == pool_itr->owner,  err::NO_AUTH, "not authorized" )
-//     CHECKC( pool_itr->status == shop_status::enabled, err::STATUS_ERROR, "pool not enabled, status:" + pool_itr->status.to_string() )
-    
-//     auto p = shop_tbl.get(pool_id);
-    
-//     account_t::idx_t account_tbl( p.nft_contract, p.owner.value );
-
-//     for( nasset quantity : quants){
-//         auto account_itr = account_tbl.find( quantity.symbol.id );
-//         CHECKC( account_itr != account_tbl.end(),  err::RECORD_NOT_FOUND,"balance not found: " + to_string(quantity.symbol.id) )
-//         CHECKC( account_itr->balance.amount > 0 , err::OVERDRAWN,"overdrawn balance , id:" + to_string(quantity.symbol.id));
-//     }
-
-//     _add_nfts( p, quants );
-
-//     shop_tbl.modify( pool_itr, same_payer, [&]( auto& pool ) {
-//         pool.total_nft_amount            = p.total_nft_amount;
-//         pool.not_exchange_nft_amount     = p.not_exchange_nft_amount;
-//         pool.nft_current_amount          = p.nft_current_amount;
-//         pool.last_nft_id                 = p.last_nft_id;        
-//         pool.updated_at                  = current_time_point();
-//     });
-// }
-
-
-void rndnft_swap::_on_open_transfer( const name& from, const name& to, const asset& quantity, const string& memo){
-
-    if (from == get_self() || to != get_self()) return;
-    
-    vector<string_view> memo_params = split(memo, ":");
-    ASSERT(memo_params.size() > 0)
-
-    auto now = time_point_sec(current_time_point());
-
-    if ( memo_params[0] == "open" ){
-
-        CHECKC( memo_params.size() == 2, err::MEMO_FORMAT_ERROR, "ontransfer:issue params size of must be 2")
-        auto pool_id            = std::stoul(string(memo_params[1]));
-
-        shop_t::tbl_t pool( get_self() ,get_self().value );
-        auto pool_itr           = pool.find( pool_id );
-        CHECKC( pool_itr != pool.end(), err::RECORD_NOT_FOUND, "pool not found: " + to_string(pool_id) )
-        CHECKC( pool_itr->status == shop_status::enabled, err::STATUS_ERROR, "pool not enabled, status:" + pool_itr->status.to_string() )
-        CHECKC( pool_itr->opened_at <= now, err::STATUS_ERROR, "Time is not up ");
-        CHECKC( pool_itr->closed_at >= now,err::STATUS_ERROR, "It's too late ");
-
-        auto amount = quantity.amount / pool_itr->price.value.amount;
-
-        CHECKC( amount >= 1,err::PARAM_ERROR, "Minimum purchase quantity 1");
-        CHECKC( amount * pool_itr->price.value.amount == quantity.amount , err::PARAM_ERROR ,"Quantity does not match price");
-        CHECKC( pool_itr->asset_contract == get_first_receiver(), err::DATA_MISMATCH, "issue asset contract mismatch" );
-        CHECKC( pool_itr->price.value.symbol == quantity.symbol, err::SYMBOL_MISMATCH, "rndnft_swap asset symbol mismatch" );
-
-        CHECKC( pool_itr->not_exchange_nft_amount >= amount ,  err::OVERSIZED, "Remaining blind box:" + to_string( pool_itr->not_exchange_nft_amount) );
-
-        if ( !pool_itr ->allow_to_buy_again){
-            buyer_t::tbl_t buyer( _self, pool_id);
-            auto buyer_itr = buyer.find( from.value );
-            CHECKC( buyer_itr == buyer.end(), err::RECORD_EXISTING,"Non repeatable purchase");
-        }
-
-        auto p = pool.get( pool_id );
-
-        deal_trace_s trace;
-        trace.pool_id = pool_id;
-        trace.receiver = from;
-        trace.pay_quantity = quantity;
-        trace.created_at = now;
-        trace.fund_contract  = pool_itr->asset_contract;
-        _buy_one_nft( p , from, trace,amount);
-        
-
-        pool.modify( pool_itr, same_payer, [&]( auto& row ) {
-            row.price.received              += quantity;
-            row.not_exchange_nft_amount     = p.not_exchange_nft_amount;
-            row.exchange_nft_amount         = p.exchange_nft_amount;
-            row.updated_at                  = current_time_point();
-            row.nft_current_amount          = p.nft_current_amount;
-        });
-
-        TRANSFER( pool_itr->asset_contract, pool_itr->price.fee_receiver, quantity , std::string(""));
-    }
-}
-
-void rndnft_swap::_on_mint_transfer( const name& from, const name& to, const vector<nasset>& assets, const string& memo ){
+/// @brief - user to send blindbox nft tokens into the booth to swap
+/// @param from 
+/// @param to 
+/// @param assets 
+/// @param memo -  
+///             format1: refuel:$contract_name:$symbol_id
+///             format2: swap   
+void rndnft_swap::on_transfer_ntoken( const name& from, const name& to, const vector<nasset>& assets, const string& memo) {
     if (from == get_self() || to != get_self()) return;
     require_auth( from );
+
     vector<string_view> memo_params = split(memo, ":");
-    ASSERT(memo_params.size() > 0)
+    ASSERT( memo_params.size() > 0 )
+    CHECKC( memo_params[0] == "refuel" || memo_params[0] == "swap", err::MEMO_FORMAT_ERROR, "memo must start with 'refuel' or 'swap'" )
+    
+    if( memo_params[0] == "refuel" ) {
+        CHECKC (memo_params.size() == 3, err::MEMO_FORMAT_ERROR, "params size not equal to 2" )
+        auto contract_name            = name(string(memo_params[1]));
+        auto symbol_id                = std::stoul(string(memo_params[2]));
+        auto booth                    = booth_t( symbol_id );
+        
+        CHECKC( _db.get(contract_name.value, booth ), err::RECORD_NOT_FOUND, "booth not found: " + contract_name.to_string() + ":" + to_string(symbol_id) )
+        CHECKC( booth.status == booth_status::enabled, err::STATUS_ERROR, "booth not enabled, status:" + booth.status.to_string() )
+        CHECKC( booth.conf.base_nft_contract == get_first_receiver(), err::DATA_MISMATCH, "sent NFT mismatches with booth's base nft")
+        
+        _refuel_nft( assets, booth );
+        
+    } else { //swap
+        CHECKC (memo_params.size() == 1, err::MEMO_FORMAT_ERROR, "params size not equal to 1" )
+        CHECKC( assets.size() == 1, err::OVERSIZED, "must be 1 asset only to swap in" )
 
-    CHECKC( assets.size() == 1, err::OVERSIZED, "Only one NFT is allowed at a time point" );
-    nasset quantity = assets[0];
-    auto now = time_point_sec(current_time_point());
-    if (memo_params[0] == "fill") {
-
-        CHECKC(memo_params.size() == 2, err::MEMO_FORMAT_ERROR, "ontransfer:issue params size of must be 2")
-        auto pool_id            = std::stoul(string(memo_params[1]));
-
-        shop_t::tbl_t pool( get_self() ,get_self().value );
-        auto pool_itr           = pool.find( pool_id );
-        CHECKC( pool_itr != pool.end(), err::RECORD_NOT_FOUND, "pool not found: " + to_string(pool_id) )
-        CHECKC( pool_itr->status == shop_status::enabled, err::STATUS_ERROR, "pool not enabled, status:" + pool_itr->status.to_string() )
-        CHECKC( pool_itr->nft_contract == get_first_receiver(), err::DATA_MISMATCH, "issue asset contract mismatch" );
-        CHECKC( pool_itr->owner == from,  err::NO_AUTH, "not authorized" );
-        CHECKC( pool_itr->total_nft_amount == 0, err::RECORD_EXISTING, "mint fail , total amount" + to_string(pool_itr->total_nft_amount));
-        auto new_nft_id = pool_itr->last_nft_id;
-        uint64_t max_distance = 0;
-        uint64_t amount = quantity.amount;
-
-        shop_nftbox_t::tbl_t nft( get_self(), pool_id);
-        nft.emplace( _self, [&]( auto& row ) {
-            row.id                 = ++new_nft_id;
-            row.quantity           = quantity;    
-            row.transfer_type      = transfer_type::transfer;          
-        });
-          
-
-        auto now = current_time_point();
-        pool.modify( pool_itr, same_payer, [&]( auto& row ) {
-            row.total_nft_amount            += amount;
-            row.not_exchange_nft_amount     += amount;
-            row.nft_current_amount          = 1;
-            row.last_nft_id                 = new_nft_id;
-            row.updated_at                  = now;
-        });
-
-    }else{
-        CHECKC( false,err::MISC,"not supported");
+        auto booth                    = booth_t( assets[0].symbol.id );
+        
+        CHECKC( _db.get( get_first_receiver().value, booth ), err::RECORD_NOT_FOUND, "booth not found: " + to_string(assets[0].symbol.id) )
+        _swap_nft( from, assets[0], booth );
     }
 }
 
-void rndnft_swap::dealtrace(const deal_trace_s& trace){
+void rndnft_swap::_refuel_nft( const vector<nasset>& assets, booth_t& booth ) {
+    uint64_t new_nft_num        = 0;
+    uint64_t new_nftbox_num     = 0;
 
+    for( nasset nft : assets ) {
+        CHECKC( nft.amount > 0, err::NOT_POSITIVE, "NFT amount must be positive" )
+
+        auto nftboxes = booth_nftbox_t::idx_t( _self, booth.id );
+        auto nftidx = nftboxes.get_index<"nftidx"_n>();
+        auto itr = nftidx.lower_bound( nft.symbol.id );
+        // || itr->nfts.symbol.id != nft.symbol.id
+        if( itr == nftidx.end() || itr->nfts.symbol.id != nft.symbol.id) {
+            auto id = nftboxes.available_primary_key();
+            auto nftbox = booth_nftbox_t(id);
+            nftbox.nfts = nft;
+            _db.set( booth.id, nftbox,false);
+            new_nftbox_num++;
+
+        } else {
+            auto id = itr->id;
+            auto nftbox = booth_nftbox_t(id);
+            _db.get( booth.id, nftbox );
+
+            nftbox.nfts += nft;
+            _db.set( booth.id, nftbox );
+        }
+
+        new_nft_num             += nft.amount;
+    }
+
+    booth.base_nft_sum          += new_nft_num;
+    booth.base_nft_num          += new_nft_num;
+    booth.base_nftbox_sum       += new_nftbox_num;
+    booth.base_nftbox_num       += new_nftbox_num;
+    booth.updated_at            = current_time_point();
+
+    _db.set( booth.conf.quote_nft_contract.value, booth );
+}
+
+void rndnft_swap::_swap_nft( const name& user, const nasset& paid_nft, booth_t& booth ) {
+    //CHECKC( booth.conf.quote_nft_contract == get_first_receiver(), err::DATA_MISMATCH, "sent NFT mismatches with booth's quote nft" );
+    CHECKC( booth.base_nft_num > 0, err::OVERSIZED, "zero nft left" )
+    auto now                = time_point_sec(current_time_point());
+    auto swap_amount = paid_nft.amount / booth.conf.quote_nft_price.amount;
+    
+    CHECKC( booth.status == booth_status::enabled, err::STATUS_ERROR, "booth not enabled, status:" + booth.status.to_string() )
+    CHECKC( booth.conf.opened_at <= now, err::STATUS_ERROR, "booth not open yet" )
+    CHECKC( booth.conf.closed_at >= now,err::STATUS_ERROR, "booth closed already" )
+    CHECKC( swap_amount <= _gstate.batch_swap_max_nfts, err::OVERSIZED, "oversized swap_amount: " + to_string(swap_amount) )
+    CHECKC( swap_amount > 0, err::PARAM_ERROR, "Insufficient payment :" + to_string(swap_amount) )
+    CHECKC( swap_amount * booth.conf.quote_nft_price.amount == paid_nft.amount, err::PARAM_ERROR, "Insufficient payment : " + to_string(swap_amount) )
+
+    booth.quote_nft_recd        += paid_nft;
+
+    for( size_t i = 0; i < swap_amount; i++ ) {
+        nasset nft;
+        _one_nft( now, user, booth, nft , i );
+        vector<nasset> nfts = { nft };
+        TRANSFER_N( booth.conf.base_nft_contract, user, nfts, "swap@" + to_string(booth.id) )
+
+        auto trace = deal_trace_s_s( );
+        trace.booth_id          = booth.id;
+        trace.user              = user;
+        trace.base_nft_contract = booth.conf.base_nft_contract;
+        trace.quote_nft_contract= booth.conf.quote_nft_contract;
+        trace.paid_quant        = nasset(swap_amount,paid_nft.symbol);
+        trace.sold_quant        = nft;
+        trace.created_at        = now;
+        _on_deal_trace_s(trace);
+    }
+}
+
+void rndnft_swap::closebooth(const name& owner, const name& quote_nft_contract, const uint64_t& symbol_id){
+    CHECKC( has_auth( owner ) || has_auth( _self ) || has_auth(_gstate.admin), err::NO_AUTH, "not authorized to end booth" )
+    
+    auto booth = booth_t( symbol_id );
+    CHECKC( _db.get( quote_nft_contract.value, booth ), err::RECORD_NOT_FOUND, "booth not found: " + to_string(symbol_id) )
+    CHECKC( booth.status == booth_status::enabled, err::STATUS_ERROR, "booth not enabled, status:" + booth.status.to_string() )
+    CHECKC( booth.conf.owner == owner, err::NO_AUTH, "not authorized to end booth" );
+
+    _db.del( quote_nft_contract.value, booth );
+
+}
+
+void rndnft_swap::dealtrace(const deal_trace_s_s& trace) {
     require_auth(get_self());
-    require_recipient(trace.receiver);
-
+    require_recipient(trace.user);
 }
 
-void rndnft_swap::_buy_one_nft( shop_t& pool , const name& owner , deal_trace_s trace, const uint64_t& amount){
+void rndnft_swap::_one_nft( const time_point_sec& now, const name& owner, booth_t& booth, nasset& nft , const uint64_t& nonce) {
+    // auto boothboxes = booth_nftbox_t( booth.id );
+    CHECKC( booth.base_nftbox_num != 0 , err::RECORD_NOT_FOUND, "no nftbox in the booth" )
 
-    shop_nftbox_t::tbl_t nft( get_self(), pool.id);
-    auto itr = nft.begin();
-    CHECKC( itr != nft.end(), err::RECORD_NOT_FOUND, "No data available");
-    CHECKC( itr->quantity.amount >= amount, err::OVERSIZED, "Insufficient remaining quantity");
-
-    auto quantity = nasset( amount, itr-> quantity.symbol );
-    vector<nasset> quants = { quantity };
-
-    TRANSFER( pool.nft_contract, owner, quants , std::string("get nft"));
-    trace.sold_quantity = quantity;
-    trace.recv_contract = pool.nft_contract;
+    uint64_t rand                       = _rand( 0, booth.base_nftbox_sum, owner,nonce );
+    auto nftboxes                       = booth_nftbox_t::idx_t( _self, booth.id );
+    //auto nftidx                         = nftboxes.get_index<"nftidx"_n>();
+    auto itr                            = nftboxes.lower_bound( rand );
     
-    if ( itr->quantity.amount == amount){
+    if( itr == nftboxes.end() ) 
+        itr = nftboxes.begin();
 
-        nft.erase( itr );
-        pool.nft_current_amount --;
+    booth.base_nft_num--;
+    nft = itr->nfts;
+    nft.amount = 1;
 
-    }else {
-        
-        nft.modify( itr ,same_payer, [&]( auto& row){
-            row.quantity.amount -= amount;
-        });
-    }
-   
-    pool.not_exchange_nft_amount     -= amount;
-    pool.exchange_nft_amount         += amount;
-
-    _add_times( pool.id, owner);
-    _on_deal_trace(trace);
-}
-
-
-
-void rndnft_swap::_add_nfts( shop_t& p, const vector<nasset>& quants ){
+    // itr->nfts -= nft;
+    nftboxes.modify(*itr, same_payer, [&]( auto& row ) {
+        row.nfts -= nft;
+    });
     
-    for( nasset quantity : quants){
-
-        CHECKC( quantity.amount > 0, err::NOT_POSITIVE, "quantity must be positive" )
-
-        p.nft_current_amount++;
-        p.total_nft_amount += quantity.amount;
-        p.not_exchange_nft_amount += quantity.amount;
-
-        shop_nftbox_t::tbl_t nft( get_self(), p.id);
-        nft.emplace( _self, [&]( auto& row ) {
-            row.id                 = ++p.last_nft_id;
-            row.quantity           = quantity;  
-            row.transfer_type        = transfer_type::allowance;           
-        });
-        
+    if( itr->nfts.amount == 0) {
+        booth.base_nftbox_num--;
+        nftboxes.erase( itr );
     }
+
+    booth.updated_at  = now;
+    _db.set(booth.conf.quote_nft_contract.value, booth );
+
 }
 
+uint64_t rndnft_swap::_rand(const uint16_t& min, const uint64_t& max, const name& owner, const uint64_t& nonce) {
+    auto mixid = tapos_block_prefix() * tapos_block_num() + owner.value + nonce - current_time_point().sec_since_epoch();
+    const char *mixedChar = reinterpret_cast<const char *>( &mixid );
+    auto hash = sha256( (char *)mixedChar, sizeof(mixedChar));
 
-void rndnft_swap::_add_times( const uint64_t& pool_id, const name& owner){
-
-    buyer_t::tbl_t buyer( get_self() ,pool_id );
-    auto itr = buyer.find( owner.value);
-    auto now = current_time_point();
-    if ( itr == buyer.end()){
-
-        buyer.emplace( _self, [&]( auto& row ) {
-            row.updated_at              = now;
-            row.buy_times               = 1;
-            row.created_at              = now;
-            row.owner                   = owner;
-        });
-
-    }else {
-
-        buyer.modify( itr, same_payer, [&]( auto& row ) {
-            row.updated_at              = now;
-            row.buy_times               += 1;
-        });
-
-    }
+    auto r1 = (uint64_t) hash.data()[0];
+    uint64_t rand = r1 % max + min;
+    return rand;
 }
 
-
-void rndnft_swap::_on_deal_trace(const deal_trace_s& deal_trace)
-{
-    rndnft_swap::deal_trace_action act{ _self, { {_self, active_permission} } };
-        act.send( deal_trace );
+void rndnft_swap::_on_deal_trace_s(const deal_trace_s_s& deal_trace_s) {
+    rndnft_swap::deal_trace_s_action act{ _self, { {_self, active_permission} } };
+    act.send( deal_trace_s );
 }

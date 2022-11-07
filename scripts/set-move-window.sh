@@ -1,0 +1,1 @@
+mpush  pass.custody setmovwindow '[1,[1000001, 0],"2022-11-04T00:00:00","2022-11-11T00:00:00"]' -p pass.mart

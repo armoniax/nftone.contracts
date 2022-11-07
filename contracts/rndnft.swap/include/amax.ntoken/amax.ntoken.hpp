@@ -18,7 +18,7 @@ constexpr name active_perm = "active"_n;
 #define TRANSFER_N(bank, to, quants, memo) \
     {	ntoken::transfer_action act{ bank, { {_self, active_perm} } };\
 			act.send( _self, to, quants , memo );}
-#define TRANSFERFROM_N(bank,from, to, quants, memo) \
+#define TRANSFERFROM_N(bank, from, to, quants, memo) \
     {	ntoken::transferfrom_action act{ bank, { {_self, active_perm} } };\
 			act.send( _self, from, to, quants , memo );}
 
@@ -32,6 +32,8 @@ struct nsymbol {
     nsymbol(const uint32_t& i, const uint32_t& pid): id(i), parent_id(pid) {}
 
     friend bool operator==(const nsymbol&, const nsymbol&);
+    friend bool operator<(const nsymbol&, const nsymbol&);
+
     bool is_valid()const { return( id > parent_id ); }
     uint64_t raw()const { return( (uint64_t) parent_id << 32 | id ); }
 
@@ -40,6 +42,10 @@ struct nsymbol {
 
 bool operator==(const nsymbol& symb1, const nsymbol& symb2) {
     return( symb1.id == symb2.id && symb1.parent_id == symb2.parent_id );
+}
+
+bool operator<(const nsymbol& symb1, const nsymbol& symb2) {
+    return( symb1.id < symb2.id || symb1.parent_id < symb2.parent_id );
 }
 
 struct nasset {

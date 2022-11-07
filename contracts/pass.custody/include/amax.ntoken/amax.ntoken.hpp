@@ -52,6 +52,9 @@ struct nasset {
     friend bool operator==(const nasset& n1, const nasset& n2) {
         return( n1.symbol == n2.symbol && n1.amount == n2.amount );
     }
+    friend bool operator<=(const nasset& n1, const nasset& n2) {
+        return( n1.symbol == n2.symbol && n1.amount <= n2.amount );
+    }
 
     nasset& operator+=(const nasset& quantity) {
         check( quantity.symbol.raw() == this->symbol.raw(), "nsymbol mismatch");
@@ -66,7 +69,21 @@ struct nasset {
 
     EOSLIB_SERIALIZE( nasset, (amount)(symbol) )
 };
+struct nstats_t {
+    nasset          supply;
 
+    nstats_t() {};
+    nstats_t(const uint64_t& id): supply(id) {};
+    nstats_t(const uint64_t& id, const uint64_t& pid): supply(id, pid) {};
+    nstats_t(const uint64_t& id, const uint64_t& pid, const int64_t& am): supply(id, pid, am) {};
+
+    uint64_t primary_key()const     { return supply.symbol.id; } // must use id to keep available_primary_key increase consistenly
+
+    typedef eosio::multi_index
+    < "tokenstats"_n,  nstats_t> idx_t;
+
+    EOSLIB_SERIALIZE(nstats_t,  (supply) )
+};
 
 /**
  * The `amax.ntoken` sample system contract defines the structures and actions that allow users to create, issue, and manage tokens for AMAX based blockchains. It demonstrates one way to implement a smart contract which allows for creation and management of tokens. It is possible for one to create a similar contract which suits different needs. However, it is recommended that if one only needs a token with the below listed actions, that one uses the `amax.ntoken` contract instead of developing their own.

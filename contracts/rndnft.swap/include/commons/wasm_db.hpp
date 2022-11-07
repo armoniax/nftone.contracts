@@ -39,11 +39,13 @@ enum return_t{
     MODIFIED,
     APPENDED,
 };
+
 class dbc {
 private:
     name code;   //contract owner
 
 public:   
+    dbc() {}
     dbc(const name& code): code(code) {}
 
     template<typename RecordType>
@@ -98,16 +100,7 @@ public:
 
     template<typename RecordType>
     return_t set(const RecordType& record) {
-        auto scope = code.value;
-
-        typename RecordType::idx_t idx(code, scope);
-        auto itr = idx.find( record.primary_key() );
-        check( itr != idx.end(), "record not found" );
-
-        idx.modify( itr, same_payer, [&]( auto& item ) {
-            item = record;
-        });
-        return return_t::MODIFIED;
+       return set(record, code);
     }
 
     template<typename RecordType>
@@ -141,7 +134,7 @@ public:
     }
 
     template<typename RecordType>
-    void del_scope(const uint64_t& scope, const RecordType& record) {
+    void del(const uint64_t& scope, const RecordType& record) {
         typename RecordType::idx_t idx(code, scope);
         auto itr = idx.find(record.primary_key());
         if ( itr != idx.end() ) {

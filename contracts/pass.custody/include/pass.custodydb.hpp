@@ -20,7 +20,7 @@ using std::string;
 static constexpr eosio::name active_perm        {"active"_n};
 static constexpr symbol SYS_SYMBOL              = SYMBOL("AMAX", 8);
 static constexpr name SYS_BANK                  { "amax.token"_n };
-
+static constexpr name ITOKEN_BANK               { "verso.itoken"_n };
 static constexpr uint64_t MAX_LOCK_DAYS         = 365 * 10;
 
 #ifndef DAY_SECONDS_FOR_TEST
@@ -74,10 +74,10 @@ namespace wasm { namespace db {
 
 using namespace amax;
 
-#define CUSTODY_TBL [[eosio::table, eosio::contract("pass.custody")]]
-#define CUSTODY_TBL_NAME(name) [[eosio::table(name), eosio::contract("pass.custody")]]
+#define CUSTODY_TBL struct [[eosio::table, eosio::contract("pass.custody")]]
+#define CUSTODY_TBL_NAME(name) struct [[eosio::table(name), eosio::contract("pass.custody")]]
 
-struct CUSTODY_TBL_NAME("global") global_t {
+CUSTODY_TBL_NAME("global") global_t {
     asset plan_fee          = asset(0, SYS_SYMBOL);
     name fee_receiver       = "amax.daodev"_n;
     uint64_t last_plan_id   = 0;
@@ -100,7 +100,7 @@ struct CUSTODY_TBL_NAME("global") global_t {
 typedef eosio::singleton< "global"_n, global_t > global_singleton;
 
 
-struct CUSTODY_TBL plan_t {
+CUSTODY_TBL plan_t {
     uint64_t            id = 0;                     //PK
     name                owner;                      //plan owner
     string              title;                      //plan title: <=64 chars
@@ -124,15 +124,31 @@ struct CUSTODY_TBL plan_t {
 
     typedef eosio::multi_index<"plans"_n, plan_t,
         indexed_by<"owneridx"_n,  const_mem_fun<plan_t, uint128_t, &plan_t::by_owner> >
-    > tbl_t;
+    > idx_t;
 
     EOSLIB_SERIALIZE( plan_t, (id)(owner)(title)(asset_contract)(asset_symbol)(unlock_interval_days)(unlock_times)
                               (total_issued)(total_locked)(total_unlocked)(total_refunded)(status)(last_lock_id)(created_at)(updated_at) )
 
 };
 
+// scope: default
+CUSTODY_TBL move_window_t {
+    uint64_t        plan_id;
+    nsymbol         symbol;
+    time_point_sec  started_at;
+    time_point_sec  finished_at;
+
+    uint64_t primary_key() const { return plan_id; }
+
+    typedef eosio::multi_index<"movewindows"_n, move_window_t
+    > idx_t;
+
+    EOSLIB_SERIALIZE( move_window_t, (plan_id)(symbol)(started_at)(finished_at) )
+
+};
+
 // scope = plan_id
-struct CUSTODY_TBL lock_t {
+CUSTODY_TBL lock_t {
     uint64_t        id = 0;                       //PK, unique within the contract
     name            locker;                       //locker
     name            receiver;                     //receiver of issue who can unlock
@@ -154,7 +170,7 @@ struct CUSTODY_TBL lock_t {
     typedef eosio::multi_index<"locks"_n, lock_t,
         indexed_by<"receiveridx"_n,     const_mem_fun<lock_t, uint128_t, &lock_t::by_receiver_issue>>,
         indexed_by<"receivers"_n,       const_mem_fun<lock_t, uint64_t,  &lock_t::by_receiver>>
-    > tbl_t;
+    > idx_t;
 
     EOSLIB_SERIALIZE( lock_t,   (id)(locker)(receiver)(issued)(locked)(unlocked)
                                 (first_unlock_days)(unlock_interval_days)(unlock_times)
@@ -163,15 +179,26 @@ struct CUSTODY_TBL lock_t {
 
 // scope = contract self
 // table for plan creator accounts
-struct CUSTODY_TBL account {
+CUSTODY_TBL account {
     name    owner;
     uint64_t last_plan_id;
 
     uint64_t primary_key()const { return owner.value; }
 
-    typedef multi_index_ex< "payaccounts"_n, account > tbl_t;
+    typedef multi_index_ex< "payaccounts"_n, account > idx_t;
 
     EOSLIB_SERIALIZE( account,  (owner)(last_plan_id) )
 };
+
+
+struct move_log_s{
+    uint64_t        plan_id;
+    uint64_t        from_lock_id;
+    nasset          asset;
+    name            owner;
+    name            receiver;
+    time_point      created_at;
+};
+
 
 } }

@@ -1,0 +1,16 @@
+{
+    "name": "NFTOne Pass",
+    "token_type": "ERC1155", 
+    "description": "120,000 NFTOne Passes issued as equity NFTs offer in total 10% of NFTOne platform shares",
+    "token_id": "10004", 
+    "parent_id": "0",  
+    "file_type": ".jpg",
+    "file_url": "https://xdao.mypinata.cloud/ipfs/QmZsNrrqurWGYzs52V3CeuvTLDsWo5Wbk9oK441c6SXhpA/n1p-4.jpg", 
+    "cover_url": "https://xdao.mypinata.cloud/ipfs/QmZsNrrqurWGYzs52V3CeuvTLDsWo5Wbk9oK441c6SXhpA/n1p-4.jpg",
+    "contract_address": "pass.ntoken",   
+    "maximum_supply": 20000, 
+    "quantity": 20000,
+    "issuer": "nftone.fund", 
+    "ipowner": "nftone.fund",
+    "created_at": "2022-10-10T12:22:55+00:00"
+}

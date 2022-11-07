@@ -35,7 +35,7 @@ void custody::init() {
     require_auth( _self );
 
     // _global.remove();
-    // auto locks = lock_t::tbl_t(_self, _self.value);
+    // auto locks = lock_t::idx_t(_self, _self.value);
     // auto itr = locks.begin();
     // int step = 0;
     // while (itr != locks.end()) {
@@ -48,7 +48,11 @@ void custody::init() {
     //         itr++;
     // }
 
-    // auto plans = plan_t::tbl_t(_self, _self.value);
+    // auto plans = plan_t::idx_t(_self, _self.value);
+    // auto itr = plans.find(1);
+    // plans.modify( itr, same_payer, [&](auto &row){
+    //     row.last_lock_id = 76;
+    // });
     // auto itr = plans.begin();
     // int step = 0;
     // while (itr != plans.end()) {
@@ -60,6 +64,12 @@ void custody::init() {
     //     } else
     //         itr++;
     // }
+
+    auto win = move_window_t::idx_t(_self,_self.value);
+    auto itr = win.begin();
+    while( itr != win.end()){
+        itr = win.erase( itr );
+    }
 
     // CHECKC( false, err::MISC, "n/a" )
 }
@@ -92,7 +102,7 @@ void custody::setconfig(const asset &plan_fee, const name &fee_receiver) {
     if (_gstate.plan_fee.amount > 0) {
         CHECKC(_gstate.fee_receiver.value != 0, err::FEE_INSUFFICIENT, "fee_receiver not set")
     }
-    plan_t::tbl_t plan_tbl(get_self(), get_self().value);
+    plan_t::idx_t plan_tbl(get_self(), get_self().value);
 
     plan_tbl.emplace( owner, [&]( auto& plan ) {
         plan.id                     = _gstate.last_plan_id++; // start from 0
@@ -112,7 +122,7 @@ void custody::setconfig(const asset &plan_fee, const name &fee_receiver) {
         plan.updated_at             = plan.created_at;
     });
 
-    account::tbl_t pay_account_tbl(get_self(), get_self().value);
+    account::idx_t pay_account_tbl(get_self(), get_self().value);
     pay_account_tbl.set(owner.value, owner, [&]( auto& acct ) {
         acct.owner                  = owner;
         acct.last_plan_id           = _gstate.last_plan_id;
@@ -122,7 +132,7 @@ void custody::setconfig(const asset &plan_fee, const name &fee_receiver) {
 
 [[eosio::action]]
 void custody::setplanowner(const name& owner, const uint64_t& plan_id, const name& new_owner) {
-    plan_t::tbl_t plan_tbl(get_self(), get_self().value);
+    plan_t::idx_t plan_tbl(get_self(), get_self().value);
     auto plan_itr = plan_tbl.find(plan_id);
     CHECKC( plan_itr != plan_tbl.end(), err::RECORD_NOT_FOUND, "plan not found: " + to_string(plan_id) )
     CHECKC( owner == plan_itr->owner, err::DATA_MISMATCH, "owner mismatch" )
@@ -139,7 +149,7 @@ void custody::setplanowner(const name& owner, const uint64_t& plan_id, const nam
 // void custody::delplan(const name& owner, const uint64_t& plan_id) {
 //     require_auth(get_self());
 
-//     plan_t::tbl_t plan_tbl(get_self(), get_self().value);
+//     plan_t::idx_t plan_tbl(get_self(), get_self().value);
 //     auto plan_itr = plan_tbl.find(plan_id);
 //     CHECK( plan_itr != plan_tbl.end(), "plan not found: " + to_string(plan_id) )
 //     CHECK( owner == plan_itr->owner, "owner mismatch" )
@@ -151,7 +161,7 @@ void custody::setplanowner(const name& owner, const uint64_t& plan_id, const nam
 // void custody::enableplan(const name& owner, const uint64_t& plan_id, bool enabled) {
 //     require_auth(owner);
 
-//     plan_t::tbl_t plan_tbl(get_self(), get_self().value);
+//     plan_t::idx_t plan_tbl(get_self(), get_self().value);
 //     auto plan_itr = plan_tbl.find(plan_id);
 //     CHECK( plan_itr != plan_tbl.end(), "plan not found: " + to_string(plan_id) )
 //     CHECK( owner == plan_itr->owner, "owner mismatch" )
@@ -165,13 +175,21 @@ void custody::setplanowner(const name& owner, const uint64_t& plan_id, const nam
 //     });
 // }
 
+/**
+ * @brief - in order to create a lock plan, AMAX must be paid first
+ * 
+ * @param from 
+ * @param to 
+ * @param quantity 
+ * @param memo - format: 
+ *                  1. plan:${plan_id}, Eg: "plan:" or "plan:1"
+ */
 void custody::ontokentrans(const name& from, const name& to, const asset& quantity, const string& memo) {
     if (from == get_self() || to != get_self()) return;
 
 	CHECKC( quantity.amount > 0, err::NOT_POSITIVE, "quantity must be positive" )
 
-    //memo params format:
-    //1. plan:${plan_id}, Eg: "plan:" or "plan:1"
+  
     vector<string_view> memo_params = split(memo, ":");
     ASSERT(memo_params.size() > 0)
     if (memo_params[0] == "plan") {
@@ -183,7 +201,7 @@ void custody::ontokentrans(const name& from, const name& to, const asset& quanti
             "quantity amount mismatch with fee amount: " + to_string(_gstate.plan_fee.amount) );
         uint64_t plan_id = 0;
         if (param_plan_id.empty()) {
-            account::tbl_t pay_account_tbl(get_self(), get_self().value);
+            account::idx_t pay_account_tbl(get_self(), get_self().value);
             auto acct = pay_account_tbl.get(from.value, "from account does not exist in custody constract");
             plan_id = acct.last_plan_id;
             CHECKC( plan_id != 0, err::RECORD_NOT_FOUND, "from account does not have any plan" );
@@ -192,7 +210,7 @@ void custody::ontokentrans(const name& from, const name& to, const asset& quanti
             CHECKC( plan_id != 0, err::NOT_POSITIVE, "plan id can not be 0" );
         }
 
-        plan_t::tbl_t plan_tbl(get_self(), get_self().value);
+        plan_t::idx_t plan_tbl(get_self(), get_self().value);
         auto plan_itr           = plan_tbl.find(plan_id);
         CHECKC( plan_itr != plan_tbl.end(), err::RECORD_NOT_FOUND, "plan not found by plan_id: " + to_string(plan_id) )
         CHECKC( plan_itr->status == plan_status::feeunpaid, err::STATUS_ERROR, "plan must be unpaid fee, status:" + plan_itr->status.to_string() )
@@ -205,6 +223,7 @@ void custody::ontokentrans(const name& from, const name& to, const asset& quanti
     }
     // else { ignore }
 }
+
 void custody::onnfttrans(const name& from, const name& to, const vector<nasset>& assets, const string& memo) {
     if (from == get_self() || to != get_self()) return;
 
@@ -224,7 +243,7 @@ void custody::onnfttrans(const name& from, const name& to, const vector<nasset>&
         auto plan_id            = to_uint64(memo_params[2], "plan_id");
         auto first_unlock_days  = to_uint64(memo_params[3], "first_unlock_days");
 
-        plan_t::tbl_t plan_tbl(get_self(), get_self().value);
+        plan_t::idx_t plan_tbl(get_self(), get_self().value);
         auto plan_itr           = plan_tbl.find(plan_id);
         CHECKC( plan_itr != plan_tbl.end(), err::RECORD_NOT_FOUND, "plan not found: " + to_string(plan_id) )
         CHECKC( plan_itr->status == plan_status::enabled, err::STATUS_ERROR, "plan not enabled, status:" + plan_itr->status.to_string() )
@@ -245,7 +264,7 @@ void custody::onnfttrans(const name& from, const name& to, const vector<nasset>&
             plan.updated_at         = now;
         });
 
-        lock_t::tbl_t lock_tbl(get_self(), plan_id);
+        lock_t::idx_t lock_tbl(get_self(), plan_id);
         lock_tbl.emplace( _self, [&]( auto& lock ) {
             lock.id                 = new_lock_id;
             lock.locker             = from;
@@ -265,7 +284,138 @@ void custody::onnfttrans(const name& from, const name& to, const vector<nasset>&
     // else { ignore }
 }
 
-[[eosio::action]]
+void custody::setmovwindow( const uint64_t& plan_id, const nsymbol& symbol, const time_point_sec& started_at, const time_point_sec& finished_at ) {
+    plan_t::idx_t plan_tbl(get_self(), get_self().value);
+    auto plan_itr           = plan_tbl.find(plan_id);
+    CHECKC( plan_itr != plan_tbl.end(), err::RECORD_NOT_FOUND, "plan not found: " + to_string(plan_id) )
+    CHECKC( started_at < finished_at, err::PARAM_ERROR , "finished_at must be > started_at")
+    require_auth( plan_itr->owner );
+    nstats_t::idx_t sta( ITOKEN_BANK, ITOKEN_BANK.value );
+    CHECKC( sta.find(symbol.id) != sta.end(), err::RECORD_NOT_FOUND, "symbol not found: " + to_string(symbol.id))
+    
+    auto windows = move_window_t::idx_t( _self, _self.value );
+    auto win_itr = windows.find( plan_id );
+
+    auto found  = win_itr != windows.end();
+    
+    if (found) {
+        windows.modify( win_itr, same_payer, [&]( auto& row ) {
+            row.started_at      = started_at;
+            row.finished_at     = finished_at;
+            row.symbol          = symbol;
+        });
+
+    } else {
+        windows.emplace( _self, [&]( auto& row ) {
+            row.plan_id         = plan_id;
+            row.started_at      = started_at;
+            row.finished_at     = finished_at;
+            row.symbol          = symbol;
+        });
+    }
+}
+
+// memo: move:$plan_id:$from_lock_id:$to_account
+void custody::onmidtrans(const name& from, const name& to, const vector<nasset>& assets, const string& memo) {
+    if (from == get_self() || to != get_self()) return;
+    
+    CHECKC( assets.size() == 1, err::OVERSIZED, "only 1 MID asset allowed at a time" )
+
+    auto quant                  = assets[0];
+
+    vector<string_view> memo_params = split(memo, ":");
+    ASSERT( memo_params.size() == 4 )
+    CHECKC( memo_params[0] == "move", err::MEMO_FORMAT_ERROR, "memo not prefixed with move" )
+    
+    auto asset_contract = get_first_receiver();
+    auto plan_id                = to_uint64(memo_params[1], "plan_id");   //N1P lock plan 1 only
+    auto windows                = move_window_t::idx_t( _self, _self.value );
+    auto win_itr                = windows.find( plan_id );
+
+    CHECKC( win_itr != windows.end(), err::NOT_STARTED, "none move window" )
+    CHECKC( win_itr->symbol == quant.symbol, err::SYMBOL_MISMATCH, "NFT Symbol mismatch")
+    auto started_at             = win_itr->started_at;
+    auto finished_at            = win_itr->finished_at;
+    auto now                    = time_point_sec( current_time_point() );
+    auto null_timepoint         = time_point();
+
+    CHECKC( finished_at != null_timepoint, err::DATA_MISMATCH, "finished_at shall not be null" )
+    
+    CHECKC( now >= started_at && now <= finished_at, err::DATA_MISMATCH, "not in move window" )
+
+    
+    auto from_lock_id           = to_uint64(memo_params[2], "from_lock_id");
+    auto to_acct                = name( memo_params[3] );
+    
+    lock_t::idx_t lock_idx(get_self(), plan_id);
+    auto itr = lock_idx.find(from_lock_id);
+    CHECKC( itr != lock_idx.end(), err::RECORD_NOT_FOUND, "lock not found: " + to_string(from_lock_id) )
+    CHECKC( itr->locked.amount > 0 , err:: PARAM_ERROR ,"locked amount must be > 0")
+    CHECKC( itr->receiver == from, err::NO_AUTH, "no auth")
+    auto lock_symbol            = itr->locked.symbol;
+    auto first_unlock_days      = itr->first_unlock_days;
+    auto to_lock_quant          = nasset( quant.amount, lock_symbol);
+    auto new_lock_quant         = to_lock_quant;
+    
+
+    if (itr->locked <= to_lock_quant) {
+        lock_idx.erase( itr );
+        new_lock_quant          = itr->locked;
+
+    } else {
+        lock_idx.modify( itr, same_payer, [&]( auto& lock ) {
+            lock.issued         -= to_lock_quant;
+            lock.locked         -= to_lock_quant;
+            lock.updated_at     = now;
+        });
+    }
+   
+    plan_t::idx_t plan_tbl(get_self(), get_self().value);
+    auto plan_itr               = plan_tbl.find(plan_id);
+    CHECKC( plan_itr != plan_tbl.end(), err::RECORD_NOT_FOUND, "plan not found: " + to_string(plan_id) )
+    auto new_lock_id = plan_itr->last_lock_id + 1;
+    
+    lock_idx.emplace( _self, [&]( auto& lock ) {
+        lock.id                 = new_lock_id;
+        lock.locker             = itr->locker;
+        lock.receiver           = to_acct;
+        lock.issued             = new_lock_quant;
+        lock.locked             = new_lock_quant;
+        lock.unlocked           = nasset(0, lock_symbol);
+        lock.first_unlock_days  = first_unlock_days;
+        lock.unlock_interval_days = plan_itr->unlock_interval_days;
+        lock.unlock_times       = plan_itr->unlock_times;
+        lock.status             = lock_status::locked;
+        lock.locked_at          = itr->locked_at;
+        lock.updated_at         = now;
+    });
+    
+    plan_tbl.modify( plan_itr, same_payer,[&]( auto& plan ) {
+            plan.last_lock_id   = new_lock_id;
+            plan.updated_at     = now;
+    });
+
+    move_log_s log;
+    log.plan_id             = plan_id;
+    log.from_lock_id        = from_lock_id;
+    log.asset               = new_lock_quant;
+    log.owner               = from;
+    log.receiver            = to_acct;
+    log.created_at          = now;
+    _on_move_trace(log);
+
+    auto mid_symbol             = quant.symbol;
+    auto to_mids                = { nasset(new_lock_quant.amount, mid_symbol) };
+    NFT_TRANSFER_OUT( asset_contract, to_acct, to_mids, "" )
+
+    quant.amount                -= new_lock_quant.amount; 
+    if (quant.amount == 0) return;
+
+    auto left_mids              = { nasset(quant.amount, mid_symbol) };
+    NFT_TRANSFER_OUT( asset_contract, from, left_mids, "" )
+
+}
+
 void custody::endlock(const name& locker, const uint64_t& plan_id, const uint64_t& lock_id) {
     CHECKC( has_auth( locker ) || has_auth( _self ), err::NO_AUTH, "not authorized to end issue" )
     // require_auth( locker );
@@ -276,22 +426,30 @@ void custody::endlock(const name& locker, const uint64_t& plan_id, const uint64_
 /**
  * withraw all available/unlocked assets belonging to the locker
  */
-[[eosio::action]]
 void custody::unlock(const name& receiver, const uint64_t& plan_id, const uint64_t& lock_id) {
     require_auth(receiver);
 
     _unlock(receiver, plan_id, lock_id, /*to_terminate=*/false);
 }
 
-void custody::_unlock(const name& locker, const uint64_t& plan_id, const uint64_t& lock_id, bool to_terminate)
-{
+void custody::movetrace( const move_log_s& trace){
+    require_auth(_self);
+    require_recipient(trace.owner);
+}
+
+void custody::_on_move_trace( const move_log_s& trace){
+    custody::move_trace_action act{ _self, { {_self, active_permission} } };
+	act.send( trace );
+}
+
+void custody::_unlock(const name& locker, const uint64_t& plan_id, const uint64_t& lock_id, bool to_terminate) {
     auto now                        = current_time_point();
 
-    lock_t::tbl_t lock_tbl(get_self(), plan_id);
+    lock_t::idx_t lock_tbl(get_self(), plan_id);
     auto lock_itr                   = lock_tbl.find(lock_id);
     CHECKC( lock_itr != lock_tbl.end(), err::RECORD_NOT_FOUND, "lock not found: " + to_string(lock_id) )
 
-    plan_t::tbl_t plan_tbl(get_self(), get_self().value);
+    plan_t::idx_t plan_tbl(get_self(), get_self().value);
     auto plan_itr                   = plan_tbl.find(plan_id);
     CHECKC( plan_itr != plan_tbl.end(), err::RECORD_NOT_FOUND, "plan not found: " + to_string(plan_id) )
     CHECKC( plan_itr->status == plan_status::enabled, err::STATUS_ERROR, "plan not enabled, status:" + plan_itr->status.to_string() )
