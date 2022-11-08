@@ -82,7 +82,7 @@ void rndnft_swap::setboothtime( const name& owner, const name& quote_nft_contrac
             + quote_nft_contract.to_string() + ":" + to_string(symbol_id))
     CHECKC( owner == booth.conf.owner, err::NO_AUTH, "non-booth-owner unauthorized" )
     auto now                = time_point_sec(current_time_point());
-    CHECKC( conf.opened_at < conf.closed_at && conf.closed_at > now, err::PARAM_ERROR,          "close_at must be > opened_at and > current time")
+    CHECKC( opened_at < closed_at && closed_at > now, err::PARAM_ERROR,          "close_at must be > opened_at and > current time")
 
     booth.conf.opened_at         = opened_at;
     booth.conf.closed_at         = closed_at;
