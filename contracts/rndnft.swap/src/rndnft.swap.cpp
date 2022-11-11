@@ -37,7 +37,8 @@ void rndnft_swap::createbooth( const booth_conf_s& conf ) {
     CHECKC( is_account(conf.base_nft_contract), err::ACCOUNT_INVALID,   "base_nft_contract doesnot exist" )
     CHECKC( is_account(conf.quote_nft_contract), err::ACCOUNT_INVALID,  "quote_nft_contract doesnot exist" )
     CHECKC( conf.quote_nft_price.amount > 0, err::PARAM_ERROR ,         "price amount not positive" )
-    CHECKC( conf.opened_at < conf.closed_at, err::PARAM_ERROR,          "closed_at must be > opened_at")
+    auto now                = time_point_sec(current_time_point());
+    CHECKC( conf.opened_at < conf.closed_at && conf.closed_at > now, err::PARAM_ERROR,          "close_at must be > opened_at and > current time")
 
     //auto booth                   = booth_t( ++_gstate.last_booth_id );
     auto booth                   = booth_t( conf.quote_nft_price.symbol.id );
@@ -80,7 +81,8 @@ void rndnft_swap::setboothtime( const name& owner, const name& quote_nft_contrac
     CHECKC( _db.get( quote_nft_contract.value, booth ),  err::RECORD_NOT_FOUND, "booth not found: " 
             + quote_nft_contract.to_string() + ":" + to_string(symbol_id))
     CHECKC( owner == booth.conf.owner, err::NO_AUTH, "non-booth-owner unauthorized" )
-    CHECKC( opened_at < closed_at, err::PARAM_ERROR, "closed_at must be > opened_at")
+    auto now                = time_point_sec(current_time_point());
+    CHECKC( opened_at < closed_at && closed_at > now, err::PARAM_ERROR,          "close_at must be > opened_at and > current time")
 
     booth.conf.opened_at         = opened_at;
     booth.conf.closed_at         = closed_at;
