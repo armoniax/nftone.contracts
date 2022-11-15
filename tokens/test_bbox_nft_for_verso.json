@@ -1,0 +1,16 @@
+{
+    "name": "测试盲盒NFT verso",
+    "token_type": "ERC1155",
+    "description": "盲盒NFT可以在有效期内进行Mint目标NFT，过期后将不能Mint，请注意查看Mint结束时间。\nMint结束时间：2022-12-31 10:00:00（UTC+0）",
+    "token_id": "10002",
+    "parent_id": "0",
+    "file_type": ".jpg",
+    "file_url": "https://xdao.mypinata.cloud/ipfs/Qma7DEp16upoYFcJxm7Ah9qkyTeqYYN2vNbzcpjowEoHzT",
+    "cover_url": "https://xdao.mypinata.cloud/ipfs/Qma7DEp16upoYFcJxm7Ah9qkyTeqYYN2vNbzcpjowEoHzT",
+    "contract_address": "amax.ntoken",
+    "maximum_supply": 10000,
+    "quantity": 10000,
+    "issuer": "dragonmaster",
+    "ipowner": "aplro4qit5ym",
+    "mint_endtime": "2022-12-31T10:00:00"
+}
