@@ -319,6 +319,7 @@ void custody::setmovwindow( const uint64_t& plan_id, const nsymbol& symbol, cons
 void custody::onmidtrans(const name& from, const name& to, const vector<nasset>& assets, const string& memo) {
     if (from == get_self() || to != get_self()) return;
     
+    CHECKC( from != to, err::PARAM_ERROR, "cannot send to self" )
     vector<string_view> memo_params = split(memo, ":");
     CHECKC( memo_params.size() == 4 && memo_params[0] == "move", err::MEMO_FORMAT_ERROR, "memo not prefixed with move" )
     CHECKC( assets.size() == 1, err::OVERSIZED, "only 1 MID asset allowed at a time" )
