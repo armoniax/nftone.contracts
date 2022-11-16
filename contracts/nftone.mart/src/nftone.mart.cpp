@@ -34,19 +34,19 @@ using namespace std;
                               const double& ipfeerate ) {
       require_auth( _self );
 
-      // CHECKC( devfeerate > 0.0 && devfeerate < 1.0, err::PARAM_ERROR, "devfeerate needs to be between 0 and 1" )
-      // CHECKC( ipfeerate > 0.0 && ipfeerate < 1.0, err::PARAM_ERROR, "ipfeerate to be between 0 and 1" )
-      // CHECKC( ipfeerate + devfeerate < 1.0, err::PARAM_ERROR, "The handling ipfeerate plus devfeerate shall not exceed 1" )
-      // CHECKC( is_account(feecollector), err::ACCOUNT_INVALID, "feecollector cannot be found" )
-      // CHECKC( is_account(admin), err::ACCOUNT_INVALID, "admin cannot be found" )
+      CHECKC( devfeerate > 0.0 && devfeerate < 1.0, err::PARAM_ERROR, "devfeerate needs to be between 0 and 1" )
+      CHECKC( ipfeerate > 0.0 && ipfeerate < 1.0, err::PARAM_ERROR, "ipfeerate to be between 0 and 1" )
+      CHECKC( ipfeerate + devfeerate < 1.0, err::PARAM_ERROR, "The handling ipfeerate plus devfeerate shall not exceed 1" )
+      CHECKC( is_account(feecollector), err::ACCOUNT_INVALID, "feecollector cannot be found" )
+      CHECKC( is_account(admin), err::ACCOUNT_INVALID, "admin cannot be found" )
 
-      // _gstate.admin                 = admin;
-      // _gstate.dev_fee_collector     = feecollector;
-      // _gstate.dev_fee_rate          = devfeerate;
-      // _gstate.ipowner_fee_rate      = ipfeerate;
-      // _gstate.pay_symbol            = pay_symbol;
-      // _gstate.pay_contract         = pay_contract;
-      _gstate.apl_farm.lease_id =5;
+      _gstate.admin                 = admin;
+      _gstate.dev_fee_collector     = feecollector;
+      _gstate.dev_fee_rate          = devfeerate;
+      _gstate.ipowner_fee_rate      = ipfeerate;
+      _gstate.pay_symbol            = pay_symbol;
+      _gstate.pay_contract         = pay_contract;
+      // _gstate.apl_farm.lease_id =5;
       // _gstate.last_buy_order_idx    = 14000;
       // _gstate.last_deal_idx         = 100;
       // _gstate.order_expiry_hours    = 72;
