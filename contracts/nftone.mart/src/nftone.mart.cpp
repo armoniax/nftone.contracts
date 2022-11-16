@@ -46,9 +46,9 @@ using namespace std;
       // _gstate.ipowner_fee_rate      = ipfeerate;
       // _gstate.pay_symbol            = pay_symbol;
       // _gstate.pay_contract         = pay_contract;
-
+      _gstate.apl_farm.lease_id =5;
       // _gstate.last_buy_order_idx    = 14000;
-      _gstate.last_deal_idx         = 100;
+      // _gstate.last_deal_idx         = 100;
       // _gstate.order_expiry_hours    = 72;
 
    }
@@ -156,14 +156,34 @@ using namespace std;
          auto ipfee              = asset(0, _gstate.pay_symbol);
          process_single_buy_order( from, order, quantity, bought, deal_count, devfee, ipowner, ipfee );
 
+         auto buyerbids          = buyer_bid_t::idx_t(_self, _self.value);
+         auto idx                = buyerbids.get_index<"sellorderidx"_n>();
+         auto lower_itr 			= idx.lower_bound( order_id );
+         auto upper_itr 			= idx.upper_bound( order_id );
+
          if (order.frozen == 0) {
             orders.erase( itr );
-
+           
+            for ( auto itr = lower_itr ; itr != upper_itr && itr != idx.end(); ) { 
+               TRANSFER_X( _gstate.pay_contract, itr->buyer, itr->frozen, "refund" )
+               itr = idx.erase( itr );
+            }
          } else {
             orders.modify(itr, same_payer, [&]( auto& row ) {
                row.frozen = order.frozen;
                row.updated_at = current_time_point();
             });
+        
+            // for ( auto itr = lower_itr ; itr != upper_itr && itr != idx.end();) { 
+            //    auto bid_count                = itr->frozen.amount / itr->price.value.amount;
+            //    if ( bid_count <= order.frozen) {
+            //       itr++;
+            //       continue;
+            //    }
+            //    TRANSFER_X( _gstate.pay_contract, itr->buyer, itr->frozen, "refund" )
+            //    itr = idx.erase( itr );
+            // }
+
          }
 
          deal_trace_s trace;
@@ -178,6 +198,9 @@ using namespace std;
          trace.ipfee             =  ipfee;
          trace.created_at        =  current_time_point();
          _emit_deal_action( trace );
+
+         
+
 
       } else {
          _gstate.last_deal_idx++;
@@ -349,7 +372,6 @@ using namespace std;
       CHECKC( bid_itr != bids.end(), err::RECORD_NOT_FOUND, "buyer bid not found: " + to_string( buyer_bid_id ))
       CHECKC( buyer == bid_itr->buyer, err::NO_AUTH, "NO_AUTH")
 
-      auto left = asset( 0, _gstate.pay_symbol );
       TRANSFER_X( _gstate.pay_contract, bid_itr->buyer, bid_frozen, "cancel" )
       bids.erase( bid_itr );
    }
