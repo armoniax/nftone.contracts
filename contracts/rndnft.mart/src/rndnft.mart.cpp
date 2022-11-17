@@ -142,7 +142,7 @@ void rndnft_mart::on_transfer_ntoken( const name& from, const name& to, const ve
     }
 
     booth.nft_box_num        += new_nftbox_num;
-    CHECKC( booth.nft_box_num < _gstate.max_booth_boxes, err::OVERSIZED, "booth box num exceeds allowed" )
+    CHECKC( booth.nft_box_num <= _gstate.max_booth_boxes, err::OVERSIZED, "booth box num exceeds allowed" )
         
     booth.nft_num            += new_nft_num;
     booth.nft_num_sum        += new_nft_num;
