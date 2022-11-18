@@ -28,7 +28,6 @@ using namespace std;
       CHECK(digit >= 0 && digit <= 18, "precision digit " + std::to_string(digit) + " should be in range[0,18]");
       return calc_precision(digit);
    }
-
    void nftone_mart::init(const symbol& pay_symbol, const name& pay_contract, const name& admin,
                               const double& devfeerate, const name& feecollector,
                               const double& ipfeerate ) {
@@ -156,18 +155,11 @@ using namespace std;
          auto ipfee              = asset(0, _gstate.pay_symbol);
          process_single_buy_order( from, order, quantity, bought, deal_count, devfee, ipowner, ipfee );
 
-         auto buyerbids          = buyer_bid_t::idx_t(_self, _self.value);
-         auto idx                = buyerbids.get_index<"sellorderidx"_n>();
-         auto lower_itr 			= idx.lower_bound( order_id );
-         auto upper_itr 			= idx.upper_bound( order_id );
-
+        
          if (order.frozen == 0) {
             orders.erase( itr );
            
-            for ( auto itr = lower_itr ; itr != upper_itr && itr != idx.end(); ) { 
-               TRANSFER_X( _gstate.pay_contract, itr->buyer, itr->frozen, "refund" )
-               itr = idx.erase( itr );
-            }
+           _refund_buyer_bid( order_id ,0);
          } else {
             orders.modify(itr, same_payer, [&]( auto& row ) {
                row.frozen = order.frozen;
@@ -203,8 +195,16 @@ using namespace std;
 
 
       } else {
+
          _gstate.last_deal_idx++;
          auto buyerbids          = buyer_bid_t::idx_t(_self, _self.value);
+
+         // auto idx                = buyerbids.get_index<"sellorderidx"_n>();
+         // auto lower_itr 			= idx.lower_bound( order_id );
+         // auto upper_itr 			= idx.upper_bound( order_id );
+         // int count = distance(lower_itr,upper_itr);
+         // CHECKC( count <= MAX_BUYER_BID_COUNT , err::OVERSIZED, "Price negotiation users reach the upper limit")
+
          auto id                 = _gstate.last_deal_idx;
          auto nft_count          = quant.amount / bid_price.value.amount;
          auto frozen             = quant;
@@ -246,10 +246,12 @@ using namespace std;
 
       auto bids                     = buyer_bid_t::idx_t(_self, _self.value);
       auto bid_itr                  = bids.find( buyer_bid_id );
+      
+      CHECKC( bid_itr != bids.end(), err::RECORD_NOT_FOUND, "buyer bid not found: " + to_string( buyer_bid_id ))
+
       auto bid_frozen               = bid_itr->frozen;
       auto bid_price                = bid_itr->price;
       auto bid_count                = bid_itr->frozen.amount / bid_itr->price.value.amount;
-      CHECKC( bid_itr != bids.end(), err::RECORD_NOT_FOUND, "buyer bid not found: " + to_string( buyer_bid_id ))
       auto sell_order_id = bid_itr->sell_order_id;
 
       auto sellorders               = order_t::idx_t( _self, token_id );
@@ -285,6 +287,8 @@ using namespace std;
          }
          bought.amount = sell_frozen;
          sellorders.erase( sell_itr );
+
+         _refund_buyer_bid( sell_order_id , buyer_bid_id);
       }
 
       bids.erase(bid_itr);
@@ -390,12 +394,16 @@ using namespace std;
          TRANSFER_N( NFT_BANK, itr->maker, quants, "nftone mart cancel" )
          orders.erase( itr );
 
+         _refund_buyer_bid( order_id, 0);
       } else {
          for (auto itr = orders.begin(); itr != orders.end(); itr++) {
+
             auto nft_quant = nasset( itr->frozen, itr->price.symbol );
             vector<nasset> quants = { nft_quant };
             TRANSFER_N( NFT_BANK, itr->maker, quants, "nftone mart cancel" )
             orders.erase( itr );
+
+            _refund_buyer_bid( itr->id, 0);
          }
       }
    }
@@ -405,6 +413,25 @@ using namespace std;
       CHECKC( price.amount > 0, err::PARAM_ERROR, " price non-positive quantity not allowed" )
    }
 
+   void nftone_mart::_refund_buyer_bid( const uint64_t& order_id, const uint64_t& bid_id){
+
+      auto buyerbids          = buyer_bid_t::idx_t(_self, _self.value);
+      auto idx                = buyerbids.get_index<"sellorderidx"_n>();
+      auto lower_itr 			= idx.lower_bound( order_id );
+      auto upper_itr 			= idx.upper_bound( order_id );
+      uint8_t i = 0;
+      for ( auto itr = lower_itr ; itr != upper_itr && itr != idx.end(); i++) { 
+            if ( i == MAX_REFUND_COUNT) break;
+            if ( itr->id != bid_id || bid_id == 0){
+              
+               TRANSFER_X( _gstate.pay_contract, itr->buyer, itr->frozen, "refund" )
+               itr = idx.erase( itr );
+            }else {
+               itr ++;
+               i --;
+            }
+      }
+   }
    // void nftone_mart::dealtrace(const uint64_t& seller_order_id,
    //                   const uint64_t& bid_id,
    //                   const name& seller,

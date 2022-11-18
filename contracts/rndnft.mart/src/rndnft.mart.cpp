@@ -244,12 +244,15 @@ void rndnft_mart::dealtrace(const deal_trace_s_s& trace) {
     require_recipient(trace.buyer);
 }
 
-void rndnft_mart::_reward_farmer( const asset& xin_quantity, const name& farmer ) {
+void rndnft_mart::_reward_farmer( const asset& quantity, const name& farmer ) {
+
+   if ( _gstate1.apl_farm.lease_id == 0 ) return;
+    
    auto apples = asset(0, APLINK_SYMBOL);
    aplink::farm::available_apples( _gstate1.apl_farm.contract, _gstate1.apl_farm.lease_id, apples );
    if (apples.amount == 0) return;
 
-   auto symbol_code = xin_quantity.symbol.code().to_string();
+   auto symbol_code = quantity.symbol.code().to_string();
    if (_gstate1.apl_farm.xin_reward_conf.find(symbol_code) == _gstate1.apl_farm.xin_reward_conf.end())
       return;
 
@@ -257,9 +260,9 @@ void rndnft_mart::_reward_farmer( const asset& xin_quantity, const name& farmer 
    if (unit_reward_quant.amount == 0)
       return;
 
-   auto reward_amount = safemath::mul( unit_reward_quant.amount, xin_quantity.amount, get_precision(xin_quantity.symbol) );
+   auto reward_amount = safemath::mul( unit_reward_quant.amount, quantity.amount, get_precision(quantity.symbol) );
    auto reward_quant = asset( reward_amount, APL_SYMBOL );
-   ALLOT_APPLE( _gstate1.apl_farm.contract, _gstate1.apl_farm.lease_id, farmer, reward_quant, "xin reward" )
+   ALLOT_APPLE( _gstate1.apl_farm.contract, _gstate1.apl_farm.lease_id, farmer, reward_quant, "apl reward" )
 }
 
 
