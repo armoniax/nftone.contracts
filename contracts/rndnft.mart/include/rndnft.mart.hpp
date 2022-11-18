@@ -47,6 +47,12 @@ public:
         _db.set( boothboxes );
     }
 
+    ACTION setmaxbox(const uint64_t& max_num) {
+        require_auth( _self );
+
+        _gstate.max_booth_boxes = max_num;
+    }
+    
     ACTION fixboothbox( const uint64_t& booth_id, const nasset& nfts) {
         require_auth( _self );
 
