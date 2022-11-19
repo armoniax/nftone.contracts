@@ -179,27 +179,37 @@ void rndnft_mart::on_transfer_mtoken( const name& from, const name& to, const as
     CHECKC( memo_params[0] == "booth", err::MEMO_FORMAT_ERROR, "memo must be 'booth'" )
 
     auto now                = time_point_sec(current_time_point());
-    auto booth_id            = std::stoul(string(memo_params[1]));
-    auto booth               = booth_t( booth_id );
+    auto booth_id           = std::stoul(string(memo_params[1]));
+    auto booth              = booth_t( booth_id );
     CHECKC( _db.get( booth ), err::RECORD_NOT_FOUND, "booth not found: " + to_string(booth_id) )
-    CHECKC( booth.status == booth_status::enabled, err::STATUS_ERROR, "booth not enabled, status:" + booth.status.to_string() )
+    CHECKC( booth.status    == booth_status::enabled, err::STATUS_ERROR, "booth not enabled, status:" + booth.status.to_string() )
     CHECKC( booth.opened_at <= now, err::STATUS_ERROR, "booth not open yet" )
     CHECKC( booth.closed_at >= now,err::STATUS_ERROR, "booth closed already" )
-
-    auto count              = quantity.amount / booth.price.amount;
-    CHECKC( count == 1, err::PARAM_ERROR, "can only buy just about 1 NFT");
     CHECKC( booth.fund_contract == get_first_receiver(), err::DATA_MISMATCH, "pay contract mismatches with specified" );
     CHECKC( booth.price.symbol == quantity.symbol, err::SYMBOL_MISMATCH, "pay symbol mismatches with price" );
     CHECKC( booth.nft_num > 0, err::OVERSIZED, "zero nft left" )
 
-    booth.fund_recd          += quantity;
-    booth.updated_at         = now;
-    auto recv_memo           = "plan:" + to_string( booth.split_plan_id ) + ":1";
-    TRANSFER( booth.fund_contract, _gstate.fund_distributor, quantity, recv_memo )
-    
+    auto count              = quantity.amount / booth.price.amount;
+    CHECKC( count > 0, err::PARAM_ERROR, "min purchase amount must be 1");
+    CHECKC( count <= 10, err::PARAM_ERROR, "max purchase amount must be <= 10");
+
+    auto paid               = booth.price * count;
+    auto left               = quantity - paid;
+    booth.fund_recd         += paid;
+    booth.updated_at        = now;
+    auto recv_memo          = "plan:" + to_string( booth.split_plan_id ) + ":1";
+    TRANSFER( booth.fund_contract, _gstate.fund_distributor, paid, recv_memo )
+    if (left.amount > 0) {
+        TRANSFER( booth.fund_contract, from, left, "rndnft.mart change" )
+    }
+
     nasset nft;
-    _one_nft( from, booth, nft );
-    vector<nasset> nfts = { nft };
+    vector<nasset> nfts = {};
+    for (int i = 0; i < count; i++) {
+        _one_nft( from, i, booth, nft );
+        nfts.emplace_back( nft );
+    }
+   
     TRANSFER_N( booth.nft_contract, from, nfts , "booth: " + to_string(booth.id) )
     
     //auto trace = deal_trace_s_s( booth_id, from, booth.nft_contract, booth.fund_contract, quantity, nft, now );
@@ -208,12 +218,12 @@ void rndnft_mart::on_transfer_mtoken( const name& from, const name& to, const as
     trace.buyer             = from;
     trace.nft_contract      = booth.nft_contract;
     trace.fund_contract     = booth.fund_contract;
-    trace.paid_quant        = quantity;
+    trace.paid_quant        = paid;
     trace.sold_quant        = nft;
     trace.created_at        = now;
     _on_deal_trace_s(trace);
     
-    _reward_farmer( quantity, from);
+    _reward_farmer( paid, from );
 }
 
 void rndnft_mart::closebooth(const name& owner, const uint64_t& booth_id){
@@ -245,7 +255,6 @@ void rndnft_mart::dealtrace(const deal_trace_s_s& trace) {
 }
 
 void rndnft_mart::_reward_farmer( const asset& quantity, const name& farmer ) {
-
    if ( _gstate1.apl_farm.lease_id == 0 ) return;
     
    auto apples = asset(0, APLINK_SYMBOL);
@@ -253,24 +262,24 @@ void rndnft_mart::_reward_farmer( const asset& quantity, const name& farmer ) {
    if (apples.amount == 0) return;
 
    auto symbol_code = quantity.symbol.code().to_string();
-   if (_gstate1.apl_farm.xin_reward_conf.find(symbol_code) == _gstate1.apl_farm.xin_reward_conf.end())
+   if (_gstate1.apl_farm.reward_conf.find(symbol_code) == _gstate1.apl_farm.reward_conf.end())
       return;
 
-   auto unit_reward_quant = _gstate1.apl_farm.xin_reward_conf[symbol_code];
+   auto unit_reward_quant = _gstate1.apl_farm.reward_conf[symbol_code];
    if (unit_reward_quant.amount == 0)
       return;
 
    auto reward_amount = safemath::mul( unit_reward_quant.amount, quantity.amount, get_precision(quantity.symbol) );
    auto reward_quant = asset( reward_amount, APL_SYMBOL );
-   ALLOT_APPLE( _gstate1.apl_farm.contract, _gstate1.apl_farm.lease_id, farmer, reward_quant, "apl reward" )
+   ALLOT_APPLE( _gstate1.apl_farm.contract, _gstate1.apl_farm.lease_id, farmer, reward_quant, "rndnft.mart APL reward" )
 }
 
 
-void rndnft_mart::_one_nft( const name& owner, booth_t& booth, nasset& nft ) {
+void rndnft_mart::_one_nft( const name& owner, const uint64_t& index, booth_t& booth, nasset& nft ) {
     auto boothboxes = booth_nftbox_t( booth.id );
     CHECKC( _db.get( boothboxes ), err::RECORD_NOT_FOUND, "no nftbox in the booth" )
 
-    uint64_t rand       = _rand( 1, booth.nft_num, booth.owner, booth.id );
+    uint64_t rand       = _rand( 1, booth.nft_num, booth.owner, booth.id, index );
     uint64_t curr_num   = 0;
     for (auto itr = boothboxes.nfts.begin(); itr != boothboxes.nfts.end(); itr++) {
         curr_num        += itr->second;
@@ -292,8 +301,8 @@ void rndnft_mart::_one_nft( const name& owner, booth_t& booth, nasset& nft ) {
 
 }
 
-uint64_t rndnft_mart::_rand(const uint16_t& min_unit, const uint64_t& max_uint, const name& owner, const uint64_t& booth_id) {
-    auto mixid = tapos_block_prefix() * tapos_block_num() + owner.value + booth_id - current_time_point().sec_since_epoch();
+uint64_t rndnft_mart::_rand(const uint16_t& min_unit, const uint64_t& max_uint, const name& owner, const uint64_t& booth_id, const uint64_t& index) {
+    auto mixid = tapos_block_prefix() * tapos_block_num() + owner.value + booth_id + index - current_time_point().sec_since_epoch();
     const char *mixedChar = reinterpret_cast<const char *>( &mixid );
     auto hash = sha256( (char *)mixedChar, sizeof(mixedChar));
 

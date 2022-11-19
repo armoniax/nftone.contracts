@@ -58,7 +58,7 @@ static constexpr eosio::name active_permission{"active"_n};
 struct aplink_farm {
     name contract           = "aplink.farm"_n;
     uint64_t lease_id       = 6;    //xch-farm-land
-    map<string, asset> xin_reward_conf = {
+    map<string, asset> reward_conf = {
         { "MUSDT", asset_from_string("5.0000 APL")      }
     };
 };
@@ -67,10 +67,27 @@ struct aplink_farm {
 TBL_NAME("global") global_t {
     name        admin;
     name        fund_distributor;
-    uint16_t    max_booth_boxes      = 30;
-    uint64_t    last_booth_id        = 0;
+    uint16_t    max_booth_boxes     = 30;
+    uint16_t    max_nfts_purchase   = 10; //max one-time NFTS purchase
+    uint64_t    last_booth_id       = 0;
     
-    EOSLIB_SERIALIZE( global_t, (admin)(fund_distributor)(max_booth_boxes)(last_booth_id))
+    EOSLIB_SERIALIZE( global_t, (admin)(fund_distributor)(max_booth_boxes)(max_nfts_purchase)(last_booth_id) )
+
+    // template<typename DataStream>
+    // friend DataStream& operator << ( DataStream& ds, const global_t& t ) {
+    //     return ds   
+    //             << t.admin
+    //             << t.fund_distributor
+    //             << t.max_booth_boxes
+    //             << t.max_nfts_purchase
+    //             << t.last_booth_id;
+    // }
+
+    // //read op (read as is)
+    // template<typename DataStream>
+    // friend DataStream& operator >> ( DataStream& ds, global_t& t ) {  
+    //     return ds;
+    // }
 };
 
 typedef eosio::singleton< "global"_n, global_t > global_singleton;
@@ -87,12 +104,6 @@ namespace booth_status {
     static constexpr eosio::name enabled            = "enabled"_n;
     static constexpr eosio::name disabled           = "disabled"_n;
 };
-
-// namespace nft_random_type {
-//     static constexpr eosio::name none               = "none"_n;
-//     static constexpr eosio::name nftboxnum          = "nftboxnum"_n;
-//     static constexpr eosio::name nftnum             = "nftnum"_n;
-// };
 
 TBL booth_t {
     uint64_t            id = 0;                                             //PK

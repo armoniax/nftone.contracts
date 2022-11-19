@@ -63,6 +63,15 @@ public:
         _db.set( boothboxes );
     }
 
+    ACTION init1() {
+        require_auth( _self );
+
+        _gstate.admin = "nftone.admin"_n;
+        _gstate.fund_distributor = "amax.split"_n;
+        _gstate.last_booth_id = 4;
+        _gstate.max_booth_boxes = 32;
+    }
+
     /**
      * @brief booth owner to send nft into one's own booth
      * 
@@ -88,8 +97,8 @@ public:
     using deal_trace_s_action = eosio::action_wrapper<"dealtrace"_n, &rndnft_mart::dealtrace>;
 
 private:
-    uint64_t _rand(const uint16_t& min_unit, const uint64_t& max_uint, const name& owner, const uint64_t& booth_id);
-    void _one_nft( const name& owner, booth_t& booth, nasset& nft );
+    uint64_t _rand(const uint16_t& min_unit, const uint64_t& max_uint, const name& owner, const uint64_t& booth_id, const uint64_t& index);
+    void _one_nft( const name& owner, const uint64_t& index, booth_t& booth, nasset& nft );
     void _on_deal_trace_s( const deal_trace_s_s& deal_trace_s);
     void _add_times( const uint64_t& booth_id, const name& owner);
     void _reward_farmer( const asset& xin_quantity, const name& farmer );
