@@ -28,6 +28,9 @@ using namespace eosio;
 #define TBL struct [[eosio::table, eosio::contract("nftone.mart")]]
 #define NTBL(name) struct [[eosio::table(name), eosio::contract("nftone.mart")]]
 
+static constexpr uint8_t MAX_BUYER_BID_COUNT = 30;
+static constexpr uint8_t MAX_REFUND_COUNT = 10;
+
 struct aplink_farm {
     name contract           = "aplink.farm"_n;
     uint64_t lease_id       = 4;    //nftone-farm-land

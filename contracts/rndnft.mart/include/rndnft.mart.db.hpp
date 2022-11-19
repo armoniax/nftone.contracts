@@ -9,6 +9,7 @@
 #include <eosio/singleton.hpp>
 #include <eosio/system.hpp>
 #include <eosio/time.hpp>
+#include <commons/utils.hpp>
 
 using namespace eosio;
 using namespace std;
@@ -53,16 +54,33 @@ using namespace amax;
 
 static constexpr eosio::name active_permission{"active"_n};
 
+
+struct aplink_farm {
+    name contract           = "aplink.farm"_n;
+    uint64_t lease_id       = 6;    //xch-farm-land
+    map<string, asset> xin_reward_conf = {
+        { "MUSDT", asset_from_string("5.0000 APL")      }
+    };
+};
+
+
 TBL_NAME("global") global_t {
     name        admin;
     name        fund_distributor;
     uint16_t    max_booth_boxes      = 30;
     uint64_t    last_booth_id        = 0;
-
-    EOSLIB_SERIALIZE( global_t, (admin)(fund_distributor)(max_booth_boxes)(last_booth_id) )
+    
+    EOSLIB_SERIALIZE( global_t, (admin)(fund_distributor)(max_booth_boxes)(last_booth_id))
 };
 
 typedef eosio::singleton< "global"_n, global_t > global_singleton;
+
+TBL_NAME("global1") global1_t {
+    aplink_farm apl_farm ;
+
+    EOSLIB_SERIALIZE( global1_t, (apl_farm))
+};
+typedef eosio::singleton< "global1"_n, global1_t > global1_singleton;
 
 namespace booth_status {
     static constexpr eosio::name none               = "none"_n;

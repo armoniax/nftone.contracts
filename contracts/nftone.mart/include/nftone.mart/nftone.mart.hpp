@@ -120,6 +120,7 @@ class [[eosio::contract("nftone.mart")]] nftone_mart : public contract {
       void _reward_farmer( const asset& fee, const name& farmer );
       void _sell_transfer(const name& from, const name& to, const vector<nasset>& quants, const string& memo);
       void _buy_transfer(const name& from, const name& to, const asset& quant, const string& memo);
+      void _refund_buyer_bid( const uint64_t& order_id, const uint64_t& bid_id );
 
 };
 } //namespace amax

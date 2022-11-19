@@ -8,17 +8,25 @@ class [[eosio::contract("rndnft.mart")]] rndnft_mart: public eosio::contract {
 private:
     global_singleton    _global;
     global_t            _gstate;
+
+    global1_singleton   _global1;
+    global1_t           _gstate1;
+
     dbc                 _db;
 
 public:
     using contract::contract;
 
     rndnft_mart(eosio::name receiver, eosio::name code, datastream<const char*> ds): contract(receiver, code, ds),
-        _global(get_self(), get_self().value),_db(get_self()) {
+        _global(get_self(), get_self().value),_db(get_self()),_global1(_self, _self.value) {
         _gstate = _global.exists() ? _global.get() : global_t{};
+        _gstate1 = _global1.exists() ? _global1.get() : global1_t{};
     }
 
-    ~rndnft_mart() { _global.set( _gstate, get_self() ); }
+    ~rndnft_mart() { 
+        _global.set( _gstate, get_self() ); 
+        _global1.set( _gstate1, get_self() ); 
+    }
 
     ACTION init( const name& admin, const name& fund_distributor);
     ACTION createbooth( const name& owner,const string& title, const name& nft_contract, const name& fund_contract,
@@ -84,5 +92,5 @@ private:
     void _one_nft( const name& owner, booth_t& booth, nasset& nft );
     void _on_deal_trace_s( const deal_trace_s_s& deal_trace_s);
     void _add_times( const uint64_t& booth_id, const name& owner);
-
+    void _reward_farmer( const asset& xin_quantity, const name& farmer );
 };

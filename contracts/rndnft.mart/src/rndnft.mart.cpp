@@ -2,6 +2,8 @@
 #include "rndnft.mart.hpp"
 #include "commons/utils.hpp"
 #include "commons/wasm_db.hpp"
+#include "commons/math.hpp"
+#include <aplink.farm/aplink.farm.hpp>
 
 #include <cstdlib>
 #include <ctime>
@@ -13,16 +15,25 @@ using namespace wasm;
 using namespace amax;
 using namespace std;
 
+// static constexpr eosio::name active_permission{"active"_n};
+static constexpr symbol   APL_SYMBOL          = symbol(symbol_code("APL"), 4);
+
 #define TRANSFER(bank, to, quantity, memo) \
 { action(permission_level{get_self(), "active"_n }, bank, "transfer"_n, std::make_tuple( _self, to, quantity, memo )).send(); }
 
+#define ALLOT_APPLE(farm_contract, lease_id, to, quantity, memo) \
+    {   aplink::farm::allot_action(farm_contract, { {_self, active_perm} }).send( \
+            lease_id, to, quantity, memo );}
 
 void rndnft_mart::init( const name& admin, const name& fund_distributor){
 
     //CHECKC( false, err::MISC ,"error");
     require_auth( _self );
+    CHECKC( is_account(admin), err::ACCOUNT_INVALID,                    "owner doesnot exist" )
+    CHECKC( is_account(fund_distributor), err::ACCOUNT_INVALID,         "fund_distributor doesnot exist" )
     _gstate.admin  = admin;
-    _gstate.fund_distributor = fund_distributor;
+    _gstate.fund_distributor    = fund_distributor;
+    _gstate.max_booth_boxes     = 50;
 //    booth_t::idx_t booth( get_self(), get_self().value);
 //    auto p_itr = booth.begin();
 //    while( p_itr != booth.end() ){
@@ -39,7 +50,7 @@ void rndnft_mart::createbooth( const name& owner,const string& title, const name
     CHECKC( is_account(fund_contract),  err::ACCOUNT_INVALID,   "fund contract does not exist" )
     CHECKC( is_account(nft_contract),   err::ACCOUNT_INVALID,   "nft contract does not exist" )
     CHECKC( price.amount > 0,           err::PARAM_ERROR ,      "price amount not positive" )
-
+    
     auto now                    = current_time_point();
     auto booth                  = booth_t( ++_gstate.last_booth_id );
 
@@ -55,6 +66,9 @@ void rndnft_mart::createbooth( const name& owner,const string& title, const name
     booth.updated_at            = now;
     booth.opened_at             = opened_at;
     booth.closed_at             = opened_at + duration_days * DAY_SECONDS;
+
+    CHECKC( booth.closed_at > now, err::PARAM_ERROR,          "close_at must be > opened_at")
+
 
     _db.set( booth );
 
@@ -84,6 +98,8 @@ void rndnft_mart::setboothtime( const name& owner, const uint64_t& booth_id, con
     auto booth = booth_t( booth_id );
     CHECKC( _db.get( booth ),  err::RECORD_NOT_FOUND, "booth not found: " + to_string(booth_id) )
     CHECKC( owner == booth.owner,  err::NO_AUTH, "non-booth-owner unauthorized" )
+    auto now                = time_point_sec(current_time_point());
+    CHECKC( opened_at < closed_at && closed_at > now, err::PARAM_ERROR, "close_at must be > opened_at")
 
     booth.opened_at      = opened_at;
     booth.closed_at      = closed_at;
@@ -185,7 +201,7 @@ void rndnft_mart::on_transfer_mtoken( const name& from, const name& to, const as
     _one_nft( from, booth, nft );
     vector<nasset> nfts = { nft };
     TRANSFER_N( booth.nft_contract, from, nfts , "booth: " + to_string(booth.id) )
-   
+    
     //auto trace = deal_trace_s_s( booth_id, from, booth.nft_contract, booth.fund_contract, quantity, nft, now );
     auto trace = deal_trace_s_s( );
     trace.booth_id          = booth_id;
@@ -197,6 +213,7 @@ void rndnft_mart::on_transfer_mtoken( const name& from, const name& to, const as
     trace.created_at        = now;
     _on_deal_trace_s(trace);
     
+    _reward_farmer( quantity, from);
 }
 
 void rndnft_mart::closebooth(const name& owner, const uint64_t& booth_id){
@@ -226,6 +243,28 @@ void rndnft_mart::dealtrace(const deal_trace_s_s& trace) {
     require_auth(get_self());
     require_recipient(trace.buyer);
 }
+
+void rndnft_mart::_reward_farmer( const asset& quantity, const name& farmer ) {
+
+   if ( _gstate1.apl_farm.lease_id == 0 ) return;
+    
+   auto apples = asset(0, APLINK_SYMBOL);
+   aplink::farm::available_apples( _gstate1.apl_farm.contract, _gstate1.apl_farm.lease_id, apples );
+   if (apples.amount == 0) return;
+
+   auto symbol_code = quantity.symbol.code().to_string();
+   if (_gstate1.apl_farm.xin_reward_conf.find(symbol_code) == _gstate1.apl_farm.xin_reward_conf.end())
+      return;
+
+   auto unit_reward_quant = _gstate1.apl_farm.xin_reward_conf[symbol_code];
+   if (unit_reward_quant.amount == 0)
+      return;
+
+   auto reward_amount = safemath::mul( unit_reward_quant.amount, quantity.amount, get_precision(quantity.symbol) );
+   auto reward_quant = asset( reward_amount, APL_SYMBOL );
+   ALLOT_APPLE( _gstate1.apl_farm.contract, _gstate1.apl_farm.lease_id, farmer, reward_quant, "apl reward" )
+}
+
 
 void rndnft_mart::_one_nft( const name& owner, booth_t& booth, nasset& nft ) {
     auto boothboxes = booth_nftbox_t( booth.id );
