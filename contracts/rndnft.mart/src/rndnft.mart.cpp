@@ -283,7 +283,7 @@ void rndnft_mart::_one_nft( const name& owner, const uint64_t& index, booth_t& b
 }
 
 uint64_t rndnft_mart::_rand(const uint64_t& range, const name& owner, const uint64_t& index) {
-    auto rnd_factors    = to_string(tapos_block_prefix() * tapos_block_num()) + owner.to_string() + to_string(index);
+    auto rnd_factors    = to_string(tapos_block_prefix() * tapos_block_num()) + owner.to_string() + to_string(index * 100);
     auto hash           = HASH256( rnd_factors );
     auto r1             = (uint64_t) (hash.data()[7] << 56) | 
                           (uint64_t) (hash.data()[6] << 48) | 
