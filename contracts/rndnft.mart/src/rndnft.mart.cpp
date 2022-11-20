@@ -34,6 +34,7 @@ void rndnft_mart::init( const name& admin, const name& fund_distributor){
     _gstate.admin  = admin;
     _gstate.fund_distributor    = fund_distributor;
     _gstate.max_booth_boxes     = 50;
+    _gstate.last_booth_id       = 6;
 //    booth_t::idx_t booth( get_self(), get_self().value);
 //    auto p_itr = booth.begin();
 //    while( p_itr != booth.end() ){
@@ -190,8 +191,9 @@ void rndnft_mart::on_transfer_mtoken( const name& from, const name& to, const as
     CHECKC( booth.nft_num > 0, err::OVERSIZED, "zero nft left" )
 
     auto count              = quantity.amount / booth.price.amount;
-    CHECKC( count > 0, err::PARAM_ERROR, "min purchase amount must be 1");
-    CHECKC( count <= 10, err::PARAM_ERROR, "max purchase amount must be <= 10");
+    CHECKC( count > 0, err::PARAM_ERROR, "min purchase amount must be >= 1");
+    CHECKC( count <= booth.nft_num, err::PARAM_ERROR, "Insufficient remaining quantity");
+    CHECKC( count <= _gstate.max_nfts_purchase , err::PARAM_ERROR, "max purchase amount must be <= " + to_string( _gstate.max_nfts_purchase ));
 
     auto paid               = booth.price * count;
     auto left               = quantity - paid;
@@ -205,24 +207,26 @@ void rndnft_mart::on_transfer_mtoken( const name& from, const name& to, const as
 
     nasset nft;
     vector<nasset> nfts = {};
+
     for (int i = 0; i < count; i++) {
+
         _one_nft( from, i, booth, nft );
         nfts.emplace_back( nft );
+        
+        auto trace = deal_trace_s_s( );
+        trace.booth_id          = booth_id;
+        trace.buyer             = from;
+        trace.nft_contract      = booth.nft_contract;
+        trace.fund_contract     = booth.fund_contract;
+        trace.paid_quant        = booth.price;
+        trace.sold_quant        = nft;
+        trace.created_at        = now;
+        _on_deal_trace_s(trace);
     }
    
     TRANSFER_N( booth.nft_contract, from, nfts , "booth: " + to_string(booth.id) )
     
-    //auto trace = deal_trace_s_s( booth_id, from, booth.nft_contract, booth.fund_contract, quantity, nft, now );
-    auto trace = deal_trace_s_s( );
-    trace.booth_id          = booth_id;
-    trace.buyer             = from;
-    trace.nft_contract      = booth.nft_contract;
-    trace.fund_contract     = booth.fund_contract;
-    trace.paid_quant        = paid;
-    trace.sold_quant        = nft;
-    trace.created_at        = now;
-    _on_deal_trace_s(trace);
-    
+
     _reward_farmer( paid, from );
 }
 
@@ -278,12 +282,12 @@ void rndnft_mart::_reward_farmer( const asset& quantity, const name& farmer ) {
 void rndnft_mart::_one_nft( const name& owner, const uint64_t& index, booth_t& booth, nasset& nft ) {
     auto boothboxes = booth_nftbox_t( booth.id );
     CHECKC( _db.get( boothboxes ), err::RECORD_NOT_FOUND, "no nftbox in the booth" )
-
-    uint64_t rand_index = _rand( 0, boothboxes.nfts.size() - 1, booth.owner, index );
+  
+    uint64_t rand_index = _rand( 1, boothboxes.nfts.size() , booth.owner, index );
     uint64_t curr_num   = 0;
 
     auto itr = boothboxes.nfts.begin();
-    std::advance(itr, rand_index);
+    std::advance(itr, rand_index - 1 );
     nft = nasset( 1, itr->first );
     itr->second         -= 1;
     booth.nft_num       -= 1;
