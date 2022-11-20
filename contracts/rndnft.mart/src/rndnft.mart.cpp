@@ -280,7 +280,6 @@ void rndnft_mart::_one_nft( const name& owner, const uint64_t& index, booth_t& b
     CHECKC( _db.get( boothboxes ), err::RECORD_NOT_FOUND, "no nftbox in the booth" )
 
     uint64_t rand_index = _rand( 0, boothboxes.nfts.size() - 1, booth.owner, index );
-    uint64_t curr_num   = 0;
 
     auto itr = boothboxes.nfts.begin();
     std::advance(itr, rand_index);
