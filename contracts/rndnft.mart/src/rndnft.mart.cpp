@@ -25,23 +25,6 @@ static constexpr symbol   APL_SYMBOL          = symbol(symbol_code("APL"), 4);
     {   aplink::farm::allot_action(farm_contract, { {_self, active_perm} }).send( \
             lease_id, to, quantity, memo );}
 
-void rndnft_mart::init( const name& admin, const name& fund_distributor){
-
-    //CHECKC( false, err::MISC ,"error");
-    require_auth( _self );
-    CHECKC( is_account(admin), err::ACCOUNT_INVALID,                    "owner doesnot exist" )
-    CHECKC( is_account(fund_distributor), err::ACCOUNT_INVALID,         "fund_distributor doesnot exist" )
-    _gstate.admin  = admin;
-    _gstate.fund_distributor    = fund_distributor;
-    // _gstate.max_booth_boxes     = 50;
-    // _gstate.last_booth_id       = 6;
-//    booth_t::idx_t booth( get_self(), get_self().value);
-//    auto p_itr = booth.begin();
-//    while( p_itr != booth.end() ){
-//        p_itr = booth.erase( p_itr );
-//    }
-}
-
 void rndnft_mart::createbooth( const name& owner,const string& title, const name& nft_contract, const name& fund_contract,
                            const uint64_t& split_plan_id, const asset& price, const time_point_sec& opened_at, const uint64_t& duration_days){
  
@@ -209,7 +192,6 @@ void rndnft_mart::on_transfer_mtoken( const name& from, const name& to, const as
     vector<nasset> nfts = {};
 
     for (int i = 0; i < count; i++) {
-
         _one_nft( from, i, booth, nft );
         nfts.emplace_back( nft );
         
@@ -223,10 +205,8 @@ void rndnft_mart::on_transfer_mtoken( const name& from, const name& to, const as
         trace.created_at        = now;
         _on_deal_trace_s(trace);
     }
-   
     TRANSFER_N( booth.nft_contract, from, nfts , "booth: " + to_string(booth.id) )
     
-
     _reward_farmer( paid, from );
 }
 
@@ -283,9 +263,11 @@ void rndnft_mart::_one_nft( const name& owner, const uint64_t& index, booth_t& b
     auto boothboxes = booth_nftbox_t( booth.id );
     CHECKC( _db.get( boothboxes ), err::RECORD_NOT_FOUND, "no nftbox in the booth" )
   
-    uint64_t rand_index = _rand( 1, boothboxes.nfts.size() , booth.owner, index );
+    uint64_t rand_index = _rand( boothboxes.nfts.size(), owner, index );
     auto itr = boothboxes.nfts.begin();
-    std::advance(itr, rand_index - 1 );
+    if (rand_index > 0)
+        std::advance(itr, rand_index );
+
     nft = nasset( 1, itr->first );
     itr->second         -= 1;
     booth.nft_num       -= 1;
@@ -300,13 +282,12 @@ void rndnft_mart::_one_nft( const name& owner, const uint64_t& index, booth_t& b
 
 }
 
-uint64_t rndnft_mart::_rand(const uint16_t& min_unit, const uint64_t& max_uint, const name& owner, const uint64_t& index) {
+uint64_t rndnft_mart::_rand(const uint64_t& range, const name& owner, const uint64_t& index) {
     auto rnd_factors =  to_string(tapos_block_prefix() * tapos_block_num()) + owner.to_string() + to_string(index);
 
     auto hash = HASH256( rnd_factors );
     auto r1 = (uint64_t) hash.data()[0];
-    uint64_t rand = r1 % max_uint + min_unit;
-
+    uint64_t rand = r1 % range;
     return rand;
 }
 
