@@ -33,8 +33,8 @@ void rndnft_mart::init( const name& admin, const name& fund_distributor){
     CHECKC( is_account(fund_distributor), err::ACCOUNT_INVALID,         "fund_distributor doesnot exist" )
     _gstate.admin  = admin;
     _gstate.fund_distributor    = fund_distributor;
-    _gstate.max_booth_boxes     = 50;
-    _gstate.last_booth_id       = 6;
+    // _gstate.max_booth_boxes     = 50;
+    // _gstate.last_booth_id       = 6;
 //    booth_t::idx_t booth( get_self(), get_self().value);
 //    auto p_itr = booth.begin();
 //    while( p_itr != booth.end() ){
