@@ -279,35 +279,32 @@ void rndnft_mart::_one_nft( const name& owner, const uint64_t& index, booth_t& b
     auto boothboxes = booth_nftbox_t( booth.id );
     CHECKC( _db.get( boothboxes ), err::RECORD_NOT_FOUND, "no nftbox in the booth" )
 
-    uint64_t rand       = _rand( 1, booth.nft_num, booth.owner, booth.id, index );
+    uint64_t rand_index = _rand( 1, boothboxes.nfts.size(), booth.owner, index );
     uint64_t curr_num   = 0;
-    for (auto itr = boothboxes.nfts.begin(); itr != boothboxes.nfts.end(); itr++) {
-        curr_num        += itr->second;
-        if ( rand <= curr_num ) {
-            nft = nasset( 1, itr->first );
-            itr->second         -= 1;
-            booth.nft_num       -= 1;
 
-            if (itr->second == 0) {
-                boothboxes.nfts.erase( itr );
-                booth.nft_box_num--;
-            }
-            _db.set( boothboxes );
-            break;
-        }
+    auto itr = boothboxes.nfts.begin();
+    std::advance(itr, rand_index);
+    nft = nasset( 1, itr->first );
+    itr->second         -= 1;
+    booth.nft_num       -= 1;
+
+    if (itr->second == 0) {
+        boothboxes.nfts.erase( itr );
+        booth.nft_box_num--;
     }
-
+    
+    _db.set( boothboxes );
     _db.set( booth );
 
 }
 
-uint64_t rndnft_mart::_rand(const uint16_t& min_unit, const uint64_t& max_uint, const name& owner, const uint64_t& booth_id, const uint64_t& index) {
-    auto mixid = tapos_block_prefix() * tapos_block_num() + owner.value + booth_id + index - current_time_point().sec_since_epoch();
-    const char *mixedChar = reinterpret_cast<const char *>( &mixid );
-    auto hash = sha256( (char *)mixedChar, sizeof(mixedChar));
+uint64_t rndnft_mart::_rand(const uint16_t& min_unit, const uint64_t& max_uint, const name& owner, const uint64_t& index) {
+    auto rnd_factors =  to_string(tapos_block_prefix() * tapos_block_num()) + owner.to_string() + to_string(index);
 
+    auto hash = HASH256( rnd_factors );
     auto r1 = (uint64_t) hash.data()[0];
     uint64_t rand = r1 % max_uint + min_unit;
+
     return rand;
 }
 

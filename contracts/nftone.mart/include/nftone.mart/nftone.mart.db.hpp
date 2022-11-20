@@ -23,8 +23,6 @@ namespace amax {
 using namespace std;
 using namespace eosio;
 
-#define HASH256(str) sha256(const_cast<char*>(str.c_str()), str.size())
-
 #define TBL struct [[eosio::table, eosio::contract("nftone.mart")]]
 #define NTBL(name) struct [[eosio::table(name), eosio::contract("nftone.mart")]]
 
