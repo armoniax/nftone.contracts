@@ -24,7 +24,7 @@ public:
    rndnft_mart_tester() {
       init_contract();
    }
-   
+
    void init_contract() {
       create_accounts( { N(admin), N(account) } );
 
@@ -46,7 +46,7 @@ public:
       produce_blocks(1);
 
       set<name> actions = {N(bindaccount), N(bindanswer), N(createorder), N(chkanswer), N(chkdid), N(chkmanual)};
-      
+
       action_setauditor(N(admin), actions);
       produce_blocks(1);
    }
@@ -74,7 +74,7 @@ BOOST_FIXTURE_TEST_CASE( init_tests, rndnft_mart_tester ) try {
 
    action_bindaccount(N(admin), N(account), "mobile_hash" );
    produce_blocks(1);
-   std::cout << "action_bindaccount ---- end \n" ; 
+   std::cout << "action_bindaccount ---- end \n" ;
    // auto accaudit = get_table_accaudits(N(account));
    // wdump(("accaudit:")(accaudit));
 
@@ -82,40 +82,40 @@ BOOST_FIXTURE_TEST_CASE( init_tests, rndnft_mart_tester ) try {
    action_bindanswer (N(admin), N(account), answers );
    produce_blocks(1);
 
-   std::cout << "action_bindanswer ---- end\n"; 
+   std::cout << "action_bindanswer ---- end\n";
 
-   // auto new_active_pubkey = get_public_key( N(account), "active_new" );
+   auto new_active_pubkey = get_public_key( N(account), "active_new" );
    // wdump(("---new active pubkey ---")(new_active_pubkey));
-   
+
    action_createorder( N(admin) , N(account), "mobile_hash", {"public_key", new_active_pubkey.to_string()}, false);
-   std::cout << "action_createorder ---- end\n"; 
+   std::cout << "action_createorder ---- end\n";
    produce_blocks(1);
 
    auto order = get_table_recoverorder(1);
    wdump(("order:")(order));
 
    action_chkanswer(N(admin), 1, N(account),2);
-   std::cout << "action_chkanswer ---- end\n"; 
+   std::cout << "action_chkanswer ---- end\n";
    produce_blocks(1);
 
    action_chkdid(N(admin), 1, N(account), true);
-   std::cout << "action_chkdid ---- end\n"; 
+   std::cout << "action_chkdid ---- end\n";
    produce_blocks(1);
 
 
    action_chkmanual(N(admin), 1, N(account), true);
-   std::cout << "action_chkmanual ---- end\n"; 
+   std::cout << "action_chkmanual ---- end\n";
    produce_blocks(1);
 
 
    action_closeorder(N(account), 1);
-   std::cout << "action_closeorder ---- end\n"; 
+   std::cout << "action_closeorder ---- end\n";
    produce_blocks(1);
 
    std::cout<<"add code authority begin.\n";
    auto contract_auth3 = get_auth(N(rndnft.mart), N(owner));
    wdump(("rndnft.mart ---new account auth3: ---")(contract_auth3));
-   
+
 
    std::cout<<"add code authority end.\n";
 
@@ -127,7 +127,7 @@ BOOST_FIXTURE_TEST_CASE( init_tests, rndnft_mart_tester ) try {
 BOOST_FIXTURE_TEST_CASE( update_pubkey_test, rndnft_mart_tester ) try {
 
 
-   
+
 
 
 
@@ -137,7 +137,7 @@ BOOST_FIXTURE_TEST_CASE( update_pubkey_test, rndnft_mart_tester ) try {
 } FC_LOG_AND_RETHROW()
 
 
-  
+
 
 
 // BOOST_FIXTURE_TEST_CASE( create_negative_max_supply, rndnft_mart_tester ) try {
