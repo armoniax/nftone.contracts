@@ -1,0 +1,12 @@
+#pragma once
+#include <eosio/testing/tester.hpp>
+
+namespace eosio { namespace testing {
+
+struct contracts {
+   
+   static std::vector<uint8_t> rndnft_mart_wasm() { return read_wasm("${CMAKE_BINARY_DIR}/../contracts/rndnft.mart/rndnft.mart.wasm"); }
+   static std::vector<char>    rndnft_mart_abi() { return read_abi("${CMAKE_BINARY_DIR}/../contracts/rndnft.mart/rndnft.mart.abi"); }
+
+};
+}} //ns eosio::testing
