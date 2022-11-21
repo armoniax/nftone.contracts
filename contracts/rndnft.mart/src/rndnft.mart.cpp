@@ -185,7 +185,7 @@ void rndnft_mart::on_transfer_mtoken( const name& from, const name& to, const as
     auto recv_memo          = "plan:" + to_string( booth.split_plan_id ) + ":1";
     TRANSFER( booth.fund_contract, _gstate.fund_distributor, paid, recv_memo )
     if (left.amount > 0) {
-        TRANSFER( booth.fund_contract, from, left, "rndnft.mart change" )
+        TRANSFER( booth.fund_contract, from, left, std::string("rndnft.mart change") )
     }
 
     map<uint64_t, nasset> bought;
@@ -207,7 +207,7 @@ void rndnft_mart::on_transfer_mtoken( const name& from, const name& to, const as
         trace.buyer             = from;
         trace.nft_contract      = booth.nft_contract;
         trace.fund_contract     = booth.fund_contract;
-        trace.paid_quant        = booth.price;
+        trace.paid_quant        = booth.price * nft.second.amount;
         trace.sold_quant        = nft.second;
         trace.created_at        = now;
         _on_deal_trace_s(trace);
