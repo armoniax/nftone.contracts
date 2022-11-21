@@ -188,20 +188,27 @@ void rndnft_mart::on_transfer_mtoken( const name& from, const name& to, const as
         TRANSFER( booth.fund_contract, from, left, "rndnft.mart change" )
     }
 
-    nasset nft;
-    vector<nasset> nfts = {};
-
+    map<uint64_t, nasset> bought;
     for (int i = 0; i < count; i++) {
+        nasset nft;
         _one_nft( from, i, booth, nft );
-        nfts.emplace_back( nft );
+        if (bought.count( nft.symbol.id ) == 0)
+            bought[nft.symbol.id] = nft;
+        else
+            bought[nft.symbol.id] += nft;
+    }
+
+    vector<nasset> nfts = {};
+    for (auto const& nft : bought) {
+        nfts.emplace_back( nft.second );
         
-        auto trace = deal_trace_s_s( );
+        auto trace              = deal_trace_s_s( );
         trace.booth_id          = booth_id;
         trace.buyer             = from;
         trace.nft_contract      = booth.nft_contract;
         trace.fund_contract     = booth.fund_contract;
         trace.paid_quant        = booth.price;
-        trace.sold_quant        = nft;
+        trace.sold_quant        = nft.second;
         trace.created_at        = now;
         _on_deal_trace_s(trace);
     }
