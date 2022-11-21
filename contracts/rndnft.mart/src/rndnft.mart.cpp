@@ -185,7 +185,7 @@ void rndnft_mart::on_transfer_mtoken( const name& from, const name& to, const as
     auto recv_memo          = "plan:" + to_string( booth.split_plan_id ) + ":1";
     TRANSFER( booth.fund_contract, _gstate.fund_distributor, paid, recv_memo )
     if (left.amount > 0) {
-        TRANSFER( booth.fund_contract, from, left, "rndnft.mart change" )
+        TRANSFER( booth.fund_contract, from, left, std::string("rndnft.mart change") )
     }
 
     map<uint64_t, nasset> bought;
