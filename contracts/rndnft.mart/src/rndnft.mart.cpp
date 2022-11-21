@@ -207,7 +207,7 @@ void rndnft_mart::on_transfer_mtoken( const name& from, const name& to, const as
         trace.buyer             = from;
         trace.nft_contract      = booth.nft_contract;
         trace.fund_contract     = booth.fund_contract;
-        trace.paid_quant        = booth.price;
+        trace.paid_quant        = booth.price * nft.second.amount;
         trace.sold_quant        = nft.second;
         trace.created_at        = now;
         _on_deal_trace_s(trace);
