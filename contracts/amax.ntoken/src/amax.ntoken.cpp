@@ -48,6 +48,17 @@ void ntoken::setipowner(const uint64_t& symbid, const name& ip_owner) {
    });
 }
 
+void ntoken::settokenurl(const uint64_t& symbid, const string& url) {
+   require_auth( _self );
+
+   auto nstats          = nstats_t::idx_t( _self, _self.value );
+   auto itr             = nstats.find( symbid );
+   check( itr != nstats.end(), "nft not found" );
+
+   nstats.modify( itr, same_payer, [&](auto& row){
+      row.token_uri     = url;
+   });
+}
 void ntoken::setnotary(const name& notary, const bool& to_add) {
    require_auth( _self );
 
