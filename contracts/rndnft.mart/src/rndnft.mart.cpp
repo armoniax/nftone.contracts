@@ -176,7 +176,7 @@ void rndnft_mart::on_transfer_mtoken( const name& from, const name& to, const as
     auto count              = quantity.amount / booth.price.amount;
     CHECKC( count > 0, err::PARAM_ERROR, "min purchase amount must be >= 1");
     CHECKC( count <= booth.nft_num, err::PARAM_ERROR, "Insufficient remaining quantity");
-    CHECKC( count <= _gstate.max_nfts_purchase , err::PARAM_ERROR, "max purchase amount must be <= " + to_string( _gstate.max_nfts_purchase ));
+    // CHECKC( count <= _gstate.max_nfts_purchase , err::PARAM_ERROR, "max purchase amount must be <= " + to_string( _gstate.max_nfts_purchase ));
 
     auto paid               = booth.price * count;
     auto left               = quantity - paid;

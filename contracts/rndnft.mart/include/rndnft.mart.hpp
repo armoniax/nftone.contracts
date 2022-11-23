@@ -21,12 +21,12 @@ public:
 
     rndnft_mart(eosio::name receiver, eosio::name code, datastream<const char*> ds): contract(receiver, code, ds),
         _global(get_self(), get_self().value),_db(get_self()),_global1(_self, _self.value) {
-        _gstate = _global.exists() ? _global.get() : global_t{};
+        // _gstate = _global.exists() ? _global.get() : global_t{};
         _gstate1 = _global1.exists() ? _global1.get() : global1_t{};
     }
 
     ~rndnft_mart() { 
-        _global.set( _gstate, get_self() ); 
+        // _global.set( _gstate, get_self() ); 
         _global1.set( _gstate1, get_self() ); 
     }
 
@@ -64,6 +64,16 @@ public:
         _db.set( boothboxes );
     }
 
+    ACTION init(){
+        require_auth( _self );
+        _global.remove();
+        _gstate = global_t{};
+
+        // _gstate.admin = "armoniaadmin"_n;
+        // _gstate.fund_distributor = "amax.split"_n;
+        // _gstate.last_booth_id = 2;
+        // _gstate.max_booth_boxes = 30;
+    }
     /**
      * @brief booth owner to send nft into one's own booth
      * 
