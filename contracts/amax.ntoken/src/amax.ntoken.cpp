@@ -48,7 +48,7 @@ void ntoken::setipowner(const uint64_t& symbid, const name& ip_owner) {
    });
 }
 
-void ntoken::settokenurl(const uint64_t& symbid, const string& url) {
+void ntoken::settokenuri(const uint64_t& symbid, const string& url) {
    require_auth( _self );
 
    auto nstats          = nstats_t::idx_t( _self, _self.value );

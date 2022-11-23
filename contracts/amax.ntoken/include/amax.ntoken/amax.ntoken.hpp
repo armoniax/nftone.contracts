@@ -86,7 +86,7 @@ class [[eosio::contract("amax.ntoken")]] ntoken : public contract {
 
    ACTION setipowner(const uint64_t& symbid, const name& ip_owner);
 
-   ACTION settokenurl(const uint64_t& symbid, const string& url);
+   ACTION settokenuri(const uint64_t& symbid, const string& url);
    /**
     * @brief notary to notarize a NFT asset by its token ID
     *
