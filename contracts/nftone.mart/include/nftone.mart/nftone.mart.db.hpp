@@ -44,13 +44,13 @@ NTBL("global") global_t {
     double notary_fee_rate          = 0.0;
     uint32_t order_expiry_hours     = 72;
     eosio::symbol pay_symbol;
-    name pay_contract               = "amax.mtoken"_n;
+    name bank_contract               = "amax.mtoken"_n;
     aplink_farm apl_farm;
     uint64_t last_buy_order_idx     = 0;
     uint64_t last_deal_idx          = 0;
 
     EOSLIB_SERIALIZE( global_t, (admin)(dev_fee_collector)(dev_fee_rate)(creator_fee_rate)(ipowner_fee_rate)
-                                (notary_fee_rate)(order_expiry_hours)(pay_symbol)(pay_contract)
+                                (notary_fee_rate)(order_expiry_hours)(pay_symbol)(bank_contract)
                                 (apl_farm)(last_buy_order_idx)(last_deal_idx) )
 
     // template<typename DataStream>

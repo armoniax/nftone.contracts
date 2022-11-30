@@ -28,7 +28,7 @@ using namespace std;
       CHECK(digit >= 0 && digit <= 18, "precision digit " + std::to_string(digit) + " should be in range[0,18]");
       return calc_precision(digit);
    }
-   void nftone_mart::init(const symbol& pay_symbol, const name& pay_contract, const name& admin,
+   void nftone_mart::init(const symbol& pay_symbol, const name& bank_contract, const name& admin,
                               const double& devfeerate, const name& feecollector,
                               const double& ipfeerate ) {
       require_auth( _self );
@@ -44,7 +44,7 @@ using namespace std;
       _gstate.dev_fee_rate          = devfeerate;
       _gstate.ipowner_fee_rate      = ipfeerate;
       _gstate.pay_symbol            = pay_symbol;
-      _gstate.pay_contract         = pay_contract;
+      _gstate.bank_contract         = bank_contract;
       // _gstate.apl_farm.lease_id =5;
       // _gstate.last_buy_order_idx    = 14000;
       // _gstate.last_deal_idx         = 100;
@@ -172,7 +172,7 @@ using namespace std;
             //       itr++;
             //       continue;
             //    }
-            //    TRANSFER_X( _gstate.pay_contract, itr->buyer, itr->frozen, "refund" )
+            //    TRANSFER_X( _gstate.bank_contract, itr->buyer, itr->frozen, "refund" )
             //    itr = idx.erase( itr );
             // }
 
@@ -227,7 +227,7 @@ using namespace std;
       }
 
       if (quantity.amount > 0) {
-         TRANSFER_X( _gstate.pay_contract, from, quantity, "nft buy left" )
+         TRANSFER_X( _gstate.bank_contract, from, quantity, "nft buy left" )
       }
    }
 
@@ -238,7 +238,8 @@ using namespace std;
 
       auto reward_amount = wasm::safemath::mul( _gstate.apl_farm.unit_reward.amount, fee.amount, get_precision(APL_SYMBOL) );
       auto reward_quant = asset( reward_amount, APL_SYMBOL );
-      ALLOT_APPLE( _gstate.apl_farm.contract, _gstate.apl_farm.lease_id, farmer, reward_quant, "nftone reward" )
+      if ( reward_quant.amount > 0 )
+         ALLOT_APPLE( _gstate.apl_farm.contract, _gstate.apl_farm.lease_id, farmer, reward_quant, "nftone reward" )
    }
 
    ACTION nftone_mart::takebuybid( const name& seller, const uint32_t& token_id, const uint64_t& buyer_bid_id ) {
@@ -283,7 +284,7 @@ using namespace std;
          if (bid_count > sell_frozen) {
             auto left = asset( 0, _gstate.pay_symbol );
             left.amount = (bid_count - sell_frozen) * bid_price.value.amount ;
-            TRANSFER_X( _gstate.pay_contract, bid_itr->buyer,left , "take nft left" )
+            TRANSFER_X( _gstate.bank_contract, bid_itr->buyer,left , "take nft left" )
          }
          bought.amount = sell_frozen;
          sellorders.erase( sell_itr );
@@ -351,19 +352,19 @@ using namespace std;
       ipfee.amount                  = earned.amount * _gstate.ipowner_fee_rate;
 
       if (devfee.amount > 0) {
-         TRANSFER_X( _gstate.pay_contract, _gstate.dev_fee_collector, devfee, "nftone dev fee" )
+         TRANSFER_X( _gstate.bank_contract, _gstate.dev_fee_collector, devfee, "nftone dev fee" )
 
          _reward_farmer( devfee, buyer );
       }
 
       if (ipfee.amount > 0 && ipowner.length() != 0 && is_account(ipowner))
-         TRANSFER_X( _gstate.pay_contract, ipowner, ipfee, "nftone ip fee" )
+         TRANSFER_X( _gstate.bank_contract, ipowner, ipfee, "nftone ip fee" )
       else
          ipfee.amount = 0;
 
       earned -= devfee + ipfee;
       if (earned.amount > 0)
-         TRANSFER_X( _gstate.pay_contract, maker, earned, "sell nft: " + to_string(bought.symbol.id) )
+         TRANSFER_X( _gstate.bank_contract, maker, earned, "sell nft: " + to_string(bought.symbol.id) )
 
    }
 
@@ -376,7 +377,7 @@ using namespace std;
       CHECKC( bid_itr != bids.end(), err::RECORD_NOT_FOUND, "buyer bid not found: " + to_string( buyer_bid_id ))
       CHECKC( buyer == bid_itr->buyer, err::NO_AUTH, "NO_AUTH")
 
-      TRANSFER_X( _gstate.pay_contract, bid_itr->buyer, bid_frozen, "cancel" )
+      TRANSFER_X( _gstate.bank_contract, bid_itr->buyer, bid_frozen, "cancel" )
       bids.erase( bid_itr );
    }
 
@@ -424,7 +425,7 @@ using namespace std;
             if ( i == MAX_REFUND_COUNT) break;
             if ( itr->id != bid_id || bid_id == 0){
               
-               TRANSFER_X( _gstate.pay_contract, itr->buyer, itr->frozen, "refund" )
+               TRANSFER_X( _gstate.bank_contract, itr->buyer, itr->frozen, "refund" )
                itr = idx.erase( itr );
             }else {
                itr ++;
