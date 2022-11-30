@@ -96,7 +96,7 @@ class [[eosio::contract("nftone.mart")]] nftone_mart : public contract {
       _gstate.dev_fee_collector = dev_fee_collector;
    }
    
-   ACTION init(const symbol& pay_symbol, const name& pay_contract, const name& admin,
+   ACTION init(const symbol& pay_symbol, const name& bank_contract, const name& admin,
                               const double& devfeerate, const name& feecollector,
                               const double& ipfeerate);
    ACTION cancelorder(const name& maker, const uint32_t& token_id, const uint64_t& order_id);
