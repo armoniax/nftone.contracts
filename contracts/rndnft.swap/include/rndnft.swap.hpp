@@ -4,6 +4,9 @@
 using namespace std;
 using namespace wasm::db;
 
+
+#define HASH256(str) sha256(const_cast<char*>(str.c_str()), str.size())
+
 class [[eosio::contract("rndnft.swap")]] rndnft_swap: public eosio::contract {
 private:
     global_singleton    _global;
@@ -42,7 +45,7 @@ public:
     using deal_trace_s_action = eosio::action_wrapper<"dealtrace"_n, &rndnft_swap::dealtrace>;
 
 private:
-    uint64_t _rand(const uint16_t& min_unit, const uint64_t& max_uint, const name& owner, const uint64_t& nonce);
+    uint64_t _rand( const uint64_t& range, const name& owner, const uint64_t& index );
     void _one_nft( const time_point_sec& now, const name& owner, booth_t& booth, nasset& nft , const uint64_t& nonce);
     void _on_deal_trace_s( const deal_trace_s_s& deal_trace_s);
     void _refuel_nft( const vector<nasset>& assets, booth_t& booth );
