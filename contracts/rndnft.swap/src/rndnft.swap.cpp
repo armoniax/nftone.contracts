@@ -40,7 +40,6 @@ void rndnft_swap::createbooth( const booth_conf_s& conf ) {
     auto now                = time_point_sec(current_time_point());
     CHECKC( conf.opened_at < conf.closed_at && conf.closed_at > now, err::PARAM_ERROR,          "close_at must be > opened_at and > current time")
 
-    //auto booth                   = booth_t( ++_gstate.last_booth_id );
     auto booth                   = booth_t( conf.quote_nft_price.symbol.id );
 
     CHECKC( !_db.get( conf.quote_nft_contract.value, booth),err::RECORD_EXISTING, "booth already exising : " 
@@ -141,7 +140,6 @@ void rndnft_swap::_refuel_nft( const vector<nasset>& assets, booth_t& booth ) {
         auto nftboxes = booth_nftbox_t::idx_t( _self, booth.id );
         auto nftidx = nftboxes.get_index<"nftidx"_n>();
         auto itr = nftidx.lower_bound( nft.symbol.id );
-        // || itr->nfts.symbol.id != nft.symbol.id
         if( itr == nftidx.end() || itr->nfts.symbol.id != nft.symbol.id) {
             auto id = nftboxes.available_primary_key();
             auto nftbox = booth_nftbox_t(id);
@@ -171,7 +169,7 @@ void rndnft_swap::_refuel_nft( const vector<nasset>& assets, booth_t& booth ) {
 }
 
 void rndnft_swap::_swap_nft( const name& user, const nasset& paid_nft, booth_t& booth ) {
-    //CHECKC( booth.conf.quote_nft_contract == get_first_receiver(), err::DATA_MISMATCH, "sent NFT mismatches with booth's quote nft" );
+    
     CHECKC( booth.base_nft_num > 0, err::OVERSIZED, "zero nft left" )
     auto now                = time_point_sec(current_time_point());
     auto swap_amount = paid_nft.amount / booth.conf.quote_nft_price.amount;
@@ -185,22 +183,31 @@ void rndnft_swap::_swap_nft( const name& user, const nasset& paid_nft, booth_t& 
 
     booth.quote_nft_recd        += paid_nft;
 
+    map<uint64_t, nasset> bought;
+
     for( size_t i = 0; i < swap_amount; i++ ) {
         nasset nft;
         _one_nft( now, user, booth, nft , i );
-        vector<nasset> nfts = { nft };
-        TRANSFER_N( booth.conf.base_nft_contract, user, nfts, "swap@" + to_string(booth.id) )
 
+        if (bought.count( nft.symbol.id ) == 0)
+            bought[nft.symbol.id] = nft;
+        else
+            bought[nft.symbol.id] += nft;
+    }
+    vector<nasset> nfts = {};
+    for (auto const& nft : bought) {
+        nfts.emplace_back( nft.second );
         auto trace = deal_trace_s_s( );
         trace.booth_id          = booth.id;
         trace.user              = user;
         trace.base_nft_contract = booth.conf.base_nft_contract;
         trace.quote_nft_contract= booth.conf.quote_nft_contract;
         trace.paid_quant        = nasset(swap_amount,paid_nft.symbol);
-        trace.sold_quant        = nft;
+        trace.sold_quant        = nft.second;
         trace.created_at        = now;
         _on_deal_trace_s(trace);
     }
+    TRANSFER_N( booth.conf.base_nft_contract, user, nfts, "swap@" + to_string(booth.id) )
 }
 
 void rndnft_swap::closebooth(const name& owner, const name& quote_nft_contract, const uint64_t& symbol_id){
@@ -221,14 +228,23 @@ void rndnft_swap::dealtrace(const deal_trace_s_s& trace) {
 }
 
 void rndnft_swap::_one_nft( const time_point_sec& now, const name& owner, booth_t& booth, nasset& nft , const uint64_t& nonce) {
-    // auto boothboxes = booth_nftbox_t( booth.id );
     CHECKC( booth.base_nftbox_num != 0 , err::RECORD_NOT_FOUND, "no nftbox in the booth" )
 
-    uint64_t rand                       = _rand( 0, booth.base_nftbox_sum, owner,nonce );
     auto nftboxes                       = booth_nftbox_t::idx_t( _self, booth.id );
-    //auto nftidx                         = nftboxes.get_index<"nftidx"_n>();
-    auto itr                            = nftboxes.lower_bound( rand );
-    
+    auto itr                            = nftboxes.begin();
+    if ( booth.base_nftbox_num >= MAX_LOWER_BOUND ){
+        uint64_t rand_index             = _rand( booth.base_nftbox_sum, owner,nonce );
+        itr                             = nftboxes.lower_bound( rand_index );
+    }else {
+        uint64_t rand_index             = _rand( booth.base_nft_num, owner,nonce );
+        uint64_t curr_num = 0;
+        for( ; itr != nftboxes.end(); itr++){
+            curr_num += itr->nfts.amount;
+            if ( rand_index <= curr_num)
+                break;
+        }
+    }
+   
     if( itr == nftboxes.end() ) 
         itr = nftboxes.begin();
 
@@ -236,7 +252,6 @@ void rndnft_swap::_one_nft( const time_point_sec& now, const name& owner, booth_
     nft = itr->nfts;
     nft.amount = 1;
 
-    // itr->nfts -= nft;
     nftboxes.modify(*itr, same_payer, [&]( auto& row ) {
         row.nfts -= nft;
     });
@@ -248,16 +263,22 @@ void rndnft_swap::_one_nft( const time_point_sec& now, const name& owner, booth_
 
     booth.updated_at  = now;
     _db.set(booth.conf.quote_nft_contract.value, booth );
-
 }
 
-uint64_t rndnft_swap::_rand(const uint16_t& min, const uint64_t& max, const name& owner, const uint64_t& nonce) {
-    auto mixid = tapos_block_prefix() * tapos_block_num() + owner.value + nonce - current_time_point().sec_since_epoch();
-    const char *mixedChar = reinterpret_cast<const char *>( &mixid );
-    auto hash = sha256( (char *)mixedChar, sizeof(mixedChar));
+uint64_t rndnft_swap::_rand(const uint64_t& range, const name& owner, const uint64_t& index) {
+    auto rnd_factors    = to_string(tapos_block_prefix() * tapos_block_num()) + owner.to_string() + to_string(index * 100);
+    auto hash           = HASH256( rnd_factors );
+    auto r1             = (uint64_t) (hash.data()[7] << 56) | 
+                          (uint64_t) (hash.data()[6] << 48) | 
+                          (uint64_t) (hash.data()[5] << 40) |
+                          (uint64_t) (hash.data()[4] << 32) | 
+                          (uint64_t) (hash.data()[3] << 24) |
+                          (uint64_t) (hash.data()[2] << 16) |
+                          (uint64_t) (hash.data()[1] << 8)  |
+                          (uint64_t) hash.data()[0];
 
-    auto r1 = (uint64_t) hash.data()[0];
-    uint64_t rand = r1 % max + min;
+    uint64_t rand       = r1 % range;
+
     return rand;
 }
 

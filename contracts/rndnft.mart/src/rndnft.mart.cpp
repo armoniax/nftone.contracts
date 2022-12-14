@@ -4,6 +4,7 @@
 #include "commons/wasm_db.hpp"
 #include "commons/math.hpp"
 #include <aplink.farm/aplink.farm.hpp>
+#include "amax.split/tokensplit.db.hpp"
 
 #include <cstdlib>
 #include <ctime>
@@ -35,6 +36,10 @@ void rndnft_mart::createbooth( const name& owner,const string& title, const name
     CHECKC( is_account(nft_contract),   err::ACCOUNT_INVALID,   "nft contract does not exist" )
     CHECKC( price.amount > 0,           err::PARAM_ERROR ,      "price amount not positive" )
     
+    split_plan_t::tbl_t splitplan( _gstate.fund_distributor,_self.value);
+    auto plan_itr = splitplan.find(split_plan_id);
+    CHECKC( plan_itr != splitplan.end(), err:: RECORD_NOT_FOUND, " split plan not found : " + to_string(split_plan_id))
+
     auto now                    = current_time_point();
     auto booth                  = booth_t( ++_gstate.last_booth_id );
 
@@ -212,6 +217,7 @@ void rndnft_mart::on_transfer_mtoken( const name& from, const name& to, const as
         trace.created_at        = now;
         _on_deal_trace_s(trace);
     }
+    
     TRANSFER_N( booth.nft_contract, from, nfts , "booth: " + to_string(booth.id) )
     
     _reward_farmer( paid, from );

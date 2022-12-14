@@ -18,6 +18,7 @@ using std::string;
 #define SYMBOL(sym_code, precision) symbol(symbol_code(sym_code), precision)
 
 static constexpr uint64_t DAY_SECONDS           = 24 * 60 * 60;
+static constexpr uint64_t MAX_LOWER_BOUND       = 200;
 enum class err: uint8_t {
    NONE                 = 0,
    RECORD_NOT_FOUND     = 1,
