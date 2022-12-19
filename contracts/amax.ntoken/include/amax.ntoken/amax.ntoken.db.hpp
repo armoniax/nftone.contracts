@@ -74,6 +74,7 @@ struct nasset {
     EOSLIB_SERIALIZE( nasset, (amount)(symbol) )
 };
 
+//Scope: self
 TBL nstats_t {
     nasset          supply;
     nasset          max_supply;     // 1 means NFT-721 type

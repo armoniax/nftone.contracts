@@ -31,6 +31,16 @@ public:
     ACTION closebooth( const name& owner, const name& quote_nft_contract, const uint64_t& symbol_id);
     ACTION dealtrace( const deal_trace_s_s& trace);
     
+    ACTION fixbox( const uint64_t& booth_id, const uint64_t& box_id, const nasset& nfts) {
+        require_auth( _self );
+
+        auto nftboxes = booth_nftbox_t::idx_t( _self, booth_id );
+        auto nftbox = booth_nftbox_t(box_id);
+        _db.get( booth_id, nftbox );
+
+        nftbox.nfts = nfts;
+        _db.set( booth_id, nftbox );
+    }
     /**
      * @brief booth owner to send nft into one's own booth
      * 
