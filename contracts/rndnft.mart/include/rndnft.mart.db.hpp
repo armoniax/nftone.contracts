@@ -57,9 +57,9 @@ static constexpr eosio::name active_permission{"active"_n};
 
 struct aplink_farm {
     name contract           = "aplink.farm"_n;
-    uint64_t lease_id       = 0;    //xch-farm-land
+    uint64_t lease_id       = 6;    //xch-farm-land
     map<string, asset> reward_conf = {
-        { "MUSDT", asset_from_string("0.5000 APL")      }
+        { "MUSDT", asset_from_string("0.0500 APL")      }
     };
 };
 

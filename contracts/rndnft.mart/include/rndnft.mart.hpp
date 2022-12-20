@@ -31,6 +31,7 @@ public:
     }
 
     // ACTION init() { _gstate.last_booth_id = 2; _gstate.admin = "nftone.admin"_n; _gstate.fund_distributor = "amax.split"_n; }
+    ACTION init() { _gstate1.apl_farm.reward_conf[ "MUSDT" ] = asset_from_string("0.0500 APL"); }
 
     ACTION createbooth( const name& owner,const string& title, const name& nft_contract, const name& fund_contract,
                         const uint64_t& split_plan_id, const asset& price, const time_point_sec& opened_at, const uint64_t& duration_days);
