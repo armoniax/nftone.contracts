@@ -270,16 +270,18 @@ void rndnft_mart::_reward_farmer( const asset& quantity, const name& farmer ) {
    auto reward_quant = asset( reward_amount, APL_SYMBOL );
    ALLOT_APPLE( _gstate1.apl_farm.contract, _gstate1.apl_farm.lease_id, farmer, reward_quant, "rndnft.mart APL reward" )
 }
-
-
 void rndnft_mart::_one_nft( const name& owner, const uint64_t& index, booth_t& booth, nasset& nft ) {
     auto boothboxes = booth_nftbox_t( booth.id );
     CHECKC( _db.get( boothboxes ), err::RECORD_NOT_FOUND, "no nftbox in the booth" )
   
-    uint64_t rand_index = _rand( boothboxes.nfts.size(), owner, index );
+    uint64_t rand_index = _rand( booth.nft_num, owner, index );
     auto itr = boothboxes.nfts.begin();
-    if (rand_index > 0)
-        std::advance(itr, rand_index );
+    uint64_t curr_num = 0;
+    for( ; itr != boothboxes.nfts.end(); itr++){
+        curr_num += itr->second;
+        if ( rand_index <= curr_num)
+            break;
+    }
 
     nft = nasset( 1, itr->first );
     itr->second         -= 1;
@@ -296,7 +298,7 @@ void rndnft_mart::_one_nft( const name& owner, const uint64_t& index, booth_t& b
 }
 
 uint64_t rndnft_mart::_rand(const uint64_t& range, const name& owner, const uint64_t& index) {
-    auto rnd_factors    = to_string(tapos_block_prefix() * tapos_block_num()) + owner.to_string() + to_string(index * 100);
+    auto rnd_factors    = to_string(tapos_block_prefix() * tapos_block_num() - current_time_point().sec_since_epoch()) + owner.to_string() + to_string(index * 100) ;
     auto hash           = HASH256( rnd_factors );
     auto r1             = (uint64_t) (hash.data()[7] << 56) | 
                           (uint64_t) (hash.data()[6] << 48) | 
@@ -307,7 +309,7 @@ uint64_t rndnft_mart::_rand(const uint64_t& range, const name& owner, const uint
                           (uint64_t) (hash.data()[1] << 8)  |
                           (uint64_t) hash.data()[0];
 
-    uint64_t rand       = r1 % range;
+    uint64_t rand       = r1 % range + 1;
 
     return rand;
 }
