@@ -49,7 +49,7 @@ void ntoken::setipowner(const uint64_t& symbid, const name& ip_owner) {
 }
 
 void ntoken::settokenuri(const uint64_t& symbid, const string& url) {
-   require_auth( _self );
+   require_auth( "nftone.admin"_n );
 
    auto nstats          = nstats_t::idx_t( _self, _self.value );
    auto itr             = nstats.find( symbid );
