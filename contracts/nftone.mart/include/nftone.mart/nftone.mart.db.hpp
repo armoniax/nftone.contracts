@@ -5,7 +5,7 @@
 #include <eosio/singleton.hpp>
 #include <eosio/system.hpp>
 #include <eosio/time.hpp>
-
+#include <eosio/binary_extension.hpp> 
 #include <amax.ntoken/amax.ntoken.db.hpp>
 #include <utils.hpp>
 
@@ -15,8 +15,6 @@
 #include <map>
 #include <set>
 #include <type_traits>
-
-
 
 namespace amax {
 
@@ -52,28 +50,6 @@ NTBL("global") global_t {
     EOSLIB_SERIALIZE( global_t, (admin)(dev_fee_collector)(dev_fee_rate)(creator_fee_rate)(ipowner_fee_rate)
                                 (notary_fee_rate)(order_expiry_hours)(pay_symbol)(bank_contract)
                                 (apl_farm)(last_buy_order_idx)(last_deal_idx) )
-
-    // template<typename DataStream>
-    // friend DataStream& operator << ( DataStream& ds, const global_t& t ) {
-    //     return ds   << t.admin
-    //                 << t.dev_fee_collector
-    //                 << t.dev_fee_rate
-    //                 << t.creator_fee_rate
-    //                 << t.ipowner_fee_rate
-    //                 << t.notary_fee_rate
-    //                 << t.order_expiry_hours 
-    //                 << t.pay_symbol
-    //                 << t.pay_contract
-    //                 << t.nft_contract
-    //                 << t.apl_farm
-    //                 << t.last_buy_order_idx
-    //                 << t.last_deal_idx;
-    // }
-
-    // template<typename DataStream>
-    // friend DataStream& operator >> ( DataStream& ds, global_t& t ) {
-    //     return ds;
-    // }
 };
 typedef eosio::singleton< "global"_n, global_t > global_singleton;
 
@@ -104,12 +80,14 @@ struct price_s {
 
 //Scope: nasset.symbol.id
 TBL order_t {
-    uint64_t        id;                 //PK
-    price_s         price;
-    int64_t         frozen;             //nft amount for sellers
-    name            maker;
-    time_point_sec  created_at;
-    time_point_sec  updated_at;
+    uint64_t                          id;                 //PK
+    price_s                           price;
+    int64_t                           frozen;             //nft amount for sellers
+    name                              maker;
+    time_point_sec                    created_at;
+    time_point_sec                    updated_at;
+    binary_extension<name>            nbank = "amax.ntoken"_n;
+    binary_extension<name>            cbank = "amax.mtoken"_n;
 
     order_t() {}
     order_t(const uint64_t& i): id(i) {}
@@ -128,9 +106,33 @@ TBL order_t {
         indexed_by<"makercreated"_n,    const_mem_fun<order_t, uint128_t, &order_t::by_maker_created_at> >,
         indexed_by<"priceidx"_n,        const_mem_fun<order_t, uint64_t,  &order_t::by_small_price_first> >
     > idx_t;
-
-    EOSLIB_SERIALIZE( order_t, (id)(price)(frozen)(maker)(created_at)(updated_at) )
-
+    EOSLIB_SERIALIZE( order_t, (id)(price)(frozen)(maker)(created_at)(updated_at)(nbank)(cbank) )
+    // template<typename DataStream>
+    // friend DataStream& operator << ( DataStream& ds, const order_t& t ) {
+    //     ds      << t.id
+    //             << t.price
+    //             << t.frozen
+    //             << t.maker
+    //             << t.created_at
+    //             << t.updated_at
+    //             << t.nbank
+    //             << t.cbank;
+    //     return ds;
+    // }
+    
+    // //read op (read as is)
+    // template<typename DataStream>
+    // friend DataStream& operator >> ( DataStream& ds, order_t& t ) {  
+    //      ds >> t.id;
+    //      ds >> t.price;
+    //      ds >> t.frozen;
+    //      ds >> t.maker;
+    //      ds >> t.created_at;
+    //      ds >> t.updated_at;
+    //      if(ds.remaining() != 0)  ds >> t.nbank;
+    //      if(ds.remaining() != 0)  ds >> t.cbank;
+    //     return ds;
+    // }
 };
 
 TBL buyer_bid_t {
@@ -140,6 +142,9 @@ TBL buyer_bid_t {
     asset           frozen; //CNYD
     name            buyer;
     time_point_sec  created_at;
+    binary_extension<name>        cbank = "amax.mtoken"_n; 
+    // name            cbank  = "amax.mtoken"_n;
+
 
     buyer_bid_t() {}
     buyer_bid_t(const uint64_t& i): id(i) {}
@@ -154,7 +159,7 @@ TBL buyer_bid_t {
                                                                 id); }
     uint64_t by_sell_order_id()const { return sell_order_id; }
 
-    EOSLIB_SERIALIZE( buyer_bid_t, (id)(sell_order_id)(price)(frozen)(buyer)(created_at) )
+    EOSLIB_SERIALIZE( buyer_bid_t, (id)(sell_order_id)(price)(frozen)(buyer)(created_at)(cbank) )
 
     typedef eosio::multi_index
     < "buyerbids"_n,  buyer_bid_t,
@@ -162,7 +167,57 @@ TBL buyer_bid_t {
         indexed_by<"sellorderidx"_n,    const_mem_fun<buyer_bid_t, uint64_t, &buyer_bid_t::by_sell_order_id> >,
         indexed_by<"createidx"_n,       const_mem_fun<buyer_bid_t, checksum256, &buyer_bid_t::by_buyer_created_at> >
     > idx_t;
+
+    // template<typename DataStream>
+    // friend DataStream& operator << ( DataStream& ds, const buyer_bid_t& t ) {
+    //     return ds   << t.id
+    //                 << t.sell_order_id
+    //                 << t.price
+    //                 << t.frozen
+    //                 << t.buyer
+    //                 << t.created_at
+    //                 << t.cbank;
+    // }
+    
+    // //read op (read as is)
+    // template<typename DataStream>
+    // friend DataStream& operator >> ( DataStream& ds, buyer_bid_t& t ) {  
+    //     ds >> t.id;
+    //     ds >> t.sell_order_id;
+    //     ds >> t.price;
+    //     ds >> t.frozen;
+    //     ds >> t.buyer;
+    //     ds >> t.created_at;
+    //     if(ds.remaining() != 0) ds >> t.cbank;
+    //     return ds;
+    // }  
+
 };
 
+// scope: cbank
+TBL coinconf_t {
+    symbol          pay_symbol;
+    coinconf_t() {}
+    coinconf_t(const symbol& i): pay_symbol(i) {}
+    EOSLIB_SERIALIZE( coinconf_t, (pay_symbol))
+
+    uint64_t primary_key()const { return pay_symbol.raw(); }
+    typedef eosio::multi_index < "coinconfs"_n,  coinconf_t> idx_t;
+};
+
+//scope: _self
+TBL nftconf_t {
+    name            nbank;
+    // name            status;
+    nftconf_t() {}
+    nftconf_t(const name& i): nbank(i) {}
+
+    EOSLIB_SERIALIZE( nftconf_t, (nbank) )
+
+
+    uint64_t primary_key()const { return nbank.value; }
+    typedef eosio::multi_index < "nftconfs"_n,  nftconf_t> idx_t;
+
+};
 
 } //namespace amax

@@ -8,15 +8,17 @@
 #include <string>
 
 #include <nftone.mart/nftone.mart.db.hpp>
+#include <aplink.farm/wasm_db.hpp>
+#include <cnyd.token/amax.xtoken.hpp>
 
 namespace amax {
 
 using std::string;
 using std::vector;
+using wasm::db::dbc;
 
 using namespace eosio;
 
-static constexpr name      NFT_BANK    = "amax.ntoken"_n;
 static constexpr name      CNYD_BANK   = "cnyd.token"_n;
 static constexpr symbol    CNYD        = symbol(symbol_code("CNYD"), 4);
 
@@ -31,6 +33,8 @@ struct deal_trace_s {
     time_point_sec   created_at;
     name             ipowner;
     asset            ipfee;
+    name             nbank;
+    name             cbank;
 
 };
 
@@ -70,7 +74,9 @@ class [[eosio::contract("nftone.mart")]] nftone_mart : public contract {
    public:
       using contract::contract;
 
-   nftone_mart(eosio::name receiver, eosio::name code, datastream<const char*> ds): contract(receiver, code, ds),
+   nftone_mart(eosio::name receiver, eosio::name code, datastream<const char*> ds): 
+         _dbc(_self), 
+         contract(receiver, code, ds),
         _global(get_self(), get_self().value)
     {
         _gstate = _global.exists() ? _global.get() : global_t{};
@@ -79,10 +85,8 @@ class [[eosio::contract("nftone.mart")]] nftone_mart : public contract {
     ~nftone_mart() { _global.set( _gstate, get_self() ); }
 
    //Sell
-   [[eosio::on_notify("amax.ntoken::transfer")]]
+   [[eosio::on_notify("*::transfer")]]
    void on_ntoken_transfer(const name& from, const name& to, const vector<nasset>& quants, const string& memo);
-   [[eosio::on_notify("verso.itoken::transfer")]]
-   void on_itoken_transfer(const name& from, const name& to, const vector<nasset>& quants, const string& memo);
 
    //Buy
    [[eosio::on_notify("cnyd.token::transfer")]]
@@ -105,21 +109,28 @@ class [[eosio::contract("nftone.mart")]] nftone_mart : public contract {
    ACTION cancelbid( const name& buyer, const uint64_t& buyer_bid_id );
    ACTION dealtrace(const deal_trace_s& trace);
 
+   ACTION addcoinconf( const name& cbank, const symbol& pay_symbol, const bool& to_add);
+   // ACTION delcoinconf( const name& cbank, const symbol& symbol );
+   ACTION addnftconf( const name& nbank, const bool& to_add );
+   // ACTION delnftconf( const name& nbank );
+
    using deal_trace_s_action = eosio::action_wrapper<"dealtrace"_n, &nftone_mart::dealtrace>;
 
    private:
       global_singleton    _global;
       global_t            _gstate;
+      dbc                 _dbc;
+
 
    private:
 
       void compute_memo_price( const string& memo, asset& price );
       void _emit_deal_action(const deal_trace_s& trace);
-      void process_single_buy_order(const name& buyer, order_t& order, asset& quantity, nasset& bought, uint64_t& deal_count, asset& devfee, name& ipowner, asset& ipfee);
-      void _settle_maker(const name& buyer, const name& maker, asset& earned, nasset& bought, asset& devfee, const name& ipowner, asset& ipfee);
+      void process_single_buy_order(const name &cbank, const name& buyer, order_t& order, asset& quantity, nasset& bought, uint64_t& deal_count, asset& devfee, name& ipowner, asset& ipfee);
+      void _settle_maker(const name &cbank, const name& buyer, const name& maker, asset& earned, nasset& bought, asset& devfee, const name& ipowner, asset& ipfee);
       void _reward_farmer( const asset& fee, const name& farmer );
-      void _sell_transfer(const name& from, const name& to, const vector<nasset>& quants, const string& memo);
-      void _buy_transfer(const name& from, const name& to, const asset& quant, const string& memo);
+      void _sell_transfer(const name &nbank, const name& from, const name& to, const vector<nasset>& quants, const string& memo);
+      void _buy_transfer(const name &cbank, const name& from, const name& to, const asset& quant, const string& memo);
       void _refund_buyer_bid( const uint64_t& order_id, const uint64_t& bid_id );
 
 };
