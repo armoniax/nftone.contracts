@@ -252,7 +252,7 @@ void ntoken::setcreator( const name& creator, const bool& to_add){
 
    if ( to_add ){
 
-      auto creators = creator_t::idx_t( get_self(), get_self().value );
+      auto creators = creator_whitelist_t::idx_t( get_self(), get_self().value );
       auto find_itr = creators.find( creator.value );
       check( find_itr == creators.end(),"Creator already existing" );
       creators.emplace( _self, [&]( auto& s ) {
@@ -261,7 +261,7 @@ void ntoken::setcreator( const name& creator, const bool& to_add){
 
    } else {
 
-      auto creators = creator_t::idx_t( get_self(), get_self().value );
+      auto creators = creator_whitelist_t::idx_t( get_self(), get_self().value );
       auto find_itr = creators.find( creator.value );
       check( find_itr != creators.end(),"Creator not found" );
       creators.erase(find_itr);
@@ -273,7 +273,7 @@ void ntoken::_creator_auth_check( const name& creator){
       auto find_itr = accounts.find( DID_SYMBOL_ID );
       if ( find_itr == accounts.end()){
 
-         auto creators = creator_t::idx_t( get_self(), get_self().value );
+         auto creators = creator_whitelist_t::idx_t( get_self(), get_self().value );
          auto find_itr = creators.find( creator.value );
          check( find_itr != creators.end(),"did not found" );
 
