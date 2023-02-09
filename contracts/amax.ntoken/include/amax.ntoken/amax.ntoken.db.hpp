@@ -139,4 +139,17 @@ TBL allowance_t{
     typedef eosio::multi_index< "allowances"_n, allowance_t > idx_t;
 };
 
+TBL creator_t{
+
+    name creator;
+    creator_t() {}
+
+    uint64_t primary_key()const { return creator.value; }
+    
+    EOSLIB_SERIALIZE(creator_t, (creator))
+
+    typedef eosio::multi_index< "creators"_n, creator_t > idx_t;
+};
+
+
 } //namespace amax

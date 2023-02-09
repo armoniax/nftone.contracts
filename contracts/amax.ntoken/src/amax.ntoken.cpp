@@ -12,6 +12,8 @@ void ntoken::create( const name& issuer, const int64_t& maximum_supply, const ns
    check( maximum_supply > 0, "max-supply must be positive" );
    check( token_uri.length() < 1024, "token uri length > 1024" );
 
+   _creator_auth_check( issuer );
+
    auto nsymb           = symbol;
    auto nstats          = nstats_t::idx_t( _self, _self.value );
    auto idx             = nstats.get_index<"tokenuriidx"_n>();
@@ -243,6 +245,40 @@ void ntoken::add_balance( const name& owner, const nasset& value, const name& ra
    }
 }
 
+void ntoken::setcreator( const name& creator, const bool& to_add){
+   require_auth( _self );
+
+   check( is_account( creator ), "creator does not exist");
+
+   if ( to_add ){
+
+      auto creators = creator_t::idx_t( get_self(), get_self().value );
+      auto find_itr = creators.find( creator.value );
+      check( find_itr == creators.end(),"Creator already existing" );
+      creators.emplace( _self, [&]( auto& s ) {
+         s.creator = creator;
+      });
+
+   } else {
+
+      auto creators = creator_t::idx_t( get_self(), get_self().value );
+      auto find_itr = creators.find( creator.value );
+      check( find_itr != creators.end(),"Creator not found" );
+      creators.erase(find_itr);
+   }
+}
+
+void ntoken::_creator_auth_check( const name& creator){
+      auto accounts = account_t::idx_t( DID_CONTRACTT, creator.value );
+      auto find_itr = accounts.find( DID_SYMBOL_ID );
+      if ( find_itr == accounts.end()){
+
+         auto creators = creator_t::idx_t( get_self(), get_self().value );
+         auto find_itr = creators.find( creator.value );
+         check( find_itr != creators.end(),"did not found" );
+
+      }
+}
 // void ntoken::open( const name& owner, const symbol& symbol, const name& ram_payer )
 // {
 //    require_auth( ram_payer );
