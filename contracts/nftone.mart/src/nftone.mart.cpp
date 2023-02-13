@@ -267,11 +267,11 @@ using namespace std;
       aplink::farm::available_apples( _gstate.apl_farm.contract, _gstate.apl_farm.lease_id, apples );
       if (apples.amount == 0 || _gstate1.farm_scales.count(extended_asset_fee.get_extended_symbol()) == false) return;
       auto scale = _gstate1.farm_scales.at(extended_asset_fee.get_extended_symbol());
-      auto value = multiply_decimal64( extended_asset_fee.quantity.amount, 
-                         get_precision(APLINK_SYMBOL), get_precision(extended_asset_fee.quantity.symbol));
-      value = value * scale / get_precision(APLINK_SYMBOL);
-      // auto reward_amount = wasm::safemath::mul( _gstate.apl_farm.unit_reward.amount, fee.amount, get_precision(APL_SYMBOL) );
-      auto reward_quant = asset( value, APL_SYMBOL );
+      // auto value = multiply_decimal64( extended_asset_fee.quantity.amount, 
+      //                    get_precision(APLINK_SYMBOL), get_precision(extended_asset_fee.quantity.symbol));
+      // value = value * scale / get_precision(APLINK_SYMBOL);
+      auto reward_amount = wasm::safemath::mul( scale, fee.amount, get_precision(APL_SYMBOL) );
+      auto reward_quant = asset( reward_amount, APL_SYMBOL );
       if ( reward_quant.amount > 0 )
          ALLOT_APPLE( _gstate.apl_farm.contract, _gstate.apl_farm.lease_id, farmer, reward_quant, "nftone reward" )
    }
