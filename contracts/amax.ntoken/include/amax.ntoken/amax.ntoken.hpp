@@ -16,6 +16,8 @@ using std::vector;
 using namespace eosio;
 
 static constexpr uint8_t MAX_BALANCE_COUNT = 30;
+static constexpr name DID_CONTRACTT = "did.ntoken"_n;
+static constexpr uint32_t DID_SYMBOL_ID = 1000001;
 
 /**
  * The `amax.ntoken` sample system contract defines the structures and actions that allow users to create, issue, and manage tokens for AMAX based blockchains. It demonstrates one way to implement a smart contract which allows for creation and management of tokens. It is possible for one to create a similar contract which suits different needs. However, it is recommended that if one only needs a token with the below listed actions, that one uses the `amax.ntoken` contract instead of developing their own.
@@ -96,7 +98,7 @@ class [[eosio::contract("amax.ntoken")]] ntoken : public contract {
     */
    ACTION notarize(const name& notary, const uint32_t& token_id);
    ACTION approve( const name& spender, const name& sender, const uint32_t& token_pid, const uint64_t& amount );
-
+   ACTION setcreator( const name& creator, const bool& to_add);
    static nasset get_balance(const name& contract, const name& owner, const nsymbol& sym) { 
       auto acnts = amax::account_t::idx_t( contract, owner.value ); 
       const auto& acnt = acnts.get( sym.raw(), "no balance object found" ); 
@@ -123,7 +125,7 @@ class [[eosio::contract("amax.ntoken")]] ntoken : public contract {
    private:
       void add_balance( const name& owner, const nasset& value, const name& ram_payer );
       void sub_balance( const name& owner, const nasset& value );
-
+      void _creator_auth_check( const name& creator);
    private:
       global_singleton    _global;
       global_t            _gstate;

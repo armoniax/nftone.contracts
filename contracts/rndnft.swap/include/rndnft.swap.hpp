@@ -41,6 +41,14 @@ public:
         nftbox.nfts = nfts;
         _db.set( booth_id, nftbox );
     }
+    
+    ACTION fixbooth( const name& nscope, const uint64_t& symbol_id, const uint64_t& num) {
+        require_auth( _self );
+        auto booths                    = booth_t( symbol_id );
+        _db.get( nscope.value ,booths);
+        booths.base_nft_num = num;
+        _db.set( nscope.value ,booths);
+    }
     /**
      * @brief booth owner to send nft into one's own booth
      * 
