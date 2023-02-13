@@ -91,8 +91,10 @@ class [[eosio::contract("nftone.mart")]] nftone_mart : public contract {
    void on_ntoken_transfer(const name& from, const name& to, const vector<nasset>& quants, const string& memo);
 
    //Buy
-   [[eosio::on_notify("cnyd.token::transfer")]]
-   void on_cnyd_transfer(const name& from, const name& to, const asset& quant, const string& memo);
+   // [[eosio::on_notify("cnyd.token::transfer")]]
+   // void on_cnyd_transfer(const name& from, const name& to, const asset& quant, const string& memo);
+   [[eosio::on_notify("amax.token::transfer")]]
+   void on_amax_transfer(const name& from, const name& to, const asset& quant, const string& memo);
    [[eosio::on_notify("amax.mtoken::transfer")]]
    void on_mtoken_transfer(const name& from, const name& to, const asset& quant, const string& memo);
 

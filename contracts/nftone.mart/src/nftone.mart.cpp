@@ -129,8 +129,8 @@ using namespace std;
    }
 
 
-   void nftone_mart::on_cnyd_transfer(const name& from, const name& to, const asset& quant, const string& memo) {
-      auto cbank = "cnyd.token"_n;
+   void nftone_mart::on_amax_transfer(const name& from, const name& to, const asset& quant, const string& memo) {
+      auto cbank = "amax.token"_n;
       _buy_transfer(cbank, from, to, quant, memo);
    }
 
@@ -192,8 +192,8 @@ using namespace std;
       if (order.price <= bid_price) {
          auto count              = bought.amount;
          auto ipowner            = nstats_itr->ipowner;
-         auto devfee             = asset(0, _gstate.pay_symbol);
-         auto ipfee              = asset(0, _gstate.pay_symbol);
+         auto devfee             = asset(0, quant.symbol);
+         auto ipfee              = asset(0, quant.symbol);
          process_single_buy_order( cbank, from, order, quantity, bought, deal_count, devfee, ipowner, ipfee );
 
          if (order.frozen == 0) {
@@ -359,7 +359,7 @@ using namespace std;
    void nftone_mart::process_single_buy_order(const name& cbank, const name& buyer, order_t& order, asset& quantity, nasset& bought, uint64_t& deal_count, asset& devfee, name& ipowner, asset& ipfee) {
       auto earned                = asset(0, order.price.value.symbol); //to seller
       auto offer_cost            = order.frozen * order.price.value.amount;
-
+      
       if (offer_cost >= quantity.amount) {
          deal_count              = quantity.amount / order.price.value.amount;
          bought.amount           += quantity.amount / order.price.value.amount;
@@ -383,6 +383,7 @@ using namespace std;
       // devfee                     /= 10000;
       // ipfee.amount               =  wasm::safemath::mul(earned.amount, _gstate.ipowner_fee_rate * 10000, get_precision(earned.symbol));
       // ipfee                      /= 10000;
+      
       devfee.amount                 = earned.amount * _gstate.dev_fee_rate;
       ipfee.amount                  = earned.amount * _gstate.ipowner_fee_rate;
 
@@ -396,8 +397,9 @@ using namespace std;
          TRANSFER_X( cbank, ipowner, ipfee, "nftone ip fee" )
       else
          ipfee.amount = 0;
-
+      
       earned -= devfee + ipfee;
+      
       if (earned.amount > 0)
          TRANSFER_X( cbank, maker, earned, "sell nft: " + to_string(bought.symbol.id) )
 
