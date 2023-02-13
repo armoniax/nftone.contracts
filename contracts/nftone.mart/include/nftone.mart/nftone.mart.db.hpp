@@ -24,6 +24,14 @@ using namespace eosio;
 #define TBL struct [[eosio::table, eosio::contract("nftone.mart")]]
 #define NTBL(name) struct [[eosio::table(name), eosio::contract("nftone.mart")]]
 
+
+static constexpr name      CNYD_BANK   = "cnyd.token"_n;
+static constexpr symbol    CNYD        = symbol(symbol_code("CNYD"), 4);
+
+static constexpr name      MUSDT_BANK   = "amax.mtoken"_n;
+static constexpr name      NTOKEN_BANK  = "amax.ntoken"_n;
+static constexpr symbol    MUSDT        = symbol(symbol_code("MUSDT"), 6);
+
 static constexpr uint8_t MAX_BUYER_BID_COUNT = 30;
 static constexpr uint8_t MAX_REFUND_COUNT = 10;
 
@@ -52,6 +60,15 @@ NTBL("global") global_t {
                                 (apl_farm)(last_buy_order_idx)(last_deal_idx) )
 };
 typedef eosio::singleton< "global"_n, global_t > global_singleton;
+
+
+NTBL("global1") global1_t {
+    map<extended_symbol,int64_t> farm_scales;
+    set<name>   nft_contract_whitelist;
+
+    EOSLIB_SERIALIZE( global1_t, (farm_scales)(nft_contract_whitelist))
+};
+typedef eosio::singleton< "global1"_n, global1_t > global1_singleton;
 
 
 // price for NFT tokens
@@ -86,8 +103,8 @@ TBL order_t {
     name                              maker;
     time_point_sec                    created_at;
     time_point_sec                    updated_at;
-    binary_extension<name>            nbank = "amax.ntoken"_n;
-    binary_extension<name>            cbank = "amax.mtoken"_n;
+    binary_extension<name>            nbank = NTOKEN_BANK;
+    binary_extension<name>            cbank = MUSDT_BANK;
 
     order_t() {}
     order_t(const uint64_t& i): id(i) {}
@@ -142,7 +159,7 @@ TBL buyer_bid_t {
     asset           frozen; //CNYD
     name            buyer;
     time_point_sec  created_at;
-    binary_extension<name>        cbank = "amax.mtoken"_n; 
+    binary_extension<name>        cbank = MUSDT_BANK; 
     // name            cbank  = "amax.mtoken"_n;
 
 
@@ -194,30 +211,30 @@ TBL buyer_bid_t {
 
 };
 
-// scope: cbank
-TBL coinconf_t {
-    symbol          pay_symbol;
-    coinconf_t() {}
-    coinconf_t(const symbol& i): pay_symbol(i) {}
-    EOSLIB_SERIALIZE( coinconf_t, (pay_symbol))
+// // scope: cbank
+// TBL coinconf_t {
+//     symbol          pay_symbol;
+//     coinconf_t() {}
+//     coinconf_t(const symbol& i): pay_symbol(i) {}
+//     EOSLIB_SERIALIZE( coinconf_t, (pay_symbol))
 
-    uint64_t primary_key()const { return pay_symbol.raw(); }
-    typedef eosio::multi_index < "coinconfs"_n,  coinconf_t> idx_t;
-};
+//     uint64_t primary_key()const { return pay_symbol.raw(); }
+//     typedef eosio::multi_index < "coinconfs"_n,  coinconf_t> idx_t;
+// };
 
-//scope: _self
-TBL nftconf_t {
-    name            nbank;
-    // name            status;
-    nftconf_t() {}
-    nftconf_t(const name& i): nbank(i) {}
+// //scope: _self
+// TBL nftconf_t {
+//     name            nbank;
+//     // name            status;
+//     nftconf_t() {}
+//     nftconf_t(const name& i): nbank(i) {}
 
-    EOSLIB_SERIALIZE( nftconf_t, (nbank) )
+//     EOSLIB_SERIALIZE( nftconf_t, (nbank) )
 
 
-    uint64_t primary_key()const { return nbank.value; }
-    typedef eosio::multi_index < "nftconfs"_n,  nftconf_t> idx_t;
+//     uint64_t primary_key()const { return nbank.value; }
+//     typedef eosio::multi_index < "nftconfs"_n,  nftconf_t> idx_t;
 
-};
+// };
 
 } //namespace amax

@@ -74,17 +74,37 @@ using namespace std;
 
       CHECKC( memo != "", err::MEMO_FORMAT_ERROR, "empty memo!" )
       auto parts                 = split( memo, ":" );
-      CHECKC( parts.size() >= 3, err::PARAM_ERROR, "Expected format 'price:bank:symbol'" );
-      auto price_str    = parts[0];
-      auto cbank        = name(parts[1]);
+
+      string            price_str;
+      name              cbank;  
+      symbol            symbol;       
+
+      if ( parts.size() == 1){
+         price_str    = parts[0];
+         cbank        = MUSDT_BANK;
+         symbol       = MUSDT;
+      } else if ( parts.size() == 3){
+         price_str    = parts[0];
+         cbank        = name(parts[1]);
+         symbol       = to_symbol((string)parts[2]);
+      } else {
+         CHECKC( false, err::PARAM_ERROR, "Expected format 'price:bank:symbol'" );
+      }
       
-      auto symbol       = to_symbol((string)parts[2]);
+      // auto price_str    = parts[0];
+      // auto cbank        = name(parts[1]);
+      
+      // auto symbol       = to_symbol((string)parts[2]);
+      extended_symbol sym = extended_symbol(symbol,cbank);
 
-      coinconf_t coinconf(symbol);
-      CHECKC( _dbc.get(cbank.value, coinconf), err::RECORD_NOT_FOUND, "coinconf not found");
+      CHECKC( _gstate1.farm_scales.count(sym), err::RECORD_NOT_FOUND, "asset contract not found" )
+      CHECKC( _gstate1.nft_contract_whitelist.find(nbank) != _gstate1.nft_contract_whitelist.end(), err::RECORD_NOT_FOUND, "nft contract not found" )
 
-      nftconf_t nftconf(nbank);
-      CHECKC( _dbc.get(nftconf), err::RECORD_NOT_FOUND, "nftconf not found" )
+      // coinconf_t coinconf(symbol);
+      // CHECKC( _dbc.get(cbank.value, coinconf), err::RECORD_NOT_FOUND, "coinconf not found");
+
+      // nftconf_t nftconf(nbank);
+      // CHECKC( _dbc.get(nftconf), err::RECORD_NOT_FOUND, "nftconf not found" )
 
       CHECKC( quants.size() == 1, err::OVERSIZED, "only one nft allowed to sell to nft at a timepoint" )
       asset price          = asset( 0, symbol );
@@ -239,13 +259,19 @@ using namespace std;
       }
    }
 
-   void nftone_mart::_reward_farmer( const asset& fee, const name& farmer ) {
+   void nftone_mart::_reward_farmer( const asset& fee, const name& farmer ,const name& asset_contract) {
+      
+      extended_asset extended_asset_fee = extended_asset(fee, asset_contract);
+
       auto apples = asset(0, APLINK_SYMBOL);
       aplink::farm::available_apples( _gstate.apl_farm.contract, _gstate.apl_farm.lease_id, apples );
-      if (apples.amount == 0 || _gstate.apl_farm.unit_reward.amount == 0) return;
-
-      auto reward_amount = wasm::safemath::mul( _gstate.apl_farm.unit_reward.amount, fee.amount, get_precision(APL_SYMBOL) );
-      auto reward_quant = asset( reward_amount, APL_SYMBOL );
+      if (apples.amount == 0 || _gstate1.farm_scales.count(extended_asset_fee.get_extended_symbol()) == false) return;
+      auto scale = _gstate1.farm_scales.at(extended_asset_fee.get_extended_symbol());
+      auto value = multiply_decimal64( extended_asset_fee.quantity.amount, 
+                         get_precision(APLINK_SYMBOL), get_precision(extended_asset_fee.quantity.symbol));
+      value = value * scale / get_precision(APLINK_SYMBOL);
+      // auto reward_amount = wasm::safemath::mul( _gstate.apl_farm.unit_reward.amount, fee.amount, get_precision(APL_SYMBOL) );
+      auto reward_quant = asset( value, APL_SYMBOL );
       if ( reward_quant.amount > 0 )
          ALLOT_APPLE( _gstate.apl_farm.contract, _gstate.apl_farm.lease_id, farmer, reward_quant, "nftone reward" )
    }
@@ -363,7 +389,7 @@ using namespace std;
       if (devfee.amount > 0) {
          TRANSFER_X( cbank, _gstate.dev_fee_collector, devfee, "nftone dev fee" )
 
-         _reward_farmer( devfee, buyer );
+         _reward_farmer( devfee, buyer ,cbank);
       }
 
       if (ipfee.amount > 0 && ipowner.length() != 0 && is_account(ipowner))
@@ -454,20 +480,15 @@ using namespace std;
 		act.send( trace );
    }
 
-   void nftone_mart::addcoinconf( const name& cbank, const symbol& pay_symbol, const bool& to_add) {
+   void nftone_mart::addcoinconf( const extended_symbol& symbol, const uint64_t& unit_reward,const bool& to_add) {
 
       CHECKC( has_auth(_self) || has_auth(_gstate.admin) ,err::NO_AUTH, "Missing required authority of admin or maintainer" )
-      CHECKC( is_account(cbank),err::ACCOUNT_INVALID, "owner does not exist");
+      CHECKC( is_account(symbol.get_contract()),err::ACCOUNT_INVALID, "cbank does not exist");
 
       if ( to_add){
-         coinconf_t conf(pay_symbol);
-         CHECKC(!_dbc.get(cbank.value, conf), err::RECORD_EXISTING, "coin conf already existed");
-         _dbc.set(cbank.value,conf,false);
+         _gstate1.farm_scales[symbol] = unit_reward;
       }else {
-
-         coinconf_t conf(pay_symbol);
-         CHECKC(_dbc.get(cbank.value, conf), err::RECORD_EXISTING, "coin conf not existed");
-         _dbc.del(conf);
+         _gstate1.farm_scales.erase(symbol);
       }
    }
    // void nftone_mart::delcoinconf( const name& cbank, const symbol& pay_symbol ) {
@@ -483,17 +504,12 @@ using namespace std;
    void nftone_mart::addnftconf( const name& nbank ,const bool& to_add) {
 
       CHECKC( has_auth(_self) || has_auth(_gstate.admin), err::NO_AUTH, "Missing required authority of admin or maintainer" )
-      CHECKC( is_account(nbank),err::ACCOUNT_INVALID, "owner does not exist");
+      CHECKC( is_account(nbank),err::ACCOUNT_INVALID, "nbank does not exist");
 
       if ( to_add){
-         nftconf_t  conf(nbank);
-         CHECKC( !_dbc.get(conf) , err::RECORD_EXISTING, "nft conf already existed");
-         _dbc.set(_self.value,conf,false);
+         _gstate1.nft_contract_whitelist.insert(nbank);
       }else {
-
-         nftconf_t  conf(nbank);
-         CHECKC(_dbc.get(conf), err::RECORD_EXISTING, "nft conf not existed");
-         _dbc.del(conf);
+         _gstate1.nft_contract_whitelist.insert(nbank);
       }
       
 
