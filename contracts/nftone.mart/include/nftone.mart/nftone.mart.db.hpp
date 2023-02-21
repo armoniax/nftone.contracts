@@ -124,32 +124,6 @@ TBL order_t {
         indexed_by<"priceidx"_n,        const_mem_fun<order_t, uint64_t,  &order_t::by_small_price_first> >
     > idx_t;
     EOSLIB_SERIALIZE( order_t, (id)(price)(frozen)(maker)(created_at)(updated_at)(nbank)(cbank) )
-    // template<typename DataStream>
-    // friend DataStream& operator << ( DataStream& ds, const order_t& t ) {
-    //     ds      << t.id
-    //             << t.price
-    //             << t.frozen
-    //             << t.maker
-    //             << t.created_at
-    //             << t.updated_at
-    //             << t.nbank
-    //             << t.cbank;
-    //     return ds;
-    // }
-    
-    // //read op (read as is)
-    // template<typename DataStream>
-    // friend DataStream& operator >> ( DataStream& ds, order_t& t ) {  
-    //      ds >> t.id;
-    //      ds >> t.price;
-    //      ds >> t.frozen;
-    //      ds >> t.maker;
-    //      ds >> t.created_at;
-    //      ds >> t.updated_at;
-    //      if(ds.remaining() != 0)  ds >> t.nbank;
-    //      if(ds.remaining() != 0)  ds >> t.cbank;
-    //     return ds;
-    // }
 };
 
 TBL buyer_bid_t {
@@ -160,7 +134,7 @@ TBL buyer_bid_t {
     name            buyer;
     time_point_sec  created_at;
     binary_extension<name>        cbank = MUSDT_BANK; 
-    // name            cbank  = "amax.mtoken"_n;
+
 
 
     buyer_bid_t() {}
@@ -185,56 +159,6 @@ TBL buyer_bid_t {
         indexed_by<"createidx"_n,       const_mem_fun<buyer_bid_t, checksum256, &buyer_bid_t::by_buyer_created_at> >
     > idx_t;
 
-    // template<typename DataStream>
-    // friend DataStream& operator << ( DataStream& ds, const buyer_bid_t& t ) {
-    //     return ds   << t.id
-    //                 << t.sell_order_id
-    //                 << t.price
-    //                 << t.frozen
-    //                 << t.buyer
-    //                 << t.created_at
-    //                 << t.cbank;
-    // }
-    
-    // //read op (read as is)
-    // template<typename DataStream>
-    // friend DataStream& operator >> ( DataStream& ds, buyer_bid_t& t ) {  
-    //     ds >> t.id;
-    //     ds >> t.sell_order_id;
-    //     ds >> t.price;
-    //     ds >> t.frozen;
-    //     ds >> t.buyer;
-    //     ds >> t.created_at;
-    //     if(ds.remaining() != 0) ds >> t.cbank;
-    //     return ds;
-    // }  
-
 };
-
-// // scope: cbank
-// TBL coinconf_t {
-//     symbol          pay_symbol;
-//     coinconf_t() {}
-//     coinconf_t(const symbol& i): pay_symbol(i) {}
-//     EOSLIB_SERIALIZE( coinconf_t, (pay_symbol))
-
-//     uint64_t primary_key()const { return pay_symbol.raw(); }
-//     typedef eosio::multi_index < "coinconfs"_n,  coinconf_t> idx_t;
-// };
-
-// //scope: _self
-// TBL nftconf_t {
-//     name            nbank;
-//     // name            status;
-//     nftconf_t() {}
-//     nftconf_t(const name& i): nbank(i) {}
-
-//     EOSLIB_SERIALIZE( nftconf_t, (nbank) )
-
-
-//     uint64_t primary_key()const { return nbank.value; }
-//     typedef eosio::multi_index < "nftconfs"_n,  nftconf_t> idx_t;
-
-// };
 
 } //namespace amax
