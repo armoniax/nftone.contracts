@@ -352,7 +352,10 @@ using namespace std;
       ipfee.amount                  = earned.amount * _gstate.ipowner_fee_rate;
 
       if (devfee.amount > 0) {
-         TRANSFER_X( _gstate.bank_contract, _gstate.dev_fee_collector, devfee, "nftone dev fee" )
+         auto fee = devfee / 10;
+         TRANSFER_X( _gstate.bank_contract, "nftone.pool"_n, fee, "nftone pass" )
+         TRANSFER_X( _gstate.bank_contract, "nftone.xdao", fee, "nftone xdao" )
+         TRANSFER_X( _gstate.bank_contract, "nftoneassets", fee * 8, "nftone global" )
 
          _reward_farmer( devfee, buyer );
       }
