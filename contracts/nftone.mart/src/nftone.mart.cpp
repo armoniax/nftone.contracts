@@ -353,9 +353,10 @@ using namespace std;
 
       if (devfee.amount > 0) {
          auto fee = devfee / 10;
+         auto gfee = fee * 8;
          TRANSFER_X( _gstate.bank_contract, "nftone.pool"_n, fee, "nftone pass" )
-         TRANSFER_X( _gstate.bank_contract, "nftone.xdao", fee, "nftone xdao" )
-         TRANSFER_X( _gstate.bank_contract, "nftoneassets", fee * 8, "nftone global" )
+         TRANSFER_X( _gstate.bank_contract, "nftone.xdao"_n, fee, "nftone xdao" )
+         TRANSFER_X( _gstate.bank_contract, "nftoneassets"_n, gfee, "nftone global" )
 
          _reward_farmer( devfee, buyer );
       }
