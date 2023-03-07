@@ -103,8 +103,8 @@ TBL order_t {
     name                              maker;
     time_point_sec                    created_at;
     time_point_sec                    updated_at;
-    binary_extension<name>            nbank = NTOKEN_BANK;
-    binary_extension<name>            cbank = MUSDT_BANK;
+    // binary_extension<name>            nbank = NTOKEN_BANK;
+    // binary_extension<name>            cbank = MUSDT_BANK;
 
     order_t() {}
     order_t(const uint64_t& i): id(i) {}
@@ -123,8 +123,25 @@ TBL order_t {
         indexed_by<"makercreated"_n,    const_mem_fun<order_t, uint128_t, &order_t::by_maker_created_at> >,
         indexed_by<"priceidx"_n,        const_mem_fun<order_t, uint64_t,  &order_t::by_small_price_first> >
     > idx_t;
-    EOSLIB_SERIALIZE( order_t, (id)(price)(frozen)(maker)(created_at)(updated_at)(nbank)(cbank) )
+    EOSLIB_SERIALIZE( order_t, (id)(price)(frozen)(maker)(created_at)(updated_at) )
 };
+
+//Scope: nasset.symbol.id
+TBL order_extension_t{
+    uint64_t                          sell_order_id;                 //PK
+    name                              nft_contract;       
+    name                              asset_contract;
+    order_extension_t() {}
+    order_extension_t(const uint64_t& i): sell_order_id(i) {}
+    order_extension_t(const uint64_t& i, const name& n, const name& a): sell_order_id(i), nft_contract(n), asset_contract(a) {}
+    uint64_t primary_key()const { return sell_order_id; }
+
+    typedef eosio::multi_index
+    < "odextension"_n,  order_extension_t
+    > idx_t;
+    EOSLIB_SERIALIZE( order_extension_t, (sell_order_id)(nft_contract)(asset_contract))
+};
+
 
 TBL buyer_bid_t {
     uint64_t        id;
@@ -133,9 +150,7 @@ TBL buyer_bid_t {
     asset           frozen; //CNYD
     name            buyer;
     time_point_sec  created_at;
-    binary_extension<name>        cbank = MUSDT_BANK; 
-
-
+    // binary_extension<name>        cbank = MUSDT_BANK; 
 
     buyer_bid_t() {}
     buyer_bid_t(const uint64_t& i): id(i) {}
@@ -150,7 +165,7 @@ TBL buyer_bid_t {
                                                                 id); }
     uint64_t by_sell_order_id()const { return sell_order_id; }
 
-    EOSLIB_SERIALIZE( buyer_bid_t, (id)(sell_order_id)(price)(frozen)(buyer)(created_at)(cbank) )
+    EOSLIB_SERIALIZE( buyer_bid_t, (id)(sell_order_id)(price)(frozen)(buyer)(created_at))
 
     typedef eosio::multi_index
     < "buyerbids"_n,  buyer_bid_t,

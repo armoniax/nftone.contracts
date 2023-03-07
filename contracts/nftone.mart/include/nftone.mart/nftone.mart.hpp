@@ -115,8 +115,7 @@ class [[eosio::contract("nftone.mart")]] nftone_mart : public contract {
    ACTION addcoinconf( const extended_symbol& symbol, const uint64_t& unit_reward,const bool& to_add);
    
    ACTION addnftconf( const name& nbank, const bool& to_add );
-
-
+   
    using deal_trace_s_action = eosio::action_wrapper<"dealtrace"_n, &nftone_mart::dealtrace>;
 
    private:
@@ -136,7 +135,8 @@ class [[eosio::contract("nftone.mart")]] nftone_mart : public contract {
       void _reward_farmer( const asset& fee, const name& farmer ,const name& asset_contract);
       void _sell_transfer(const name &nbank, const name& from, const name& to, const vector<nasset>& quants, const string& memo);
       void _buy_transfer(const name &cbank, const name& from, const name& to, const asset& quant, const string& memo);
-      void _refund_buyer_bid( const uint64_t& order_id, const uint64_t& bid_id );
+      void _refund_buyer_bid( const uint64_t& order_id, const name& asset_contract, const uint64_t& bid_id = 0);
+      order_extension_t _get_order_extension(const uint32_t& symbl_id, const uint64_t& sellorder_id);
 
 };
 } //namespace amax
