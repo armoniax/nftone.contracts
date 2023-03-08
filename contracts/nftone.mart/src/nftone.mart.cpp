@@ -3,7 +3,7 @@
 #include <amax.ntoken/amax.ntoken.hpp>
 #include <aplink.farm/aplink.farm.hpp>
 #include <cnyd.token/amax.xtoken.hpp>
-
+#include <eosio/binary_extension.hpp> 
 #include<math.hpp>
 
 #include <utils.hpp>
@@ -28,6 +28,7 @@ using namespace std;
       CHECK(digit >= 0 && digit <= 18, "precision digit " + std::to_string(digit) + " should be in range[0,18]");
       return calc_precision(digit);
    }
+
    void nftone_mart::init(const symbol& pay_symbol, const name& bank_contract, const name& admin,
                               const double& devfeerate, const name& feecollector,
                               const double& ipfeerate ) {
@@ -45,19 +46,16 @@ using namespace std;
       _gstate.ipowner_fee_rate      = ipfeerate;
       _gstate.pay_symbol            = pay_symbol;
       _gstate.bank_contract         = bank_contract;
-      // _gstate.apl_farm.lease_id =5;
-      // _gstate.last_buy_order_idx    = 14000;
-      // _gstate.last_deal_idx         = 100;
+      // _gstate.apl_farm.lease_id     = 8;
+      // _gstate.last_buy_order_idx    = 1000;
+      // _gstate.last_deal_idx         = 1000;
       // _gstate.order_expiry_hours    = 72;
 
    }
 
    void nftone_mart::on_ntoken_transfer(const name& from, const name& to, const vector<nasset>& quants, const string& memo) {
-      _sell_transfer( from, to, quants, memo );
-   }
-
-   void nftone_mart::on_itoken_transfer(const name& from, const name& to, const vector<nasset>& quants, const string& memo) {
-      _sell_transfer( from, to, quants, memo );
+      auto bank = get_first_receiver();
+      _sell_transfer( bank, from, to, quants, memo );
    }
 
    /**
@@ -66,18 +64,51 @@ using namespace std;
     * @param from
     * @param to
     * @param quantity
-    * @param memo: $ask_price       E.g.:  10288    (its currency unit is CNYD)
+    * @param memo: $ask_price:$mtoken:$symbol      E.g.:  10288:amax.mtoken:6,MUSDT    (its currency unit is CNYD)
     *
     */
-   void nftone_mart::_sell_transfer(const name& from, const name& to, const vector<nasset>& quants, const string& memo) {
+   void nftone_mart::_sell_transfer(const name& nbank, const name& from, const name& to, const vector<nasset>& quants, const string& memo) {
       CHECKC( from != to, err::ACCOUNT_INVALID, "cannot transfer to self" );
-
+   
       if (from == get_self() || to != get_self()) return;
 
       CHECKC( memo != "", err::MEMO_FORMAT_ERROR, "empty memo!" )
+      auto parts                 = split( memo, ":" );
+
+      string            price_str;
+      name              cbank;  
+      symbol            symbol;       
+
+      if ( parts.size() == 1){
+         price_str    = parts[0];
+         cbank        = MUSDT_BANK;
+         symbol       = MUSDT;
+      } else if ( parts.size() == 3){
+         price_str    = parts[0];
+         cbank        = name(parts[1]);
+         symbol       = to_symbol((string)parts[2]);
+      } else {
+         CHECKC( false, err::PARAM_ERROR, "Expected format 'price:bank:symbol'" );
+      }
+      
+      // auto price_str    = parts[0];
+      // auto cbank        = name(parts[1]);
+      
+      // auto symbol       = to_symbol((string)parts[2]);
+      extended_symbol sym = extended_symbol(symbol,cbank);
+
+      CHECKC( _gstate1.farm_scales.count(sym), err::RECORD_NOT_FOUND, "asset contract not found" )
+      CHECKC( _gstate1.nft_contract_whitelist.find(nbank) != _gstate1.nft_contract_whitelist.end(), err::RECORD_NOT_FOUND, "nft contract not found" )
+
+      // coinconf_t coinconf(symbol);
+      // CHECKC( _dbc.get(cbank.value, coinconf), err::RECORD_NOT_FOUND, "coinconf not found");
+
+      // nftconf_t nftconf(nbank);
+      // CHECKC( _dbc.get(nftconf), err::RECORD_NOT_FOUND, "nftconf not found" )
+
       CHECKC( quants.size() == 1, err::OVERSIZED, "only one nft allowed to sell to nft at a timepoint" )
-      asset price          = asset( 0, _gstate.pay_symbol );
-      compute_memo_price( memo, price );
+      asset price          = asset( 0, symbol );
+      compute_memo_price( (string)price_str, price );
 
       auto quant              = quants[0];
       CHECKC( quant.amount > 0, err::PARAM_ERROR, "non-positive quantity not allowed" )
@@ -85,6 +116,7 @@ using namespace std;
 
       auto sellorders = order_t::idx_t( _self, quant.symbol.id );
       _gstate.last_buy_order_idx ++;
+
       sellorders.emplace(_self, [&]( auto& row ) {
          row.id         =  _gstate.last_buy_order_idx;
          row.price      = ask_price;
@@ -92,15 +124,25 @@ using namespace std;
          row.maker      = from;
          row.created_at = time_point_sec( current_time_point() );
       });
+
+      auto orderex = order_extension_t::idx_t( _self, quant.symbol.id );
+      
+      orderex.emplace(_self, [&]( auto& row ) {
+         row.sell_order_id          =  _gstate.last_buy_order_idx;
+         row.nft_contract           = nbank;
+         row.asset_contract         = cbank;
+      });
    }
 
 
-   void nftone_mart::on_cnyd_transfer(const name& from, const name& to, const asset& quant, const string& memo) {
-      _buy_transfer(from, to, quant, memo);
+   void nftone_mart::on_amax_transfer(const name& from, const name& to, const asset& quant, const string& memo) {
+      auto cbank = "amax.token"_n;
+      _buy_transfer(cbank, from, to, quant, memo);
    }
 
    void nftone_mart::on_mtoken_transfer(const name& from, const name& to, const asset& quant, const string& memo) {
-      _buy_transfer(from, to, quant, memo);
+      auto cbank = "amax.mtoken"_n;
+      _buy_transfer(cbank, from, to, quant, memo);
    }
 
    /**
@@ -112,9 +154,9 @@ using namespace std;
     * @param memo: $token_id:$order_id:$bid_price
     *       E.g.:  123:1:10288
     */
-   void nftone_mart::_buy_transfer(const name& from, const name& to, const asset& quant, const string& memo) {
+   void nftone_mart::_buy_transfer(const name& cbank, const name& from, const name& to, const asset& quant, const string& memo) {
 
-      CHECKC( quant.symbol == _gstate.pay_symbol, err::SYMBOL_MISMATCH, "pay symbol not matched")
+      
       if (from == get_self() || to != get_self()) return;
 
       CHECKC( from != to, err::ACCOUNT_INVALID, "cannot transfer to self" );
@@ -128,54 +170,52 @@ using namespace std;
       auto quantity              = quant;
       auto token_id              = to_uint64( params[0], "token_id" );
 
-      auto nstats                = nstats_t::idx_t(NFT_BANK, NFT_BANK.value);
+      auto orders                = order_t::idx_t( _self, token_id );
+      auto order_id              = stoi( string( params[1] ));
+      auto itr                   = orders.find( order_id );
+
+      CHECKC( itr != orders.end(), err::RECORD_NOT_FOUND, "order not found: " + to_string(order_id) + "@" + to_string(token_id) )
+      CHECKC( quant.symbol == itr->price.value.symbol , err::SYMBOL_MISMATCH, "pay symbol not matched")
+
+      auto orderex = _get_order_extension( token_id, order_id);
+      CHECKC( orderex.asset_contract == cbank, err::MEMO_FORMAT_ERROR, "asset contract must be" + orderex.asset_contract.to_string())
+
+      auto nstats                = nstats_t::idx_t( orderex.nft_contract, orderex.nft_contract.value);
       auto nstats_itr            = nstats.find(token_id);
-      CHECKC( nstats_itr         != nstats.end(), err::RECORD_NOT_FOUND, "nft token not found: " + to_string(token_id) )
+      CHECKC( nstats_itr         != nstats.end(), err::RECORD_NOT_FOUND, "nft contract not found: " + orderex.nft_contract.to_string() + ":" + to_string(token_id) )
       auto token_pid             = nstats_itr->supply.symbol.parent_id;
       auto nsymb                 = nsymbol( token_id, token_pid );
-      auto orders                = order_t::idx_t( _self, token_id );
+      
       auto bought                = nasset(0, nsymb); //by buyer
-      asset price                = asset( 0, _gstate.pay_symbol );
+      asset price                = asset( 0, quant.symbol );
 
       auto bid_price             = price_s(price, nsymb);
 
       compute_memo_price( string(params[2]), bid_price.value );
 
-      auto order_id              = stoi( string( params[1] ));
-      auto itr                   = orders.find( order_id );
-      CHECKC( itr != orders.end(), err::RECORD_NOT_FOUND, "order not found: " + to_string(order_id) + "@" + to_string(token_id) )
+      
       CHECKC( quant.amount >= (uint64_t)(bid_price.value.amount), err::PARAM_ERROR, "quantity < price, " + to_string(bid_price.value.amount) )
-
+  
       uint64_t deal_count        = 0;
       auto order                 = *itr;
       if (order.price <= bid_price) {
          auto count              = bought.amount;
          auto ipowner            = nstats_itr->ipowner;
-         auto devfee             = asset(0, _gstate.pay_symbol);
-         auto ipfee              = asset(0, _gstate.pay_symbol);
-         process_single_buy_order( from, order, quantity, bought, deal_count, devfee, ipowner, ipfee );
+         auto devfee             = asset(0, quant.symbol);
+         auto ipfee              = asset(0, quant.symbol);
+         process_single_buy_order( cbank, from, order, quantity, bought, deal_count, devfee, ipowner, ipfee );
 
-        
          if (order.frozen == 0) {
             orders.erase( itr );
-           
-           _refund_buyer_bid( order_id ,0);
+
+            _refund_buyer_bid(order_id, orderex.asset_contract, 0);
+            _dbc.del_scope(token_id,orderex);
+            
          } else {
             orders.modify(itr, same_payer, [&]( auto& row ) {
                row.frozen = order.frozen;
                row.updated_at = current_time_point();
             });
-        
-            // for ( auto itr = lower_itr ; itr != upper_itr && itr != idx.end();) { 
-            //    auto bid_count                = itr->frozen.amount / itr->price.value.amount;
-            //    if ( bid_count <= order.frozen) {
-            //       itr++;
-            //       continue;
-            //    }
-            //    TRANSFER_X( _gstate.bank_contract, itr->buyer, itr->frozen, "refund" )
-            //    itr = idx.erase( itr );
-            // }
-
          }
 
          deal_trace_s trace;
@@ -189,10 +229,9 @@ using namespace std;
          trace.ipowner           =  ipowner;
          trace.ipfee             =  ipfee;
          trace.created_at        =  current_time_point();
+         trace.nbank             =  orderex.nft_contract;
+         trace.cbank             =  cbank;
          _emit_deal_action( trace );
-
-         
-
 
       } else {
 
@@ -223,20 +262,26 @@ using namespace std;
       if (bought.amount > 0) {
          //send to buyer for nft tokens
          vector<nasset> quants = { bought };
-         TRANSFER_N( NFT_BANK, from, quants, "buy nft: " + to_string(token_id) )
+         TRANSFER_N( orderex.nft_contract , from, quants, "buy nft: " + to_string(token_id) )
       }
 
       if (quantity.amount > 0) {
-         TRANSFER_X( _gstate.bank_contract, from, quantity, "nft buy left" )
+         TRANSFER_X( cbank, from, quantity, "nft buy left" )
       }
    }
 
-   void nftone_mart::_reward_farmer( const asset& fee, const name& farmer ) {
+   void nftone_mart::_reward_farmer( const asset& fee, const name& farmer ,const name& asset_contract) {
+      
+      extended_asset extended_asset_fee = extended_asset(fee, asset_contract);
+
       auto apples = asset(0, APLINK_SYMBOL);
       aplink::farm::available_apples( _gstate.apl_farm.contract, _gstate.apl_farm.lease_id, apples );
-      if (apples.amount == 0 || _gstate.apl_farm.unit_reward.amount == 0) return;
-
-      auto reward_amount = wasm::safemath::mul( _gstate.apl_farm.unit_reward.amount, fee.amount, get_precision(APL_SYMBOL) );
+      if (apples.amount == 0 || _gstate1.farm_scales.count(extended_asset_fee.get_extended_symbol()) == false) return;
+      auto scale = _gstate1.farm_scales.at(extended_asset_fee.get_extended_symbol());
+      // auto value = multiply_decimal64( extended_asset_fee.quantity.amount, 
+      //                    get_precision(APLINK_SYMBOL), get_precision(extended_asset_fee.quantity.symbol));
+      // value = value * scale / get_precision(APLINK_SYMBOL);
+      auto reward_amount = wasm::safemath::mul( scale, fee.amount, get_precision(APL_SYMBOL) );
       auto reward_quant = asset( reward_amount, APL_SYMBOL );
       if ( reward_quant.amount > 0 )
          ALLOT_APPLE( _gstate.apl_farm.contract, _gstate.apl_farm.lease_id, farmer, reward_quant, "nftone reward" )
@@ -260,15 +305,18 @@ using namespace std;
       CHECKC( sell_itr != sellorders.end(), err::RECORD_NOT_FOUND, "sell order not found: " + to_string( sell_order_id ))
       CHECKC( seller == sell_itr->maker, err::NO_AUTH, "NO_AUTH")
       auto sell_frozen              = sell_itr->frozen;
+      
+      auto orderex = _get_order_extension( token_id, sell_order_id);
 
-      auto nstats                   = nstats_t::idx_t(NFT_BANK, NFT_BANK.value);
+    
+      auto nstats                   = nstats_t::idx_t( orderex.nft_contract, orderex.nft_contract.value);
       auto nstats_itr               = nstats.find(token_id);
       CHECKC( nstats_itr            != nstats.end(), err::RECORD_NOT_FOUND, "nft token not found: " + to_string(token_id) )
       auto token_pid                = nstats_itr->supply.symbol.parent_id;
       auto nsymb                    = nsymbol( token_id, token_pid );
       auto bought                   = nasset(0, nsymb); //by buyer
-      auto earned                   = asset( 0, _gstate.pay_symbol );
-      auto fee                      = asset(0, _gstate.pay_symbol);
+      auto earned                   = asset( 0, sell_itr->price.value.symbol );
+      auto fee                      = asset(0, sell_itr->price.value.symbol );
 
       auto deal_count      = 0;
       if (bid_count < sell_frozen) {
@@ -282,26 +330,28 @@ using namespace std;
       } else {
          deal_count = sell_frozen;
          if (bid_count > sell_frozen) {
-            auto left = asset( 0, _gstate.pay_symbol );
+            auto left = asset( 0, sell_itr->price.value.symbol );
             left.amount = (bid_count - sell_frozen) * bid_price.value.amount ;
-            TRANSFER_X( _gstate.bank_contract, bid_itr->buyer,left , "take nft left" )
+            TRANSFER_X( orderex.asset_contract, bid_itr->buyer,left , "take nft left" )
          }
          bought.amount = sell_frozen;
          sellorders.erase( sell_itr );
 
-         _refund_buyer_bid( sell_order_id , buyer_bid_id);
+         _refund_buyer_bid( sell_order_id ,orderex.asset_contract, buyer_bid_id);
+
+         _dbc.del_scope(token_id,orderex);
       }
 
       bids.erase(bid_itr);
 
       vector<nasset> quants         = { bought };
-      TRANSFER_N( NFT_BANK, bid_itr->buyer, quants, "buy nft: " + to_string(token_id) )
+      TRANSFER_N( orderex.nft_contract, bid_itr->buyer, quants, "buy nft: " + to_string(token_id) )
       earned.amount                 = bought.amount * bid_price.value.amount;
       
       auto ipowner                  = nstats_itr->ipowner;
-      auto devfee                   = asset(0, _gstate.pay_symbol);
-      auto ipfee                    = asset(0, _gstate.pay_symbol);
-      _settle_maker( bid_itr->buyer, seller, earned, bought, devfee, ipowner, ipfee );
+      auto devfee                   = asset(0, sell_itr->price.value.symbol);
+      auto ipfee                    = asset(0, sell_itr->price.value.symbol);
+      _settle_maker( orderex.asset_contract, bid_itr->buyer, seller, earned, bought, devfee, ipowner, ipfee );
 
       deal_trace_s trace;
       trace.seller_order_id         =  sell_itr->id;
@@ -321,10 +371,10 @@ using namespace std;
 
    /////////////////////////////// private funcs below /////////////////////////////////////////////
 
-   void nftone_mart::process_single_buy_order(const name& buyer, order_t& order, asset& quantity, nasset& bought, uint64_t& deal_count, asset& devfee, name& ipowner, asset& ipfee) {
-      auto earned                = asset(0, _gstate.pay_symbol); //to seller
+   void nftone_mart::process_single_buy_order(const name& cbank, const name& buyer, order_t& order, asset& quantity, nasset& bought, uint64_t& deal_count, asset& devfee, name& ipowner, asset& ipfee) {
+      auto earned                = asset(0, order.price.value.symbol); //to seller
       auto offer_cost            = order.frozen * order.price.value.amount;
-
+      
       if (offer_cost >= quantity.amount) {
          deal_count              = quantity.amount / order.price.value.amount;
          bought.amount           += quantity.amount / order.price.value.amount;
@@ -340,14 +390,15 @@ using namespace std;
          quantity.amount         -= offer_cost;
       }
 
-      _settle_maker( buyer, order.maker, earned, bought, devfee, ipowner, ipfee);
+      _settle_maker(cbank,  buyer, order.maker, earned, bought, devfee, ipowner, ipfee);
    }
 
-   void nftone_mart::_settle_maker(const name& buyer, const name& maker, asset& earned, nasset& bought, asset& devfee, const name& ipowner, asset& ipfee) {
+   void nftone_mart::_settle_maker(const name& cbank, const name& buyer, const name& maker, asset& earned, nasset& bought, asset& devfee, const name& ipowner, asset& ipfee) {
       // devfee.amount              =  wasm::safemath::mul(earned.amount, _gstate.dev_fee_rate * 10000, get_precision(earned.symbol));
       // devfee                     /= 10000;
       // ipfee.amount               =  wasm::safemath::mul(earned.amount, _gstate.ipowner_fee_rate * 10000, get_precision(earned.symbol));
       // ipfee                      /= 10000;
+      
       devfee.amount                 = earned.amount * _gstate.dev_fee_rate;
       ipfee.amount                  = earned.amount * _gstate.ipowner_fee_rate;
 
@@ -358,17 +409,18 @@ using namespace std;
          TRANSFER_X( _gstate.bank_contract, "nftone.xdao"_n, fee, "nftone xdao" )
          TRANSFER_X( _gstate.bank_contract, "nftoneassets"_n, gfee, "nftone global" )
 
-         _reward_farmer( devfee, buyer );
+         _reward_farmer( devfee, buyer ,cbank);
       }
 
       if (ipfee.amount > 0 && ipowner.length() != 0 && is_account(ipowner))
-         TRANSFER_X( _gstate.bank_contract, ipowner, ipfee, "nftone ip fee" )
+         TRANSFER_X( cbank, ipowner, ipfee, "nftone ip fee" )
       else
          ipfee.amount = 0;
-
+      
       earned -= devfee + ipfee;
+      
       if (earned.amount > 0)
-         TRANSFER_X( _gstate.bank_contract, maker, earned, "sell nft: " + to_string(bought.symbol.id) )
+         TRANSFER_X( cbank, maker, earned, "sell nft: " + to_string(bought.symbol.id) )
 
    }
 
@@ -381,7 +433,9 @@ using namespace std;
       CHECKC( bid_itr != bids.end(), err::RECORD_NOT_FOUND, "buyer bid not found: " + to_string( buyer_bid_id ))
       CHECKC( buyer == bid_itr->buyer, err::NO_AUTH, "NO_AUTH")
 
-      TRANSFER_X( _gstate.bank_contract, bid_itr->buyer, bid_frozen, "cancel" )
+      auto orderex = _get_order_extension( bid_price.symbol.id,bid_itr->sell_order_id);
+
+      TRANSFER_X( orderex.asset_contract, bid_itr->buyer, bid_frozen, "cancel" )
       bids.erase( bid_itr );
    }
 
@@ -393,22 +447,32 @@ using namespace std;
          auto itr = orders.find( order_id );
          CHECKC( itr != orders.end(), err::RECORD_NOT_FOUND, "order not exit: " + to_string(order_id) + "@" + to_string(token_id) )
          CHECKC( maker == itr->maker, err::NO_AUTH, "NO_AUTH")
+         
+         auto orderex = _get_order_extension( token_id, order_id);
 
          auto nft_quant = nasset( itr->frozen, itr->price.symbol );
          vector<nasset> quants = { nft_quant };
-         TRANSFER_N( NFT_BANK, itr->maker, quants, "nftone mart cancel" )
+         TRANSFER_N( orderex.nft_contract, itr->maker, quants, "nftone mart cancel" )
          orders.erase( itr );
 
-         _refund_buyer_bid( order_id, 0);
+         _refund_buyer_bid( order_id, orderex.asset_contract);
+
+         _dbc.del_scope(token_id,orderex);
+
       } else {
          for (auto itr = orders.begin(); itr != orders.end(); itr++) {
 
             auto nft_quant = nasset( itr->frozen, itr->price.symbol );
             vector<nasset> quants = { nft_quant };
-            TRANSFER_N( NFT_BANK, itr->maker, quants, "nftone mart cancel" )
+
+            auto orderex = _get_order_extension( token_id, order_id);
+            
+            TRANSFER_N( orderex.nft_contract , itr->maker, quants, "nftone mart cancel" )
             orders.erase( itr );
 
-            _refund_buyer_bid( itr->id, 0);
+            _refund_buyer_bid( itr->id, orderex.asset_contract);
+
+            _dbc.del_scope(token_id,orderex);
          }
       }
    }
@@ -418,7 +482,7 @@ using namespace std;
       CHECKC( price.amount > 0, err::PARAM_ERROR, " price non-positive quantity not allowed" )
    }
 
-   void nftone_mart::_refund_buyer_bid( const uint64_t& order_id, const uint64_t& bid_id){
+   void nftone_mart::_refund_buyer_bid( const uint64_t& order_id, const name& cbank, const uint64_t& bid_id){
 
       auto buyerbids          = buyer_bid_t::idx_t(_self, _self.value);
       auto idx                = buyerbids.get_index<"sellorderidx"_n>();
@@ -428,8 +492,8 @@ using namespace std;
       for ( auto itr = lower_itr ; itr != upper_itr && itr != idx.end(); i++) { 
             if ( i == MAX_REFUND_COUNT) break;
             if ( itr->id != bid_id || bid_id == 0){
-              
-               TRANSFER_X( _gstate.bank_contract, itr->buyer, itr->frozen, "refund" )
+
+               TRANSFER_X( cbank, itr->buyer, itr->frozen, "refund" )
                itr = idx.erase( itr );
             }else {
                itr ++;
@@ -437,34 +501,6 @@ using namespace std;
             }
       }
    }
-   // void nftone_mart::dealtrace(const uint64_t& seller_order_id,
-   //                   const uint64_t& bid_id,
-   //                   const name& seller,
-   //                   const name& buyer,
-   //                   const price_s& price,
-   //                   const asset& fee,
-   //                   const int64_t& count,
-   //                   const time_point_sec created_at
-   //                 )
-   // {
-   //    require_auth(get_self());
-   //    require_recipient(seller);
-   //    require_recipient(buyer);
-   // }
-
-   // void nftone_mart::_emit_deal_action(const uint64_t& seller_order_id,
-   //                   const uint64_t&   bid_id,
-   //                   const name&       maker,
-   //                   const name&       buyer,
-   //                   const price_s&    price,
-   //                   const asset&      fee,
-   //                   const int64_t     count,
-   //                   const time_point_sec created_at)
-   //  {
-   //       amax::nftone_mart::deal_trace_s_action act{ _self, { {_self, active_permission} } };
-	// 		act.send( seller_order_id, bid_id, maker, buyer, price, fee, count, created_at );
-
-   // }
 
    void nftone_mart::dealtrace(const deal_trace_s& trace) {
       require_auth(get_self());
@@ -475,6 +511,45 @@ using namespace std;
    void nftone_mart::_emit_deal_action(const deal_trace_s& trace) {
       amax::nftone_mart::deal_trace_s_action act{ _self, { {_self, active_permission} } };
 		act.send( trace );
+   }
+
+   void nftone_mart::addcoinconf( const extended_symbol& symbol, const uint64_t& unit_reward,const bool& to_add) {
+
+      CHECKC( has_auth(_self) || has_auth(_gstate.admin) ,err::NO_AUTH, "Missing required authority of admin or maintainer" )
+      CHECKC( is_account(symbol.get_contract()),err::ACCOUNT_INVALID, "cbank does not exist");
+
+      if ( to_add){
+         _gstate1.farm_scales[symbol] = unit_reward;
+      }else {
+         _gstate1.farm_scales.erase(symbol);
+      }
+   }
+
+   void nftone_mart::addnftconf( const name& nbank ,const bool& to_add) {
+
+      CHECKC( has_auth(_self) || has_auth(_gstate.admin), err::NO_AUTH, "Missing required authority of admin or maintainer" )
+      CHECKC( is_account(nbank),err::ACCOUNT_INVALID, "nbank does not exist");
+
+      if ( to_add){
+         _gstate1.nft_contract_whitelist.insert(nbank);
+      }else {
+         _gstate1.nft_contract_whitelist.insert(nbank);
+      }
+      
+
+      
+   }
+
+   order_extension_t nftone_mart::_get_order_extension(const uint32_t& symbl_id, const uint64_t& sellorder_id/* = 0*/){
+
+      auto oe = order_extension_t::idx_t( _self, symbl_id);
+      auto itr = oe.find(sellorder_id);
+      if ( itr != oe.end()){
+
+         return oe.get(sellorder_id);
+      }else {
+         return order_extension_t(sellorder_id,NTOKEN_BANK,MUSDT_BANK);
+      }
    }
 
 } //namespace amax

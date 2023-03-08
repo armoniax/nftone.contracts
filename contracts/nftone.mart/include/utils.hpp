@@ -192,3 +192,8 @@ uint128_t make128key(uint64_t a, uint64_t b) {
 checksum256 make256key(uint64_t a, uint64_t b, uint64_t c, uint64_t d) {
     return checksum256::make_from_word_sequence<uint64_t>(a,b,c,d);
 }
+
+symbol to_symbol( const string& str ) {
+   auto symbol_parts = split( str, "," );
+   return symbol(symbol_parts[1], stoi(string(symbol_parts[0])));
+}
