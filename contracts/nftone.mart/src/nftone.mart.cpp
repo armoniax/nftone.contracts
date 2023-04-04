@@ -91,29 +91,18 @@ using namespace std;
          CHECKC( false, err::PARAM_ERROR, "Expected format 'price:bank:symbol'" );
       }
       
-      // auto price_str    = parts[0];
-      // auto cbank        = name(parts[1]);
-      
-      // auto symbol       = to_symbol((string)parts[2]);
       extended_symbol sym = extended_symbol(symbol,cbank);
       
       
       CHECKC( _gstate1.farm_scales.count(sym), err::RECORD_NOT_FOUND, "asset contract not found" )
       CHECKC( _gstate1.nft_contract_whitelist.find(nbank) != _gstate1.nft_contract_whitelist.end(), err::RECORD_NOT_FOUND, "nft contract not found" )
 
-      // coinconf_t coinconf(symbol);
-      // CHECKC( _dbc.get(cbank.value, coinconf), err::RECORD_NOT_FOUND, "coinconf not found");
-
-      // nftconf_t nftconf(nbank);
-      // CHECKC( _dbc.get(nftconf), err::RECORD_NOT_FOUND, "nftconf not found" )
-
       CHECKC( quants.size() == 1, err::OVERSIZED, "only one nft allowed to sell to nft at a timepoint" )
       asset price          = asset( 0, symbol );
       compute_memo_price( (string)price_str, price );
 
-      asset min_price = asset(0,symbol);
-      min_price.amount = 10000;
-
+      asset min_price = asset(10000,symbol);
+  
       CHECKC( price >= min_price , err::PARAM_ERROR, "The price cannot be lower than " + min_price.to_string())
 
       auto quant              = quants[0];
