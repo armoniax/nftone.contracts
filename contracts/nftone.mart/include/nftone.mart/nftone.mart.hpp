@@ -98,6 +98,9 @@ class [[eosio::contract("nftone.mart")]] nftone_mart : public contract {
    [[eosio::on_notify("amax.mtoken::transfer")]]
    void on_mtoken_transfer(const name& from, const name& to, const asset& quant, const string& memo);
 
+   [[eosio::on_notify("amax.ntt::transfer")]]
+   void on_ntt_transfer(const name& from, const name& to, const asset& quant, const string& memo);
+   
    ACTION setfeecollec(const name& dev_fee_collector) {
       require_auth( _self );
 

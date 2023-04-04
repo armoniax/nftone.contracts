@@ -4,7 +4,7 @@
 #include <aplink.farm/aplink.farm.hpp>
 #include <cnyd.token/amax.xtoken.hpp>
 #include <eosio/binary_extension.hpp> 
-#include<math.hpp>
+#include <math.hpp>
 
 #include <utils.hpp>
 
@@ -22,7 +22,7 @@ using namespace std;
 #define CHECKC(exp, code, msg) \
    { if (!(exp)) eosio::check(false, string("$$$") + to_string((int)code) + string("$$$ ") + msg); }
 
-
+   
    inline int64_t get_precision(const symbol &s) {
       int64_t digit = s.precision();
       CHECK(digit >= 0 && digit <= 18, "precision digit " + std::to_string(digit) + " should be in range[0,18]");
@@ -96,7 +96,8 @@ using namespace std;
       
       // auto symbol       = to_symbol((string)parts[2]);
       extended_symbol sym = extended_symbol(symbol,cbank);
-
+      
+      
       CHECKC( _gstate1.farm_scales.count(sym), err::RECORD_NOT_FOUND, "asset contract not found" )
       CHECKC( _gstate1.nft_contract_whitelist.find(nbank) != _gstate1.nft_contract_whitelist.end(), err::RECORD_NOT_FOUND, "nft contract not found" )
 
@@ -109,6 +110,11 @@ using namespace std;
       CHECKC( quants.size() == 1, err::OVERSIZED, "only one nft allowed to sell to nft at a timepoint" )
       asset price          = asset( 0, symbol );
       compute_memo_price( (string)price_str, price );
+
+      asset min_price = asset(0,symbol);
+      min_price.amount = 10000;
+
+      CHECKC( price >= min_price , err::PARAM_ERROR, "The price cannot be lower than " + min_price.to_string())
 
       auto quant              = quants[0];
       CHECKC( quant.amount > 0, err::PARAM_ERROR, "non-positive quantity not allowed" )
@@ -136,13 +142,18 @@ using namespace std;
 
 
    void nftone_mart::on_amax_transfer(const name& from, const name& to, const asset& quant, const string& memo) {
-      auto cbank = "amax.token"_n;
-      _buy_transfer(cbank, from, to, quant, memo);
+      
+      _buy_transfer(get_first_receiver(), from, to, quant, memo);
    }
 
    void nftone_mart::on_mtoken_transfer(const name& from, const name& to, const asset& quant, const string& memo) {
-      auto cbank = "amax.mtoken"_n;
-      _buy_transfer(cbank, from, to, quant, memo);
+      
+      _buy_transfer(get_first_receiver(), from, to, quant, memo);
+   }
+
+   void nftone_mart::on_ntt_transfer(const name& from, const name& to, const asset& quant, const string& memo) {
+      
+      _buy_transfer(get_first_receiver(), from, to, quant, memo);
    }
 
    /**
@@ -264,7 +275,7 @@ using namespace std;
          vector<nasset> quants = { bought };
          TRANSFER_N( orderex.nft_contract , from, quants, "buy nft: " + to_string(token_id) )
       }
-
+      
       if (quantity.amount > 0) {
          TRANSFER_X( cbank, from, quantity, "nft buy left" )
       }
@@ -403,7 +414,11 @@ using namespace std;
       ipfee.amount                  = earned.amount * _gstate.ipowner_fee_rate;
 
       if (devfee.amount > 0) {
-         TRANSFER_X( cbank, _gstate.dev_fee_collector, devfee, "nftone dev fee" )
+         auto fee = devfee / 10;
+         auto gfee = fee * 8;
+         TRANSFER_X( cbank, "nftone.pool"_n, fee, "nftone pass" )
+         TRANSFER_X( cbank, "nftone.xdao"_n, fee, "nftone xdao" )
+         TRANSFER_X( cbank, "nftoneassets"_n, gfee, "nftone global" )
 
          _reward_farmer( devfee, buyer ,cbank);
       }
