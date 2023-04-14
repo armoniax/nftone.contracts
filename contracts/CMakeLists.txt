@@ -15,6 +15,8 @@ set(TRANSFER_ICON_URI "transfer.png#5dfad0df72772ee1ccc155e670c1d124f5c5122f1d50
 set(VOTING_ICON_URI   "voting.png#db28cd3db6e62d4509af3644ce7d377329482a14bb4bfaca2aa5f1400d8e8a84")
 
 add_subdirectory(amax.ntoken)
+add_subdirectory(nftone.ntoken)
+add_subdirectory(amax.ntt)
 add_subdirectory(nftone.mart)
 add_subdirectory(pass.custody)
 add_subdirectory(pass.mart)
