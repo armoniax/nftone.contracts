@@ -1,4 +1,4 @@
-#include <amax.locknft/amax.locknft.hpp>
+#include <nftone.ntoken/nftone.ntoken.hpp>
 
 namespace amax {
 

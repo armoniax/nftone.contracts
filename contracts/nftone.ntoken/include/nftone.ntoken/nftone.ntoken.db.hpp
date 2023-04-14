@@ -19,8 +19,8 @@ using namespace std;
 using namespace eosio;
 
 #define HASH256(str) sha256(const_cast<char*>(str.c_str()), str.size())
-#define TBL struct [[eosio::table, eosio::contract("amax.locknft")]]
-#define NTBL(name) struct [[eosio::table(name), eosio::contract("amax.locknft")]]
+#define TBL struct [[eosio::table, eosio::contract("nftone.ntoken")]]
+#define NTBL(name) struct [[eosio::table(name), eosio::contract("nftone.ntoken")]]
 
 NTBL("global") global_t {
     set<name> notaries;
