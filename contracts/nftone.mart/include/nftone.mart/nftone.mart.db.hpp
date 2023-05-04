@@ -34,6 +34,7 @@ static constexpr symbol    MUSDT        = symbol(symbol_code("MUSDT"), 6);
 
 static constexpr uint8_t MAX_BUYER_BID_COUNT = 30;
 static constexpr uint8_t MAX_REFUND_COUNT = 10;
+static constexpr uint64_t MIN_PRICE_PRECISION = 10000;
 
 struct aplink_farm {
     name contract           = "aplink.farm"_n;
@@ -50,7 +51,7 @@ NTBL("global") global_t {
     double notary_fee_rate          = 0.0;
     uint32_t order_expiry_hours     = 72;
     eosio::symbol pay_symbol;
-    name bank_contract               = "amax.mtoken"_n;
+    name bank_contract               = MUSDT_BANK;
     aplink_farm apl_farm;
     uint64_t last_buy_order_idx     = 0;
     uint64_t last_deal_idx          = 0;
