@@ -235,16 +235,15 @@ void token::setacctperms(const name& issuer, const name& to, const symbol& symbo
     require_issuer(issuer, symbol);
 
     check( is_account( to ), "to account does not exist: " + to.to_string() );
-    check(symbol == NTT_SYMBOL, "invalid NTT symbol");
 
     accounts acnts( get_self(), to.value );
     auto it = acnts.find( symbol.code().raw() );
     if( it == acnts.end() ) {
       acnts.emplace( issuer, [&]( auto& a ){
-        a.balance = asset(0, NTT_SYMBOL);
+        a.balance = asset(0, symbol);
         a.allow_send = allowsend;
         a.allow_recv = allowrecv;
-        a.sum_balance = asset(0, NTT_SYMBOL);
+        a.sum_balance = asset(0, symbol);
         a.expired_at = current_time_point() + seconds(YEAR_SECONDS);
       });
    } else {
