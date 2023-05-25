@@ -156,11 +156,21 @@ void rndnft_mart::on_transfer_ntoken( const name& from, const name& to, const ve
     _db.set( booth );
 }
 
+void rndnft_mart::on_transfer_ntt( const name& from, const name& to, const asset& quantity, const string& memo ) {
+    _transfer_token(from,to,quantity,memo);
+}
 
+void rndnft_mart::on_transfer_mtoken( const name& from, const name& to, const asset& quantity, const string& memo ) {
+    _transfer_token(from,to,quantity,memo);
+}
+
+void rndnft_mart::on_transfer_amax( const name& from, const name& to, const asset& quantity, const string& memo ) {
+    _transfer_token(from,to,quantity,memo);
+}
 /// buyer to send mtoken to buy NFTs (with random NFT return, 1 only)
 /// memo format:     booth:${booth_id}
 ///
-void rndnft_mart::on_transfer_mtoken( const name& from, const name& to, const asset& quantity, const string& memo ) {
+void rndnft_mart::_transfer_token( const name& from, const name& to, const asset& quantity, const string& memo ) {
     if (from == get_self() || to != get_self()) return;
     
     vector<string_view> memo_params = split(memo, ":");

@@ -30,10 +30,17 @@ public:
         _global1.set( _gstate1, get_self() ); 
     }
 
-    // ACTION init() { _gstate.last_booth_id = 2; _gstate.admin = "nftone.admin"_n; _gstate.fund_distributor = "amax.split"_n; }
-    ACTION init(const string& apl) {
-        require_auth(_self);
-        _gstate1.apl_farm.reward_conf[ "MUSDT" ] = asset_from_string(apl); 
+//    ACTION init() {
+//
+//        require_auth(_self);
+//        _gstate.admin = "nftone.admin"_n;
+//        _gstate.fund_distributor = "amax.split"_n;
+//
+//    }
+
+    ACTION setapl( const string& coin, const string& apl){
+         require_auth(_self);
+        _gstate1.apl_farm.reward_conf[ coin ] = asset_from_string(apl); 
     }
 
     ACTION createbooth( const name& owner,const string& title, const name& nft_contract, const name& fund_contract,
@@ -92,9 +99,17 @@ public:
     [[eosio::on_notify("amax.mtoken::transfer")]] 
     void on_transfer_mtoken( const name& from, const name& to, const asset& quantity, const string& memo );
     
+    [[eosio::on_notify("amax.ntt::transfer")]] 
+    void on_transfer_ntt( const name& from, const name& to, const asset& quantity, const string& memo );
+
+     [[eosio::on_notify("amax.token::transfer")]] 
+    void on_transfer_amax( const name& from, const name& to, const asset& quantity, const string& memo );
+
     using deal_trace_s_action = eosio::action_wrapper<"dealtrace"_n, &rndnft_mart::dealtrace>;
 
 private:
+
+    void _transfer_token(  const name& from, const name& to, const asset& quantity, const string& memo );
     uint64_t _rand(const uint64_t& max_uint, const name& owner, const uint64_t& index);
     void _one_nft( const name& owner, const uint64_t& index, booth_t& booth, nasset& nft );
     void _on_deal_trace_s( const deal_trace_s_s& deal_trace_s);
