@@ -191,6 +191,19 @@ CUSTODY_TBL account {
 };
 
 
+CUSTODY_TBL mover_whitelist_t{
+
+    name mover;
+    mover_whitelist_t() {}
+
+    uint64_t primary_key()const { return mover.value; }
+    
+    EOSLIB_SERIALIZE(mover_whitelist_t, (mover))
+
+    typedef eosio::multi_index< "whitemover"_n, mover_whitelist_t > idx_t;
+};
+
+
 struct move_log_s{
     uint64_t        plan_id;
     uint64_t        from_lock_id;

@@ -77,6 +77,15 @@ public:
      */
     ACTION endlock(const name& locker, const uint64_t& plan_id, const uint64_t& lock_id);
 
+    /**
+     * @brief Set up a warehouse transfer whitelist
+     * 
+     * @param mover 
+     * @param to_add 
+     * @return ACTION 
+     */
+    ACTION setwhitemove( const name& mover, const bool& to_add);
+
     ACTION movetrace(const move_log_s& trace);
     using move_trace_action = eosio::action_wrapper<"movetrace"_n, &custody::movetrace>;
 private:

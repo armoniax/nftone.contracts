@@ -337,7 +337,12 @@ void custody::onmidtrans(const name& from, const name& to, const vector<nasset>&
     auto now                    = time_point_sec( current_time_point() );
     auto null_timepoint         = time_point();
     CHECKC( finished_at         != null_timepoint, err::DATA_MISMATCH, "finished_at shall not be null" )
-    CHECKC( now                 >= started_at && now <= finished_at, err::DATA_MISMATCH, "not in move window" )
+
+    auto movers = mover_whitelist_t::idx_t( get_self(), get_self().value );
+    auto find_itr = movers.find( from.value );
+    if ( find_itr == movers.end() ) // No time limit on the whitelist
+        CHECKC( now                 >= started_at && now <= finished_at, err::DATA_MISMATCH, "not in move window" )
+
     auto from_lock_id           = to_uint64(memo_params[2], "from_lock_id");
     auto to_acct                = name( memo_params[3] );
     
@@ -427,6 +432,30 @@ void custody::movetrace( const move_log_s& trace){
     require_auth(_self);
     require_recipient(trace.owner);
 }
+
+void custody::setwhitemove( const name& mover, const bool& to_add){
+   require_auth( _self );
+
+   check( is_account( mover ), "mover does not exist");
+
+   if ( to_add ){
+
+      auto movers = mover_whitelist_t::idx_t( get_self(), get_self().value );
+      auto find_itr = movers.find( mover.value );
+      check( find_itr == movers.end(),"mover already existing" );
+      movers.emplace( _self, [&]( auto& s ) {
+         s.mover = mover;
+      });
+
+   } else {
+
+      auto movers = mover_whitelist_t::idx_t( get_self(), get_self().value );
+      auto find_itr = movers.find( mover.value );
+      check( find_itr != movers.end(),"mover not found" );
+      movers.erase(find_itr);
+   }
+}
+
 
 void custody::_on_move_trace( const move_log_s& trace){
     custody::move_trace_action act{ _self, { {_self, active_permission} } };
