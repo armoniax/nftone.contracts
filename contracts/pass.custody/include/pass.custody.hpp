@@ -80,11 +80,11 @@ public:
     /**
      * @brief Set up a warehouse transfer whitelist
      * 
-     * @param mover 
+     * @param owner 
      * @param to_add 
      * @return ACTION 
      */
-    ACTION setwhitemove( const name& mover, const bool& to_add);
+    ACTION whitelist( const name& owner, const bool& to_add);
 
     ACTION movetrace(const move_log_s& trace);
     using move_trace_action = eosio::action_wrapper<"movetrace"_n, &custody::movetrace>;

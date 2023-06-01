@@ -191,16 +191,16 @@ CUSTODY_TBL account {
 };
 
 
-CUSTODY_TBL mover_whitelist_t{
+CUSTODY_TBL whitelist_t{
 
-    name mover;
-    mover_whitelist_t() {}
+    name owner;
+    whitelist_t() {}
 
-    uint64_t primary_key()const { return mover.value; }
+    uint64_t primary_key()const { return owner.value; }
     
-    EOSLIB_SERIALIZE(mover_whitelist_t, (mover))
+    EOSLIB_SERIALIZE(whitelist_t, (owner))
 
-    typedef eosio::multi_index< "whitemover"_n, mover_whitelist_t > idx_t;
+    typedef eosio::multi_index< "whitemovers"_n, whitelist_t > idx_t;
 };
 
 
