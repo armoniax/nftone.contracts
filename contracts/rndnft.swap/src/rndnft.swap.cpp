@@ -236,7 +236,7 @@ void rndnft_swap::_one_nft( const time_point_sec& now, const name& owner, booth_
         uint64_t rand_index             = _rand( booth.base_nftbox_sum, owner,nonce );
         itr                             = nftboxes.lower_bound( rand_index );
     }else {
-        uint64_t rand_index             = _rand( booth.base_nft_num, owner,nonce );
+        uint64_t rand_index             = _rand( booth.base_nft_num, owner,nonce ) + 1;
         uint64_t curr_num = 0;
         for( ; itr != nftboxes.end(); itr++){
             curr_num += itr->nfts.amount;
