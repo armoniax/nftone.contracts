@@ -63,7 +63,7 @@ public:
     using deal_trace_s_action = eosio::action_wrapper<"dealtrace"_n, &rndnft_swap::dealtrace>;
 
 private:
-    uint64_t _rand( const uint64_t& range, const name& owner, const uint64_t& index );
+    uint64_t _rand( const uint64_t& min_num, const uint64_t& range, const name& owner, const uint64_t& index );
     void _one_nft( const time_point_sec& now, const name& owner, booth_t& booth, nasset& nft , const uint64_t& nonce);
     void _on_deal_trace_s( const deal_trace_s_s& deal_trace_s);
     void _refuel_nft( const vector<nasset>& assets, booth_t& booth );

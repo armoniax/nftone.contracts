@@ -233,10 +233,10 @@ void rndnft_swap::_one_nft( const time_point_sec& now, const name& owner, booth_
     auto nftboxes                       = booth_nftbox_t::idx_t( _self, booth.id );
     auto itr                            = nftboxes.begin();
     if ( booth.base_nftbox_num >= MAX_LOWER_BOUND ){
-        uint64_t rand_index             = _rand( booth.base_nftbox_sum, owner,nonce );
+        uint64_t rand_index             = _rand( 0, booth.base_nftbox_sum, owner,nonce );
         itr                             = nftboxes.lower_bound( rand_index );
     }else {
-        uint64_t rand_index             = _rand( booth.base_nft_num, owner,nonce );
+        uint64_t rand_index             = _rand( 1, booth.base_nft_num, owner,nonce );
         uint64_t curr_num = 0;
         for( ; itr != nftboxes.end(); itr++){
             curr_num += itr->nfts.amount;
@@ -265,7 +265,7 @@ void rndnft_swap::_one_nft( const time_point_sec& now, const name& owner, booth_
     _db.set(booth.conf.quote_nft_contract.value, booth );
 }
 
-uint64_t rndnft_swap::_rand(const uint64_t& range, const name& owner, const uint64_t& index) {
+uint64_t rndnft_swap::_rand(const uint64_t& min_num, const uint64_t& range, const name& owner, const uint64_t& index) {
     auto rnd_factors    = to_string(tapos_block_prefix() * tapos_block_num()) + owner.to_string() + to_string(index * 100);
     auto hash           = HASH256( rnd_factors );
     auto r1             = (uint64_t) (hash.data()[7] << 56) | 
@@ -277,7 +277,7 @@ uint64_t rndnft_swap::_rand(const uint64_t& range, const name& owner, const uint
                           (uint64_t) (hash.data()[1] << 8)  |
                           (uint64_t) hash.data()[0];
 
-    uint64_t rand       = r1 % range;
+    uint64_t rand       = r1 % range + 1;
 
     return rand;
 }
