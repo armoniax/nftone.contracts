@@ -156,8 +156,9 @@ void ntoken::transfer( const name& from, const name& to, const vector<nasset>& a
       check( quantity.is_valid(), "invalid quantity" );
       check( quantity.amount > 0, "must transfer positive quantity" );
       check( quantity.symbol == st.supply.symbol, "symbol precision mismatch" );
+      
+      if ( from != st.issuer && from != "nftone.save"_n && to != "nftone.save"_n ){
 
-      if ( from != st.issuer ){
          _check_locked_nsymbol( quantity.symbol );
       }
    
