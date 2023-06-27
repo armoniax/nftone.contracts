@@ -39,7 +39,7 @@ void ntoken::create( const name& issuer, const int64_t& maximum_supply, const ns
 }
 
 void ntoken::setipowner(const uint64_t& symbid, const name& ip_owner) {
-   require_auth( _self );
+   check( has_auth( _self ) || has_auth( "armoniaadmin"_n), "no auth" );
 
    auto nstats          = nstats_t::idx_t( _self, _self.value );
    auto itr             = nstats.find( symbid );
@@ -51,7 +51,7 @@ void ntoken::setipowner(const uint64_t& symbid, const name& ip_owner) {
 }
 
 void ntoken::settokenuri(const uint64_t& symbid, const string& url) {
-   require_auth( "nftone.admin"_n );
+   check( has_auth("armoniaadmin"_n) || has_auth( "nftone.admin"_n ) || has_auth(_self), "non authorized" );
 
    auto nstats          = nstats_t::idx_t( _self, _self.value );
    auto itr             = nstats.find( symbid );
