@@ -269,16 +269,25 @@ void ntoken::setcreator( const name& creator, const bool& to_add){
 }
 
 void ntoken::_creator_auth_check( const name& creator){
-      auto accounts = account_t::idx_t( DID_CONTRACTT, creator.value );
-      auto find_itr = accounts.find( DID_SYMBOL_ID );
-      if ( find_itr == accounts.end()){
+      auto did_acnts = account_t::idx_t( DID_CONTRACTT, creator.value );
 
+      bool is_auth = false;
+      for( auto did_acnts_iter = did_acnts.begin(); did_acnts_iter!=did_acnts.end(); did_acnts_iter++ ) {
+         if( did_acnts_iter->balance.amount > 0 ) {
+               is_auth = true;
+               break;
+         }
+      }
+
+      if ( !is_auth ){
          auto creators = creator_whitelist_t::idx_t( get_self(), get_self().value );
          auto find_itr = creators.find( creator.value );
-         check( find_itr != creators.end(),"did not found" );
-
+         is_auth = find_itr != creators.end();
       }
+
+      check( is_auth,"did is not authenticated" );   
 }
+
 // void ntoken::open( const name& owner, const symbol& symbol, const name& ram_payer )
 // {
 //    require_auth( ram_payer );
