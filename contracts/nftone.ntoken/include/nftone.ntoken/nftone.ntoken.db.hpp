@@ -129,7 +129,7 @@ TBL creator_whitelist_t{
 
     name creator;
     creator_whitelist_t() {}
-
+    
     uint64_t primary_key()const { return creator.value; }
     
     EOSLIB_SERIALIZE(creator_whitelist_t, (creator))
