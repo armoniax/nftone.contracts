@@ -137,6 +137,23 @@ TBL creator_whitelist_t{
     typedef eosio::multi_index< "whitecreator"_n, creator_whitelist_t > idx_t;
 };
 
+///Scope: owner's account
+
+TBL transfer_whitelist_t{
+    nasset      balance;
+    bool     allow_send = false;
+    bool     allow_recv = false;
+
+    transfer_whitelist_t() {}
+    transfer_whitelist_t(const nasset& asset): balance(asset) {}
+
+    uint64_t primary_key()const { return balance.symbol.raw(); }
+
+    EOSLIB_SERIALIZE(transfer_whitelist_t, (balance)(allow_send)(allow_recv))
+
+    typedef eosio::multi_index< "tswhitelist"_n, transfer_whitelist_t > idx_t;
+};
+
 TBL lock_nsymbol_t{
     nsymbol         symbol;
     time_point_sec  lock_started_at;
