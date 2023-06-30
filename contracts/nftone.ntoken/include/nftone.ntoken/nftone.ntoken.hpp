@@ -33,7 +33,8 @@ class [[eosio::contract("nftone.ntoken")]] ntoken : public contract {
       using contract::contract;
 
    ntoken(eosio::name receiver, eosio::name code, datastream<const char*> ds): contract(receiver, code, ds),
-        _global(get_self(), get_self().value)
+        _global(get_self(), get_self().value),
+        _nastas_tbl(get_self(), get_self().value)
     {
         _gstate = _global.exists() ? _global.get() : global_t{};
     }
@@ -100,6 +101,8 @@ class [[eosio::contract("nftone.ntoken")]] ntoken : public contract {
 
    ACTION setlocktime( const nsymbol& sym, const time_point_sec& start_at,  const time_point_sec& ended_at);
 
+   ACTION setacctperms(const name& issuer, const name& to, const nsymbol& symbol,  const bool& allowsend, const bool& allowrecv) ;
+
    static nasset get_balance(const name& contract, const name& owner, const nsymbol& sym) { 
       auto acnts = amax::account_t::idx_t( contract, owner.value ); 
       const auto& acnt = acnts.get( sym.raw(), "no balance object found" ); 
@@ -127,10 +130,11 @@ class [[eosio::contract("nftone.ntoken")]] ntoken : public contract {
       void add_balance( const name& owner, const nasset& value, const name& ram_payer );
       void sub_balance( const name& owner, const nasset& value );
       void _creator_auth_check( const name& creator);
-      void _check_locked_nsymbol( const nsymbol& ns);
+      void _check_locked_nsymbol( const name& from, const name& to, const nsymbol& ns );
       
    private:
       global_singleton    _global;
       global_t            _gstate;
+      nstats_t::idx_t     _nastas_tbl;
 };
 } //namespace amax

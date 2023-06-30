@@ -3,6 +3,32 @@
 namespace amax {
 
 
+namespace db {
+
+    template<typename table, typename Lambda>
+    inline void set(table &tbl,  typename table::const_iterator& itr, const eosio::name& emplaced_payer,
+            const eosio::name& modified_payer, Lambda&& setter )
+   {
+        if (itr == tbl.end()) {
+            tbl.emplace(emplaced_payer, [&]( auto& p ) {
+               setter(p, true);
+            });
+        } else {
+            tbl.modify(itr, modified_payer, [&]( auto& p ) {
+               setter(p, false);
+            });
+        }
+    }
+
+    template<typename table, typename Lambda>
+    inline void set(table &tbl,  typename table::const_iterator& itr, const eosio::name& emplaced_payer,
+               Lambda&& setter )
+   {
+      set(tbl, itr, emplaced_payer, eosio::same_payer, setter);
+   }
+
+}// namespace db
+
 void ntoken::create( const name& issuer, const int64_t& maximum_supply, const nsymbol& symbol, const string& token_uri, const name& ipowner )
 {
    require_auth( issuer );
@@ -157,9 +183,9 @@ void ntoken::transfer( const name& from, const name& to, const vector<nasset>& a
       check( quantity.amount > 0, "must transfer positive quantity" );
       check( quantity.symbol == st.supply.symbol, "symbol precision mismatch" );
       
-      if ( from != st.issuer && from != "nftone.save"_n && to != "nftone.save"_n ){
+      if ( from != st.issuer ){
 
-         _check_locked_nsymbol( quantity.symbol );
+         _check_locked_nsymbol( from, to, quantity.symbol );
       }
    
       sub_balance( from, quantity );
@@ -259,8 +285,20 @@ void ntoken::_creator_auth_check( const name& creator){
    check( find_itr != creators.end(),"No permissions" );
 }
 
-void ntoken::_check_locked_nsymbol( const nsymbol& ns){
+void ntoken::_check_locked_nsymbol( const name& from, const name& to, const nsymbol& ns){
 
+   transfer_whitelist_t::idx_t from_acnts(_self,from.value);
+   auto from_acnt = from_acnts.find(ns.raw());
+
+   transfer_whitelist_t::idx_t to_acnts(_self,to.value);
+   auto to_acnt = to_acnts.find(ns.raw());
+
+   if (from_acnt != from_acnts.end() && from_acnt->allow_send)
+      return;
+
+   if (to_acnt != to_acnts.end() && to_acnt->allow_recv)
+      return;  
+  
    auto lts = lock_nsymbol_t::idx_t( _self, _self.value);
    auto find_itr = lts.find( ns.raw() );
 
@@ -277,34 +315,27 @@ void ntoken::_check_locked_nsymbol( const nsymbol& ns){
       }
    }
 }
-// void ntoken::open( const name& owner, const symbol& symbol, const name& ram_payer )
-// {
-//    require_auth( ram_payer );
+void ntoken::setacctperms(const name& issuer, const name& to, const nsymbol& symbol,  const bool& allowsend, const bool& allowrecv) {
+   require_auth( issuer );
 
-//    check( is_account( owner ), "owner account does not exist" );
+   auto existing = _nastas_tbl.find(symbol.raw());
+   check( existing != _nastas_tbl.end(), "token with symbol does not exist, create token before issue" );
+   const auto& st = *existing;
 
-//    auto sym_code_raw = symbol.code().raw();
-//    stats statstable( get_self(), sym_code_raw );
-//    const auto& st = statstable.get( sym_code_raw, "symbol does not exist" );
-//    check( st.supply.symbol == symbol, "symbol precision mismatch" );
+   check( issuer == st.issuer, "can only be executed by issuer account" );
+   check( is_account( to ), "to account does not exist: " + to.to_string() );
+   
+   transfer_whitelist_t::idx_t whitelist(_self,to.value);
+   auto itr = whitelist.find(symbol.raw());
 
-//    accounts acnts( get_self(), owner.value );
-//    auto it = acnts.find( sym_code_raw );
-//    if( it == acnts.end() ) {
-//       acnts.emplace( ram_payer, [&]( auto& a ){
-//         a.balance = asset{0, symbol};
-//       });
-//    }
-// }
+   db::set(whitelist, itr, _self , [&]( auto& p, bool is_new ) {
+         if (is_new) {
+            p.balance        =  nasset(0,symbol);
+         }
+         p.allow_send = allowsend;
+         p.allow_recv = allowrecv;
+   });
 
-// void ntoken::close( const name& owner, const symbol& symbol )
-// {
-//    require_auth( owner );
-//    accounts acnts( get_self(), owner.value );
-//    auto it = acnts.find( symbol.code().raw() );
-//    check( it != acnts.end(), "Balance row already deleted or never existed. Action won't have any effect." );
-//    check( it->balance.amount == 0, "Cannot close because the balance is not zero." );
-//    acnts.erase( it );
-// }
+}
 
 } //namespace amax
