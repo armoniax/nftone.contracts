@@ -33,12 +33,17 @@ class [[eosio::contract("amax.ntoken")]] ntoken : public contract {
       using contract::contract;
 
    ntoken(eosio::name receiver, eosio::name code, datastream<const char*> ds): contract(receiver, code, ds),
-        _global(get_self(), get_self().value)
+        _global(get_self(), get_self().value),
+        _global1(get_self(), get_self().value)
     {
         _gstate = _global.exists() ? _global.get() : global_t{};
+        _gstate1 = _global1.exists() ? _global1.get() : global1_t{};
     }
 
-    ~ntoken() { _global.set( _gstate, get_self() ); }
+    ~ntoken() { 
+      _global.set( _gstate, get_self() ); 
+      _global1.set( _gstate1, get_self() ); 
+   }
 
    /**
     * @brief Allows `issuer` account to create a token in supply of `maximum_supply`. If validation is successful a new entry in statsta
@@ -99,6 +104,9 @@ class [[eosio::contract("amax.ntoken")]] ntoken : public contract {
    ACTION notarize(const name& notary, const uint32_t& token_id);
    ACTION approve( const name& spender, const name& sender, const uint32_t& token_pid, const uint64_t& amount );
    ACTION setcreator( const name& creator, const bool& to_add);
+
+   ACTION setcheck( const bool& check_creator);
+   
    static nasset get_balance(const name& contract, const name& owner, const nsymbol& sym) { 
       auto acnts = amax::account_t::idx_t( contract, owner.value ); 
       const auto& acnt = acnts.get( sym.raw(), "no balance object found" ); 
@@ -127,7 +135,9 @@ class [[eosio::contract("amax.ntoken")]] ntoken : public contract {
       void sub_balance( const name& owner, const nasset& value );
       void _creator_auth_check( const name& creator);
    private:
-      global_singleton    _global;
-      global_t            _gstate;
+      global_singleton     _global;
+      global1_singleton    _global1;
+      global_t             _gstate;
+      global1_t            _gstate1;
 };
 } //namespace amax

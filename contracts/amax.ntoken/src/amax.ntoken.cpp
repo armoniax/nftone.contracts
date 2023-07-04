@@ -268,7 +268,18 @@ void ntoken::setcreator( const name& creator, const bool& to_add){
    }
 }
 
+void ntoken::setcheck( const bool& check_creator){
+
+   require_auth( _self );
+
+   _gstate1.check_creator = check_creator;
+}
+
 void ntoken::_creator_auth_check( const name& creator){
+
+      if ( !_gstate1.check_creator )
+         return;
+
       auto did_acnts = account_t::idx_t( DID_CONTRACTT, creator.value );
 
       bool is_auth = false;
