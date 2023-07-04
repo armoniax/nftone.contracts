@@ -29,6 +29,14 @@ NTBL("global") global_t {
 };
 typedef eosio::singleton< "global"_n, global_t > global_singleton;
 
+NTBL("global1") global1_t {
+    bool check_creator          = false;
+
+    EOSLIB_SERIALIZE( global1_t, (check_creator) )
+};
+
+typedef eosio::singleton< "global1"_n, global1_t > global1_singleton;
+
 struct nsymbol {
     uint32_t id;
     uint32_t parent_id;

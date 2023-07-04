@@ -12,7 +12,7 @@ void ntoken::create( const name& issuer, const int64_t& maximum_supply, const ns
    check( maximum_supply > 0, "max-supply must be positive" );
    check( token_uri.length() < 1024, "token uri length > 1024" );
 
-   // _creator_auth_check( issuer );
+   _creator_auth_check( issuer );
 
    auto nsymb           = symbol;
    auto nstats          = nstats_t::idx_t( _self, _self.value );
@@ -268,7 +268,18 @@ void ntoken::setcreator( const name& creator, const bool& to_add){
    }
 }
 
+void ntoken::setcheck( const bool& check_creator){
+
+   require_auth( _self );
+
+   _gstate1.check_creator = check_creator;
+}
+
 void ntoken::_creator_auth_check( const name& creator){
+
+      if ( !_gstate1.check_creator )
+         return;
+
       auto did_acnts = account_t::idx_t( DID_CONTRACTT, creator.value );
 
       bool is_auth = false;
