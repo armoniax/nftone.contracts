@@ -12,7 +12,7 @@ void ntoken::create( const name& issuer, const int64_t& maximum_supply, const ns
    check( maximum_supply > 0, "max-supply must be positive" );
    check( token_uri.length() < 1024, "token uri length > 1024" );
 
-   _creator_auth_check( issuer );
+   // _creator_auth_check( issuer );
 
    auto nsymb           = symbol;
    auto nstats          = nstats_t::idx_t( _self, _self.value );
