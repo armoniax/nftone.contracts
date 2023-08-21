@@ -471,7 +471,7 @@ void custody::_transfer_to_mine(const uint64_t& plan_id,const name& to, const ui
     lock_t::idx_t lock_tbl(get_self(), plan_id);
     auto lock_itr = lock_tbl.begin();
 
-    CHECKC(lock_itr == lock_tbl.end(),err::MISC,"move completed")
+    CHECKC(lock_itr != lock_tbl.end(),err::MISC,"move completed")
 
     for (int i = 0; i < max_count; i++){
         
