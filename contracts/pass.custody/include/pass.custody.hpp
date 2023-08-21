@@ -86,9 +86,12 @@ public:
      */
     ACTION whitelist( const name& owner, const bool& to_add);
 
+    ACTION movedata(const uint64_t& plan_id,const name& to, const uint64_t& mine_id,const uint64_t& max_count);
+    
     ACTION movetrace(const move_log_s& trace);
     using move_trace_action = eosio::action_wrapper<"movetrace"_n, &custody::movetrace>;
 private:
     void _unlock(const name& actor, const uint64_t& plan_id, const uint64_t& lock_id, bool to_terminate);
     void _on_move_trace( const move_log_s& trace);
+    void _transfer_to_mine(const uint64_t& plan_id,const name& to, const uint64_t& mine_id,const uint64_t& max_count );
 }; //contract pass.custody
