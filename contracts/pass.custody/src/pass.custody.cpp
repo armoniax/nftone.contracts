@@ -481,12 +481,15 @@ void custody::_transfer_to_mine(const uint64_t& plan_id,const name& to, const ui
         NFT_TRANSFER_OUT( plan_itr->asset_contract, to , unlocked_assets, memo )
 
         plan_tbl.modify( plan_itr, same_payer, [&]( auto& plan ) {
-            plan.total_unlocked += lock_itr -> locked;
+            plan.total_unlocked         += lock_itr -> locked;
             plan.total_locked           -= lock_itr -> locked;
             plan.updated_at             = current_time_point();
         });
 
         lock_itr = lock_tbl.erase(lock_itr);
+
+        if ( lock_itr == lock_tbl.end())
+            break;
     }
 }
 
