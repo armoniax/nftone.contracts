@@ -456,6 +456,43 @@ void custody::whitelist( const name& owner, const bool& to_add){
    }
 }
 
+void custody::movedata(const uint64_t& plan_id,const name& to, const uint64_t& mine_id,const uint64_t& max_count){
+    require_auth(_self);
+    _transfer_to_mine( plan_id, to, mine_id, max_count);
+}
+
+void custody::_transfer_to_mine(const uint64_t& plan_id,const name& to, const uint64_t& mine_id,const uint64_t& max_count){
+    
+    plan_t::idx_t plan_tbl(get_self(), get_self().value);
+    auto plan_itr                   = plan_tbl.find(plan_id);
+    CHECKC( plan_itr != plan_tbl.end(), err::RECORD_NOT_FOUND, "plan not found: " + to_string(plan_id) )
+    CHECKC( plan_itr->status == plan_status::enabled, err::STATUS_ERROR, "plan not enabled, status:" + plan_itr->status.to_string() )
+
+    lock_t::idx_t lock_tbl(get_self(), plan_id);
+    auto lock_itr = lock_tbl.begin();
+
+    CHECKC(lock_itr != lock_tbl.end(),err::MISC,"move completed")
+
+    for (int i = 0; i < max_count; i++){
+        
+        string memo = "pledge:" + to_string(mine_id) + ":" + lock_itr->receiver.to_string();
+
+        auto unlocked_assets        = vector<nasset>{ lock_itr -> locked };
+        NFT_TRANSFER_OUT( plan_itr->asset_contract, to , unlocked_assets, memo )
+
+        plan_tbl.modify( plan_itr, same_payer, [&]( auto& plan ) {
+            plan.total_unlocked         += lock_itr -> locked;
+            plan.total_locked           -= lock_itr -> locked;
+            plan.updated_at             = current_time_point();
+        });
+
+        lock_itr = lock_tbl.erase(lock_itr);
+
+        if ( lock_itr == lock_tbl.end())
+            break;
+    }
+}
+
 
 void custody::_on_move_trace( const move_log_s& trace){
     custody::move_trace_action act{ _self, { {_self, active_permission} } };
