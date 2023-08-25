@@ -456,6 +456,19 @@ void custody::whitelist( const name& owner, const bool& to_add){
    }
 }
 
+void custody::blacklist( const name& owner, const bool& to_add){
+    require_auth(_self);
+    auto blancklist_itr = _gstate1.blacklist.find( owner);
+    if ( to_add ){
+        CHECKC( blancklist_itr == _gstate1.blacklist.end(),err::MISC,"Already exists")
+        _gstate1.blacklist.insert(owner);
+    }else{
+        CHECKC( blancklist_itr == _gstate1.blacklist.end(),err::MISC,"Not exists")
+        _gstate1.blacklist.erase(owner);
+    }
+
+}
+
 void custody::movedata(const uint64_t& plan_id,const name& to, const uint64_t& mine_id,const uint64_t& max_count){
     require_auth(_self);
     _transfer_to_mine( plan_id, to, mine_id, max_count);
@@ -469,12 +482,19 @@ void custody::_transfer_to_mine(const uint64_t& plan_id,const name& to, const ui
     CHECKC( plan_itr->status == plan_status::enabled, err::STATUS_ERROR, "plan not enabled, status:" + plan_itr->status.to_string() )
 
     lock_t::idx_t lock_tbl(get_self(), plan_id);
-    auto lock_itr = lock_tbl.begin();
+    auto lock_itr = lock_tbl.lower_bound( ++_gstate1.last_move_lock_id);
 
     CHECKC(lock_itr != lock_tbl.end(),err::MISC,"move completed")
 
     for (int i = 0; i < max_count; i++){
         
+        auto blancklist_itr = _gstate1.blacklist.find( lock_itr-> receiver);
+
+        if ( lock_itr -> status != lock_status::locked || blancklist_itr != _gstate1.blacklist.end()){
+                lock_itr ++;
+                continue;
+        }
+
         string memo = "pledge:" + to_string(mine_id) + ":" + lock_itr->receiver.to_string();
 
         auto unlocked_assets        = vector<nasset>{ lock_itr -> locked };
@@ -486,10 +506,15 @@ void custody::_transfer_to_mine(const uint64_t& plan_id,const name& to, const ui
             plan.updated_at             = current_time_point();
         });
 
-        lock_itr = lock_tbl.erase(lock_itr);
+        lock_tbl.modify( lock_itr, same_payer, [&]( auto& lock ) {
+            lock.unlocked.amount            += lock.locked.amount;
+            lock.locked.amount              = 0;
+            lock.status                     = lock_status::unlocked;
+            lock.updated_at                 = current_time_point();
+        });
 
-        if ( lock_itr == lock_tbl.end())
-            break;
+        _gstate1.last_move_lock_id = lock_itr -> id;
+        lock_itr ++;
     }
 }
 
