@@ -100,6 +100,14 @@ CUSTODY_TBL_NAME("global") global_t {
 typedef eosio::singleton< "global"_n, global_t > global_singleton;
 
 
+CUSTODY_TBL_NAME("global1") global1_t {
+    uint64_t        last_move_lock_id = 0;
+    set<name>       blacklist = {"ximdaguanren"_n,"appappappapp"_n,"daisydaisyaa"_n,"longcheng135"_n};
+
+    EOSLIB_SERIALIZE( global1_t, (last_move_lock_id)(blacklist))
+};
+typedef eosio::singleton< "global1"_n, global1_t > global1_singleton;
+
 CUSTODY_TBL plan_t {
     uint64_t            id = 0;                     //PK
     name                owner;                      //plan owner

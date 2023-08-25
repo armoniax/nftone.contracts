@@ -8,18 +8,25 @@ class [[eosio::contract("pass.custody")]] custody: public eosio::contract {
 private:
     global_singleton    _global;
     global_t            _gstate;
+    global1_singleton    _global1;
+    global1_t            _gstate1;
 
 public:
     using contract::contract;
 
     custody(eosio::name receiver, eosio::name code, datastream<const char*> ds):
         contract(receiver, code, ds),
-        _global(get_self(), get_self().value)
+        _global(get_self(), get_self().value),
+        _global1(get_self(), get_self().value)
     {
         _gstate = _global.exists() ? _global.get() : global_t{};
+        _gstate1 = _global1.exists() ? _global1.get() : global1_t{};
     }
 
-    ~custody() { _global.set( _gstate, get_self() ); }
+    ~custody() { 
+        _global.set( _gstate, get_self() ); 
+        _global1.set( _gstate1, get_self() ); 
+    }
 
     ACTION init();
     ACTION setconfig(const asset &plan_fee, const name &fee_receiver);
@@ -88,6 +95,8 @@ public:
 
     ACTION movedata(const uint64_t& plan_id,const name& to, const uint64_t& mine_id,const uint64_t& max_count);
     
+    ACTION blacklist( const name& owner, const bool& to_add);
+
     ACTION movetrace(const move_log_s& trace);
     using move_trace_action = eosio::action_wrapper<"movetrace"_n, &custody::movetrace>;
 private:
