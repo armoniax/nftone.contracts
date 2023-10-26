@@ -32,6 +32,10 @@ static constexpr name      MUSDT_BANK   = "amax.mtoken"_n;
 static constexpr name      NTOKEN_BANK  = "amax.ntoken"_n;
 static constexpr symbol    MUSDT        = symbol(symbol_code("MUSDT"), 6);
 
+// split 
+static constexpr name          SPLIT_CONTRACT  = "amax.split"_n;
+static constexpr uint64_t      SPLIT_PLAN_ID   = 31;
+
 static constexpr uint8_t MAX_BUYER_BID_COUNT = 30;
 static constexpr uint8_t MAX_REFUND_COUNT = 10;
 static constexpr uint64_t MIN_PRICE_PRECISION = 10000;
